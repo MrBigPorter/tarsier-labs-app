@@ -22,8 +22,6 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -35,26 +33,32 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSAllowsArbitraryLoadsForMedia</key>
+		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Tarsier needs camera access to take profile pictures.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Tarsier uses your location to show relevant local content.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Tarsier needs access to your photo library to set profile pictures.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Tarsier needs camera access to take profile pictures.</string>
 	<key>NSUserNotificationAlertStyle</key>
 	<string>alert</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>

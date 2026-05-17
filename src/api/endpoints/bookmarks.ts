@@ -1,5 +1,5 @@
-import { blogApi, ApiResponseWrapper, ApiPaginatedResponse } from '../baseApi';
-import type { BookmarkedArticle, BookmarkResponse, BookmarkStatusResponse } from '../../types/frontend-blog';
+import { blogApi, ApiResponseWrapper, ApiPaginatedResponse } from '@/api/baseApi';
+import type { BookmarkedArticle, BookmarkResponse, BookmarkStatusResponse } from '@/types/frontend-blog';
 
 function unwrapData<T>(response: ApiResponseWrapper<T>): T {
   return response.data;

@@ -25,47 +25,39 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useSearchArticlesQuery } from '../api/endpoints/articles';
-import { storage } from '../lib/storage';
-import ArticleCard from '../components/blog/ArticleCard';
-import SearchBar from '../components/layout/SearchBar';
-import { ArticleListSkeleton } from '../components/core/Skeleton';
-import EmptyState from '../components/core/EmptyState';
-import Header from '../components/layout/Header';
-import SvgIcon from '../components/core/SvgIcon';
-import type { RootStackScreenProps } from '../navigation/types';
-import type { FrontendArticle } from '../types/frontend-blog';
-
-const RECENT_SEARCHES_KEY = 'recent_searches';
-const MAX_RECENT = 10;
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useSearchArticlesQuery } from '@/api/endpoints/articles';
+import { useCurrentLanguage } from '@/lib/i18n';
+import { useTranslation } from 'react-i18next';
+import { useRecentSearches } from '@/lib/hooks/useRecentSearches';
+import { ArticleCard } from '@/components/blog/ArticleCard';
+import SearchBar from '@/components/layout/SearchBar';
+import { ArticleListSkeleton } from '@/components/core/Skeleton';
+import { EmptyState } from '@/components/core/EmptyState';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import SvgIcon from '@/components/core/SvgIcon';
+import type { RootStackScreenProps } from '@/navigation/types';
+import type { FrontendArticle } from '@/types/frontend-blog';
 
 const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const lang = useCurrentLanguage();
 
   // ─── State ──────────────────────────────────────────────────────────
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [page, setPage] = useState(1);
 
-  // Load recent searches on mount
-  useEffect(() => {
-    try {
-      const saved = storage.getString(RECENT_SEARCHES_KEY);
-      if (saved) {
-        setRecentSearches(JSON.parse(saved));
-      }
-    } catch {
-      // Ignore
-    }
-  }, []);
+  const {
+    recentSearches,
+    saveRecentSearch,
+    clearRecentSearches,
+    removeRecentSearch,
+  } = useRecentSearches();
 
   // Debounce search query (300ms)
   useEffect(() => {
@@ -84,41 +76,13 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
     isError,
     refetch,
   } = useSearchArticlesQuery(
-    { q: debouncedQuery, page, pageSize: 20 },
+    { q: debouncedQuery, page, pageSize: 20, lang },
     { skip: debouncedQuery.length < 2 },
   );
 
   const results = searchData?.items || [];
   const totalPages = searchData?.totalPages || 1;
   const hasMore = page < totalPages;
-
-  // ─── Recent searches management ─────────────────────────────────────
-  const saveRecentSearch = useCallback(
-    (searchQuery: string) => {
-      if (!searchQuery.trim()) return;
-      const updated = [
-        searchQuery,
-        ...recentSearches.filter(s => s !== searchQuery),
-      ].slice(0, MAX_RECENT);
-      setRecentSearches(updated);
-      storage.set(RECENT_SEARCHES_KEY, JSON.stringify(updated));
-    },
-    [recentSearches],
-  );
-
-  const clearRecentSearches = useCallback(() => {
-    setRecentSearches([]);
-    storage.delete(RECENT_SEARCHES_KEY);
-  }, []);
-
-  const removeRecentSearch = useCallback(
-    (search: string) => {
-      const updated = recentSearches.filter(s => s !== search);
-      setRecentSearches(updated);
-      storage.set(RECENT_SEARCHES_KEY, JSON.stringify(updated));
-    },
-    [recentSearches],
-  );
 
   // ─── Handlers ───────────────────────────────────────────────────────
   const handleChangeText = useCallback((text: string) => {
@@ -176,7 +140,15 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
     if (!debouncedQuery) {
       if (recentSearches.length > 0) {
         return (
-          <View style={styles.recentSection}>
+          <View
+            style={[
+              styles.recentSection,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border + '40',
+              },
+            ]}
+          >
             <View style={styles.recentHeader}>
               <Text
                 style={[
@@ -184,7 +156,7 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
                   { color: colors.text },
                 ]}
               >
-                Recent Searches
+                {t('search.recent')}
               </Text>
               <TouchableOpacity onPress={clearRecentSearches}>
                 <Text
@@ -193,7 +165,7 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Clear
+                  {t('search.clear')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -234,11 +206,74 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
       }
 
       return (
-        <EmptyState
-          icon="search"
-          title="Search articles"
-          description="Type at least 2 characters to search across all articles"
-        />
+        <View style={styles.emptyPromptContainer}>
+          <SvgIcon
+            name="search"
+            size={48}
+            color={colors.textSecondary + '60'}
+          />
+          <Text
+            style={[
+              styles.emptyPromptTitle,
+              { color: colors.text },
+            ]}
+          >
+            {t('search.title')}
+          </Text>
+          <Text
+            style={[
+              styles.emptyPromptSubtitle,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {t('search.empty.hint')}
+          </Text>
+          <View
+            style={[
+              styles.popularTagsSection,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border + '40',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.popularTagsTitle,
+                { color: colors.text },
+              ]}
+            >
+              {t('search.popularTags')}
+            </Text>
+            <View style={styles.tagChipsRow}>
+              {['TypeScript', 'React', 'Node.js', 'Animation', 'iOS', 'Design'].map(
+                tag => (
+                  <TouchableOpacity
+                    key={tag}
+                    style={[
+                      styles.tagChip,
+                      { backgroundColor: colors.primary + '15' },
+                    ]}
+                    onPress={() => {
+                      setQuery(tag);
+                      setDebouncedQuery(tag);
+                      saveRecentSearch(tag);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.tagChipText,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      #{tag}
+                    </Text>
+                  </TouchableOpacity>
+                ),
+              )}
+            </View>
+          </View>
+        </View>
       );
     }
 
@@ -252,9 +287,9 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
       return (
         <EmptyState
           icon="alert-circle"
-          title="Search failed"
-          description="Please check your connection and try again"
-          primaryAction={{ label: 'Retry', onPress: refetch }}
+          title={t('search.loadFailed')}
+          description={t('search.error.connection')}
+          primaryAction={{ label: t('common.retry'), onPress: refetch }}
         />
       );
     }
@@ -262,10 +297,9 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
     // No results
     if (results.length === 0 && debouncedQuery.length >= 2) {
       return (
-        <EmptyState
-          icon="search"
-          title="No results found"
-          description={`No articles matching "${debouncedQuery}"`}
+        <EmptyLogoContent
+          title={t('common.noResults')}
+          description={t('search.empty.noResultsFor', { query: debouncedQuery })}
         />
       );
     }
@@ -276,31 +310,33 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header
-        title="Search"
-        hideSearch
-        hideAvatar
-        rightAction={
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={[styles.cancelText, { color: colors.primary }]}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
-        }
-      />
-
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.background, paddingTop: insets.top },
+      ]}
+    >
       <SearchBar
         value={query}
         onChangeText={handleChangeText}
         onSubmit={handleSubmit}
-        placeholder="Search articles..."
+        placeholder={t('search.placeholder')}
         autoFocus
         debounceMs={300}
+        showCancel
+        onCancel={() => navigation.goBack()}
       />
+
+      {debouncedQuery.length >= 2 && results.length > 0 && (
+        <Text
+          style={[
+            styles.resultCount,
+            { color: colors.textSecondary },
+          ]}
+        >
+          {t('search.resultCount', { count: results.length })}
+        </Text>
+      )}
 
       <FlatList
         data={results}
@@ -336,12 +372,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
   },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '500',
+  resultCount: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    fontSize: 13,
   },
   recentSection: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
     padding: spacing.lg,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   recentHeader: {
     flexDirection: 'row',
@@ -366,6 +408,47 @@ const styles = StyleSheet.create({
   recentItemText: {
     flex: 1,
     fontSize: 15,
+  },
+  emptyPromptContainer: {
+    alignItems: 'center',
+    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyPromptTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: spacing.md,
+  },
+  emptyPromptSubtitle: {
+    fontSize: 14,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  popularTagsSection: {
+    marginTop: spacing.xl,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: spacing.md,
+    width: '100%',
+  },
+  popularTagsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
+  },
+  tagChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  tagChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  tagChipText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
 

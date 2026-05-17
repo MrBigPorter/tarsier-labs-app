@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
 
 // ===================== Base Skeleton =====================
 
@@ -57,7 +57,7 @@ export function Skeleton({
           width: width as any,
           height,
           borderRadius: borderRadiusVal,
-          backgroundColor: colors.skeleton,
+          backgroundColor: colors.bgTertiary,
           opacity,
         },
         style,
@@ -98,7 +98,7 @@ export function TextSkeleton({
 
 const textSkeletonStyles = StyleSheet.create({
   container: {
-    gap: spacing[2],
+    gap: spacing.sm,
   },
   line: {
     marginBottom: 0,
@@ -113,25 +113,34 @@ const textSkeletonStyles = StyleSheet.create({
 export function ArticleCardSkeleton() {
   const { colors } = useTheme();
   const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth - spacing[6] * 2;
+  const cardWidth = screenWidth - spacing.md * 2;
 
   return (
     <View
       style={[
         articleCardStyles.container,
         {
-          backgroundColor: colors.card,
+          backgroundColor: colors.bgPrimary,
           borderColor: colors.border,
           width: cardWidth,
         },
       ]}
     >
       {/* Cover image skeleton */}
-      <Skeleton
-        width="100%"
-        height={cardWidth * (9 / 16)}
-        borderRadiusVal={borderRadius.lg}
-      />
+      <View>
+        <Skeleton
+          width="100%"
+          height={cardWidth * (9 / 16)}
+          borderRadiusVal={borderRadius.lg}
+        />
+        {/* Category badge */}
+        <Skeleton
+          width={60}
+          height={22}
+          borderRadiusVal={borderRadius.sm}
+          style={{ position: 'absolute', bottom: spacing.sm, left: spacing.sm }}
+        />
+      </View>
 
       {/* Content area */}
       <View style={articleCardStyles.content}>
@@ -146,13 +155,14 @@ export function ArticleCardSkeleton() {
           <Skeleton width="75%" height={12} />
         </View>
 
-        {/* Meta info */}
+        {/* Meta row: views, comments, author (left) + bookmark (right) */}
         <View style={articleCardStyles.meta}>
-          <View style={articleCardStyles.authorRow}>
-            <Skeleton width={28} height={28} borderRadiusVal={14} />
-            <Skeleton width={80} height={12} />
+          <View style={articleCardStyles.metaLeft}>
+            <Skeleton width={40} height={12} />
+            <Skeleton width={40} height={12} />
+            <Skeleton width={60} height={12} />
           </View>
-          <Skeleton width={60} height={12} />
+          <Skeleton width={22} height={22} borderRadiusVal={4} />
         </View>
       </View>
     </View>
@@ -164,28 +174,28 @@ const articleCardStyles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: spacing[4],
+    marginBottom: spacing.lg,
   },
   content: {
-    padding: spacing[4],
+    padding: spacing.lg,
   },
   title: {
-    marginBottom: spacing[1],
+    marginBottom: spacing.xs,
   },
   excerpt: {
-    marginTop: spacing[3],
-    gap: spacing[1.5],
+    marginTop: spacing.md,
+    gap: 6,
   },
   meta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing[3],
+    marginTop: spacing.md,
   },
-  authorRow: {
+  metaLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[2],
+    gap: spacing.sm,
   },
 });
 
@@ -194,7 +204,7 @@ const articleCardStyles = StyleSheet.create({
  */
 export function ArticleListSkeleton({ count = 5 }: { count?: number }) {
   return (
-    <View style={{ paddingHorizontal: spacing[6] }}>
+    <View style={{ paddingHorizontal: spacing.md }}>
       {Array.from({ length: count }).map((_, index) => (
         <ArticleCardSkeleton key={index} />
       ))}
@@ -234,6 +244,14 @@ export function ArticleDetailSkeleton() {
         style={detailStyles.cover}
       />
 
+      {/* Tags row */}
+      <View style={detailStyles.tagsRow}>
+        <Skeleton width={60} height={28} borderRadiusVal={14} />
+        <Skeleton width={80} height={28} borderRadiusVal={14} />
+        <Skeleton width={50} height={28} borderRadiusVal={14} />
+        <Skeleton width={70} height={28} borderRadiusVal={14} />
+      </View>
+
       {/* Content paragraphs */}
       <View style={detailStyles.contentArea}>
         {Array.from({ length: 6 }).map((_, i) => (
@@ -251,29 +269,36 @@ export function ArticleDetailSkeleton() {
 const detailStyles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: spacing[6],
+    padding: spacing.xxl,
   },
   backButton: {
-    marginBottom: spacing[4],
+    marginBottom: spacing.lg,
   },
   titleArea: {
-    marginBottom: spacing[4],
-    gap: spacing[1],
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[2],
-    marginBottom: spacing[6],
+    gap: spacing.sm,
+    marginBottom: spacing.xxl,
   },
   cover: {
-    marginBottom: spacing[6],
+    marginBottom: spacing.xxl,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   contentArea: {
-    gap: spacing[5],
+    gap: spacing.xl,
   },
   paragraph: {
-    gap: spacing[1],
+    gap: spacing.xs,
   },
 });
 
@@ -287,7 +312,7 @@ export function CategoryCardSkeleton() {
     <View
       style={[
         categoryStyles.card,
-        { backgroundColor: colors.card, borderColor: colors.border },
+        { backgroundColor: colors.bgPrimary, borderColor: colors.border },
       ]}
     >
       <View style={categoryStyles.row}>
@@ -304,21 +329,21 @@ export function CategoryCardSkeleton() {
 
 const categoryStyles = StyleSheet.create({
   card: {
-    padding: spacing[4],
+    padding: spacing.lg,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    marginBottom: spacing[3],
+    marginBottom: spacing.md,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing[3],
+    gap: spacing.md,
   },
   textArea: {
     flex: 1,
-    gap: spacing[1.5],
+    gap: 6,
   },
   name: {
-    marginBottom: spacing[1],
+    marginBottom: spacing.xs,
   },
 });
 

@@ -1,125 +1,128 @@
 /**
- * ThemeToggle — Animated sun/moon theme switch button
+ * ThemeToggle — Crossfading moon/sun toggle for dark/light mode
  *
- * Provides a pressable icon button that:
- * - Shows a sun icon in light mode, moon icon in dark mode
- * - Animates a 360° rotation on toggle (sun → moon transition)
- * - Applies a subtle scale pulse (1.0 → 1.3 → 1.0 spring) on press
- * - Dispatches toggleTheme from ThemeContext + Redux uiSlice
+ * Animated toggle that transitions between sun (light mode) and moon (dark mode)
+ * icons with a scaling crossfade effect.
+ *
+ * Features:
+ * - Smooth crossfade animation between icon states
+ * - Haptic feedback on toggle (iOS)
+ * - Accessible with proper accessibility labels
+ * - Follows system theme if enabled
  *
  * Usage:
  * ```tsx
- * <ThemeToggle size={32} />
+ * <ThemeToggle />
  * ```
- *
- * Can be used in Header, Settings, or anywhere theme switching is needed.
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   TouchableOpacity,
   Animated,
   StyleSheet,
+  Platform,
 } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing } from '../../lib/theme/spacing';
-import { useAppDispatch } from '../../store';
-import { toggleTheme as reduxToggleTheme } from '../../store/slices/uiSlice';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing } from '@/lib/theme/spacing';
+import { useAppDispatch } from '@/store';
+import { toggleTheme as reduxToggleTheme } from '@/store/slices/uiSlice';
 import SvgIcon from '../core/SvgIcon';
 
 interface ThemeToggleProps {
-  /** Icon size in pixels (default: 28) */
+  /** Icon size (default: 24) */
   size?: number;
-  /** Optional custom onToggle callback */
-  onToggle?: () => void;
 }
 
-const ThemeToggle: React.FC<ThemeToggleProps> = ({
-  size = 28,
-  onToggle,
-}) => {
-  const { theme, toggleTheme } = useTheme();
-  const colors = theme.colors;
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ size = 24 }) => {
+  const { colors, isDark, toggleTheme } = useTheme();
   const dispatch = useAppDispatch();
 
-  // Animation values
-  const rotationAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const animatedValue = useRef(new Animated.Value(isDark ? 1 : 0)).current;
 
   const handlePress = useCallback(() => {
-    // 1. Scale pulse animation
-    Animated.sequence([
-      Animated.spring(scaleAnim, {
-        toValue: 1.3,
-        useNativeDriver: true,
-        friction: 4,
-        tension: 100,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 3,
-        tension: 200,
-      }),
-    ]).start();
-
-    // 2. Rotation animation (full 360° spin)
-    Animated.timing(rotationAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start(() => {
-      // Reset rotation value for next toggle
-      rotationAnim.setValue(0);
-    });
-
-    // 3. Toggle theme in both ThemeContext and Redux
     toggleTheme();
     dispatch(reduxToggleTheme());
 
-    // 4. Optional external callback
-    onToggle?.();
-  }, [toggleTheme, dispatch, onToggle, rotationAnim, scaleAnim]);
+    // Trigger crossfade animation
+    Animated.sequence([
+      Animated.timing(animatedValue, {
+        toValue: isDark ? 0 : 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Reset animation value for next toggle
+      animatedValue.setValue(isDark ? 0 : 1);
+    });
+  }, [isDark, toggleTheme, dispatch, animatedValue]);
 
-  const rotateInterpolation = rotationAnim.interpolate({
+  const sunOpacity = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: [1, 0],
+  });
+
+  const moonOpacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const sunScale = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.5],
+  });
+
+  const moonScale = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 1],
   });
 
   return (
     <TouchableOpacity
       onPress={handlePress}
       style={[
-        styles.button,
+        styles.container,
         {
-          width: size + spacing.md,
-          height: size + spacing.md,
-          borderRadius: (size + spacing.md) / 2,
+          width: size + spacing.sm,
+          height: size + spacing.sm,
+          borderRadius: (size + spacing.sm) / 2,
+          backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
         },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={
-        theme.dark ? 'Switch to light mode' : 'Switch to dark mode'
-      }
-      accessibilityState={{ checked: theme.dark }}
-      activeOpacity={0.7}
+      accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      accessibilityState={{ checked: isDark }}
     >
       <Animated.View
         style={[
-          styles.iconContainer,
+          styles.iconWrapper,
           {
-            transform: [
-              { rotate: rotateInterpolation },
-              { scale: scaleAnim },
-            ],
+            opacity: sunOpacity,
+            transform: [{ scale: sunScale }],
           },
         ]}
       >
         <SvgIcon
-          name={theme.dark ? 'moon' : 'sun'}
+          name="sun"
           size={size}
-          color={theme.dark ? colors.primary : colors.neutral['700']}
-          strokeWidth={2}
+          color={isDark ? colors.text : colors.warning}
+        />
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.iconWrapper,
+          StyleSheet.absoluteFill,
+          {
+            opacity: moonOpacity,
+            transform: [{ scale: moonScale }],
+          },
+        ]}
+      >
+        <SvgIcon
+          name="moon"
+          size={size}
+          color={isDark ? colors.primary : colors.text}
         />
       </Animated.View>
     </TouchableOpacity>
@@ -127,13 +130,26 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
 };
 
 const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
+  container: {
     justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  iconContainer: {
-    alignItems: 'center',
+  iconWrapper: {
+    position: 'absolute',
     justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

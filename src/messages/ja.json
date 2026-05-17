@@ -20,6 +20,9 @@
     "error": "読み込みに失敗しました。後でもう一度お試しください",
     "loadFailed": "読み込みに失敗しました",
     "retry": "再試行",
+    "goBack": "戻る",
+    "pullDownToRetry": "プルダウンして再試行",
+    "checkBackLater": "後でもう一度確認してください",
     "articleCount": "{count} 記事",
     "totalTags": "{count} タグ、{total} 記事",
     "about": "について",
@@ -34,7 +37,13 @@
     "notFound": "カテゴリーが見つかりません",
     "empty": "カテゴリーはまだありません",
     "emptyArticles": "このカテゴリーにはまだ記事がありません",
-    "emptyDescription": "このカテゴリーのコンテンツは準備中です。他のカテゴリーの記事を先に見ることができます"
+    "emptyDescription": "このカテゴリーのコンテンツは準備中です。他のカテゴリーの記事を先に見ることができます",
+    "error": {
+      "loadFailed": "カテゴリーの読み込みに失敗しました"
+    },
+    "emptyState": {
+      "description": "記事が作成されるとカテゴリーが表示されます"
+    }
   },
   "tags": {
     "title": "タグクラウド",
@@ -42,7 +51,13 @@
     "notFound": "タグが見つかりません",
     "empty": "タグはまだありません",
     "emptyArticles": "このタグを使用した記事はまだありません",
-    "emptyDescription": "他の人気タグの記事を見てみましょう"
+    "emptyDescription": "他の人気タグの記事を見てみましょう",
+    "error": {
+      "loadFailed": "タグの読み込みに失敗しました"
+    },
+    "emptyState": {
+      "description": "記事がカテゴリー分けされるとタグが表示されます"
+    }
   },
   "home": {
     "title": "最新記事",
@@ -51,7 +66,10 @@
     "featured": "おすすめ",
     "featuredArticles": "おすすめ記事",
     "viewAll": "すべて表示",
-    "heroSubtitle": "厳選された注目のコンテンツをご覧ください"
+    "heroSubtitle": "厳選された注目のコンテンツをご覧ください",
+    "error": {
+      "unableToLoad": "記事を読み込めません"
+    }
   },
   "article": {
     "readTime": "読了時間",
@@ -64,7 +82,16 @@
     "notFoundDescription": "お探しの記事は存在しないか、削除されました。",
     "notPublished": "まだ公開されていません",
     "minutes": "分",
-    "popularArticles": "人気記事"
+    "popularArticles": "人気記事",
+    "empty": {
+      "inCategory": "別のカテゴリーを試してみてください"
+    },
+    "error": {
+      "loadFailed": "記事の読み込みに失敗しました",
+      "loadFailedSingle": "記事の読み込みに失敗しました",
+      "generic": "エラーが発生しました",
+      "pullDownToRetry": "プルダウンして再読み込み"
+    }
   },
   "auth": {
     "email": "メールアドレス",
@@ -85,6 +112,7 @@
     "fillAllFields": "すべての必須項目を入力してください",
     "invalidCode": "認証コードの形式が正しくありません",
     "loginFailed": "ログインに失敗しました",
+    "done": "完了",
     "oauth": {
       "githubNotConfigured": "GitHub OAuth が設定されていません",
       "githubFailed": "GitHub ログインに失敗しました",
@@ -120,6 +148,7 @@
     "title": "コメント",
     "writeComment": "コメントを書く",
     "writeReply": "返信を書く",
+    "beFirstThoughts": "最初に感想を共有しましょう！",
     "reply": "返信",
     "cancel": "キャンセル",
     "submit": "送信",
@@ -140,7 +169,10 @@
     "pageInfo": "{page} ページ / {totalPages} ページ",
     "allCommentsLoaded": "すべてのコメントを読み込みました",
     "totalComments": "合計 {count} 件のコメント",
-    "loadingComment": "コメントを読み込み中..."
+    "loadingComment": "コメントを読み込み中...",
+    "commentPending": "コメントは審査中です...",
+    "commentApproved": "コメントが公開されました",
+    "commentRejected": "コメントがコミュニティガイドラインに違反しているため、自動的に削除されました"
   },
   "search": {
     "title": "記事検索",
@@ -151,22 +183,37 @@
     "emptyDescription": "記事タイトル、内容、タグを検索",
     "noResults": "検索結果がありません",
     "noResultsDescription": "別のキーワードをお試しください",
-    "clear": "検索をクリア",
+    "clear": "クリア",
     "shortcutHint": "Cmd/Ctrl + K を押して検索を開く",
     "viewAllResults": "すべての結果を表示",
     "loadFailed": "検索に失敗しました、もう一度お試しください",
     "showingFirst": "最初の {count} 件の結果を表示",
-    "visitFullPage": "より多くの結果を見るには完全な検索ページにアクセス"
+    "visitFullPage": "より多くの結果を見るには完全な検索ページにアクセス",
+    "recent": "最近の検索",
+    "resultCount": "{{count}} 件の結果",
+    "popularTags": "人気のタグ",
+    "noRecentSearches": "最近の検索はありません",
+    "empty": {
+      "hint": "2文字以上入力してすべての記事を検索",
+      "noResultsFor": "\"{{query}}\" に一致する記事はありません"
+    },
+    "error": {
+      "connection": "接続を確認してもう一度お試しください"
+    }
   },
   "bookmarks": {
     "title": "マイブックマーク",
     "subtitle": "ブックマークしたすべての記事",
     "totalCount": "合計 {count} 記事をブックマーク",
     "empty": "ブックマークした記事はまだありません",
-    "emptyTitle": "ブックマークした記事はまだありません",
+    "emptyTitle": "まだブックマークはありません",
     "emptyDescription": "記事を探索して、お気に入りをブックマークしましょう",
     "browseArticles": "記事を閲覧",
-    "loadFailed": "ブックマークの読み込みに失敗しました"
+    "loadFailed": "ブックマークの読み込みに失敗しました",
+    "signInToView": "ログインしてブックマークを表示",
+    "saveDescription": "記事のブックマークアイコンをタップして保存",
+    "signIn": "ログイン",
+    "emptyHint": "任意の記事のブックマークアイコンをタップして保存"
   },
   "about": {
     "title": "Tarsier Labs について",
@@ -254,6 +301,7 @@
   },
   "settings": {
     "title": "設定",
+    "appearance": "外観",
     "theme": {
       "name": "テーマ",
       "dark": "ダークモード",
@@ -269,6 +317,36 @@
       "ko": "韓国語",
       "fr": "フランス語",
       "de": "ドイツ語"
+    },
+    "notifications": "通知",
+    "pushNotifications": "プッシュ通知",
+    "data": "データ",
+    "clearCache": {
+      "name": "キャッシュを消去",
+      "confirm": "キャッシュを消去",
+      "message": "ブックマークを含むすべてのキャッシュデータが消去されます。いつでも再ダウンロードできます。",
+      "action": "消去"
+    },
+    "account": "アカウント",
+    "signOut": {
+      "name": "ログアウト",
+      "confirm": "ログアウト",
+      "message": "ログアウトしてもよろしいですか？ブックマークはローカルに保存されます。"
+    },
+    "deleteAccount": {
+      "name": "アカウントを削除",
+      "confirm": "アカウントを削除",
+      "message": "この操作は取り消せません。すべてのデータが完全に削除されます。",
+      "action": "削除"
+    },
+    "info": "情報",
+    "aboutTarsier": "Tarsier について",
+    "privacyPolicy": "プライバシーポリシー",
+    "profile": {
+      "signIn": "ログイン",
+      "subtitle": "ブックマークと設定を同期",
+      "signedInAs": "{{name}} としてログイン中",
+      "signInBadge": "ログイン"
     },
     "logout": {
       "name": "ログアウト",
@@ -304,6 +382,15 @@
       "check": "更新を確認",
       "checking": "確認中...",
       "complete": "更新後、ページは自動的にリフレッシュされます..."
+    }
+  },
+  "archive": {
+    "error": {
+      "loadFailed": "アーカイブの読み込みに失敗しました"
+    },
+    "empty": {
+      "noArchived": "アーカイブされた記事はありません",
+      "description": "記事が公開されるとここに表示されます"
     }
   }
 }

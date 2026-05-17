@@ -1,18 +1,23 @@
 /**
- * TabBar — Custom bottom tab bar with animated indicators
+ * TabBar — Custom bottom tab bar with spring-animated background circle
  *
  * Tabs:
- * 1. Home (house icon)
- * 2. Articles (file-text icon)
- * 3. Categories (grid icon)
- * 4. Profile (user icon)
+ * 1. Home (home icon)
+ * 2. Search (search icon)
+ * 3. Bookmarks (bookmark icon)
+ * 4. About (user icon)
  *
  * Features:
- * - Animated active indicator dot
+ * - Spring-animated active background circle (matches web's framer-motion layoutId)
  * - Badge support (e.g., unread count)
  * - SafeArea-aware for home indicator
  * - Haptic feedback on tab press (iOS)
  * - Theme-aware colors
+ *
+ * Web reference:
+ * - Active tab shows a rounded-full bg-primary/10 circle behind the icon
+ * - Spring animation with stiffness: 500, damping: 30
+ * - Active label has font-medium weight, inactive has normal weight
  */
 import React, { useEffect, useRef } from 'react';
 import {
@@ -24,18 +29,18 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
-import SvgIcon from '../core/SvgIcon';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
+import SvgIcon, { type IconName } from '../core/SvgIcon';
 
 export interface TabItem {
   /** Unique key for the tab */
   key: string;
   /** SVG icon name (from icon set) */
-  icon: string;
+  icon: IconName;
   /** Active SVG icon name (if different) */
-  activeIcon?: string;
+  activeIcon?: IconName;
   /** Label text */
   label: string;
   /** Optional badge count (0 = hidden) */
@@ -51,12 +56,18 @@ interface TabBarProps {
   onTabPress: (key: string) => void;
 }
 
+const SPRING_CONFIG: Animated.SpringAnimationConfig = {
+  toValue: 1,
+  friction: 7,
+  tension: 100,
+  useNativeDriver: true,
+};
+
 const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
 
-  // Animation values for each tab
+  // Animation values for each tab (opacity + scale for background circle)
   const animations = useRef<Record<string, Animated.Value>>({});
 
   // Initialize animation values
@@ -68,21 +79,24 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
     }
   });
 
-  // Animate active tab indicator
+  // Animate active tab indicator with spring
   useEffect(() => {
     tabs.forEach(tab => {
       const anim = animations.current[tab.key];
       if (anim) {
-        Animated.timing(anim, {
+        Animated.spring(anim, {
+          ...SPRING_CONFIG,
           toValue: tab.key === activeTab ? 1 : 0,
-          duration: 200,
-          useNativeDriver: true,
         }).start();
       }
     });
   }, [activeTab, tabs]);
 
   const bottomPadding = Math.max(insets.bottom, 4);
+
+  // Resolve primary color with 10% opacity for the background circle
+  const activeBgColor = colors.primary;
+  const ACTIVE_CIRCLE_SIZE = 40;
 
   return (
     <View
@@ -97,9 +111,21 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
     >
       {tabs.map(tab => {
         const isActive = tab.key === activeTab;
-        const scaleAnim = animations.current[tab.key] || new Animated.Value(0);
+        const animValue = animations.current[tab.key] || new Animated.Value(0);
         const iconColor = isActive ? colors.primary : colors.textSecondary;
         const textColor = isActive ? colors.primary : colors.textSecondary;
+
+        // Interpolate circle opacity: 0 → 0.1 (10% opacity primary)
+        const circleOpacity = animValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 0.12],
+        });
+
+        // Scale the circle: slightly larger when active (1 → 1.05) for spring bounce feel
+        const circleScale = animValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.8, 1],
+        });
 
         return (
           <TouchableOpacity
@@ -112,9 +138,23 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
             accessibilityState={{ selected: isActive }}
           >
             <View style={styles.iconContainer}>
+              {/* Active background circle (web's rounded-full bg-primary/10) */}
+              <Animated.View
+                style={[
+                  styles.activeCircle,
+                  {
+                    width: ACTIVE_CIRCLE_SIZE,
+                    height: ACTIVE_CIRCLE_SIZE,
+                    borderRadius: ACTIVE_CIRCLE_SIZE / 2,
+                    backgroundColor: activeBgColor,
+                    opacity: circleOpacity,
+                    transform: [{ scale: circleScale }],
+                  },
+                ]}
+              />
               <SvgIcon
                 name={isActive && tab.activeIcon ? tab.activeIcon : tab.icon}
-                size={24}
+                size={22}
                 color={iconColor}
               />
               {tab.badge && tab.badge > 0 ? (
@@ -139,19 +179,6 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
             >
               {tab.label}
             </Text>
-            {/* Active indicator dot */}
-            {isActive && (
-              <Animated.View
-                style={[
-                  styles.activeDot,
-                  {
-                    backgroundColor: colors.primary,
-                    opacity: scaleAnim,
-                    transform: [{ scale: scaleAnim }],
-                  },
-                ]}
-              />
-            )}
           </TouchableOpacity>
         );
       })}
@@ -173,15 +200,22 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'relative',
-    marginBottom: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 44,
+    height: 40,
+    marginBottom: 0,
+  },
+  activeCircle: {
+    position: 'absolute',
   },
   label: {
     textAlign: 'center',
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
+    top: -2,
+    right: -6,
     backgroundColor: '#EF4444',
     borderRadius: 8,
     minWidth: 16,
@@ -194,12 +228,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
-  },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 2,
   },
 });
 

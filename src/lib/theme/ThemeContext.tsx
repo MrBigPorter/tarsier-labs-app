@@ -1,52 +1,54 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { useColorScheme } from 'react-native';
-import { colors } from './colors';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { TokensLight, TokensDark, front } from './design_tokens.g';
+import { storage } from '@/lib/storage';
 
 type ThemeMode = 'light' | 'dark';
 
 interface ThemeContextValue {
   mode: ThemeMode;
   isDark: boolean;
-  colors: typeof colors.light;
+  /** Flat map of all color tokens resolved to the current theme mode (backward compat) */
+  colors: Record<string, string>;
   toggleTheme: () => void;
   setTheme: (mode: ThemeMode) => void;
 }
 
-const lightColors = {
-  ...colors,
-  background: colors.white,
-  surface: colors.neutral[50],
-  surfaceVariant: colors.neutral[100],
-  text: colors.neutral[900],
-  textSecondary: colors.neutral[600],
-  textTertiary: colors.neutral[400],
-  border: colors.neutral[200],
-  borderLight: colors.neutral[100],
-  primary: colors.primary[500],
-  primaryDark: colors.primary[700],
-  primaryLight: colors.primary[100],
-};
-
-const darkColors: typeof lightColors = {
-  ...colors,
-  background: colors.neutral[900],
-  surface: colors.neutral[800],
-  surfaceVariant: colors.neutral[700],
-  text: colors.neutral[50],
-  textSecondary: colors.neutral[300],
-  textTertiary: colors.neutral[500],
-  border: colors.neutral[700],
-  borderLight: colors.neutral[800],
-  primary: colors.primary[400],
-  primaryDark: colors.primary[300],
-  primaryLight: colors.primary[900],
-};
-
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+/**
+ * Resolve TokensLight/TokensDark into a flat Record<string, string>.
+ */
+function resolveThemeColors(mode: ThemeMode): Record<string, string> {
+  const source = mode === 'dark' ? TokensDark : TokensLight;
+  const map: Record<string, string> = {};
+  for (const [key, val] of Object.entries(source)) {
+    map[key] = val as string;
+  }
+  // ── Common aliases (backward compat for screens that use legacy keys) ──
+  map.background = map.bgPrimary;
+  map.text = map.textPrimary;
+  map.primary = map.utilityBrand500 ?? map.fgBrandPrimary;
+  map.border = map.borderSecondary;
+  map.surface = map.bgSecondary;
+  return map;
+}
+
+/**
+ * Lightweight ThemeProvider.
+ *
+ * Manages the current theme mode (light/dark).
+ * Theme-dependent color resolution is handled via TokensLight / TokensDark,
+ * exposed through `useFront()` (new API) or `useTheme()` (backward compat).
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme();
-  const [mode, setMode] = useState<ThemeMode>(systemScheme ?? 'light');
+  // Read persisted theme preference from MMKV; default to 'dark' if none saved
+  const savedTheme = storage.getString('theme_mode') as ThemeMode | undefined;
+  const [mode, setMode] = useState<ThemeMode>(savedTheme ?? 'dark');
+
+  // Persist theme preference to MMKV whenever mode changes
+  useEffect(() => {
+    storage.set('theme_mode', mode);
+  }, [mode]);
 
   const toggleTheme = useCallback(() => {
     setMode(prev => (prev === 'light' ? 'dark' : 'light'));
@@ -56,15 +58,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setMode(newMode);
   }, []);
 
+  // Resolve colors whenever mode changes
+  const colors = useMemo(() => resolveThemeColors(mode), [mode]);
+
+
   const value = useMemo<ThemeContextValue>(
     () => ({
       mode,
       isDark: mode === 'dark',
-      colors: mode === 'dark' ? darkColors : lightColors,
+      colors,
       toggleTheme,
       setTheme,
     }),
-    [mode, toggleTheme, setTheme],
+    [mode, colors, toggleTheme, setTheme],
   );
 
   return (
@@ -72,10 +78,50 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Hook to access the current theme mode and resolved color map.
+ * @deprecated Prefer useFront() which separates static tokens from themed colors.
+ */
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return ctx;
+}
+
+/**
+ * The main design-token hook.
+ *
+ * Returns:
+ * - `front` – all static design tokens (spacing, radius, fontSizes, lineHeights, etc.)
+ * - `colors` – all theme-dependent color tokens resolved to the current mode
+ *
+ * Usage:
+ *   const { front, colors } = useFront();
+ *   style={{ gap: front.spacingMd, backgroundColor: colors.bgPrimary }}
+ *
+ * Or with individual destructuring:
+ *   const { front: { spacingMd, textSm }, colors: { textPrimary900 } } = useFront();
+ */
+export function useFront() {
+  const { mode } = useTheme();
+
+  return useMemo(() => {
+    const colors = mode === 'dark' ? TokensDark : TokensLight;
+    return { front, colors };
+  }, [mode]);
+}
+
+/**
+ * Convenience hook returning a flat Record<string, string> of all
+ * theme-dependent color tokens resolved to the current mode.
+ *
+ * Usage:
+ *   const mc = useModeColors();
+ *   // mc.textPrimary900 → '#181d27' (light) or '#f7f7f7' (dark)
+ */
+export function useModeColors(): Record<string, string> {
+  const { mode } = useTheme();
+  return useMemo(() => resolveThemeColors(mode), [mode]);
 }

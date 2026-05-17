@@ -6,6 +6,12 @@ buildscript {
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.1.20"
+
+        // Pre-resolve react-native location so libraries (netinfo, reanimated, etc.)
+        // can skip calling `node` during Gradle configuration.
+        // This avoids "Cannot convert '' to File" errors when the Gradle daemon
+        // doesn't properly inherit PATH for node (common with Volta/nvm on macOS).
+        REACT_NATIVE_NODE_MODULES_DIR = "${projectDir}/../node_modules/react-native"
     }
     repositories {
         google()

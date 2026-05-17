@@ -2,6 +2,14 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Pre-resolve react-native location for libraries (e.g. react-native-reanimated,
+// react-native-keychain) that use safeAppExtGet() to read ext properties from
+// the :app project. This avoids "Cannot convert '' to File" errors when Gradle
+// daemon doesn't inherit PATH for node (common with Volta/nvm on macOS).
+// NOTE: Use rootProject.projectDir here — from the :app project context,
+// projectDir is android/app/, not the repo root.
+ext.REACT_NATIVE_NODE_MODULES_DIR = "${rootProject.projectDir}/../node_modules/react-native"
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -96,6 +104,10 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // Allow Metro dev server HTTP connection (localhost) in debug builds.
+            // Without this, android:usesCleartextTraffic="${usesCleartextTraffic}" in
+            // AndroidManifest.xml is unresolved and Metro bundler connection may fail.
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -103,6 +115,8 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // Disable cleartext traffic in release (HTTPS only).
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
         }
     }
 }

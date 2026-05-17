@@ -30,5 +30,33 @@ target 'FrontendBlogMobile' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Fix: Inject Hermes V1 defines into xcconfig files for React-hermes and React-RuntimeHermes.
+    # These targets are PBXAggregateTargets (no compilation phases) in React-Core-prebuilt setup,
+    # so target-level build settings (even when set in project.pbxproj) don't propagate to
+    # compilation units that include Registration.h transitively.
+    # Without HERMES_V1_ENABLED=1, Registration.h's guard fails and it tries to include
+    # hermes/inspector/RuntimeAdapter.h which doesn't exist in Hermes V1 prebuilt.
+    # We patch the xcconfig files directly since aggregate targets ignore pbxproj-level settings.
+    hermes_targets = ['React-hermes', 'React-RuntimeHermes']
+    hermes_targets.each do |target_name|
+      ['Debug', 'Release'].each do |config_name|
+        xcconfig_path = File.join(installer.sandbox.root, 'Target Support Files', target_name, "#{target_name}.#{config_name.downcase}.xcconfig")
+        if File.exist?(xcconfig_path)
+          xcconfig_content = File.read(xcconfig_path)
+          unless xcconfig_content.include?('HERMES_V1_ENABLED')
+            # Append both HERMES_ENABLE_DEBUGGER=1 and HERMES_V1_ENABLED=1 to the first line
+            xcconfig_content.gsub!(
+              /(GCC_PREPROCESSOR_DEFINITIONS = .*)$/,
+              "\\1 HERMES_ENABLE_DEBUGGER=1 HERMES_V1_ENABLED=1"
+            )
+            File.write(xcconfig_path, xcconfig_content)
+            Pod::UI.puts "  [Hermes V1 Fix] Patched #{target_name} (#{config_name}) xcconfig".green
+          else
+            Pod::UI.puts "  [Hermes V1 Fix] Already patched #{target_name} (#{config_name}) xcconfig".yellow
+          end
+        end
+      end
+    end
   end
 end

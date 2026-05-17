@@ -193,3 +193,4 @@ cd android && ./gradlew assembleRelease
 ## 📄 License
 
 Copyright © 2024 Tarsier Labs. All rights reserved.
+# tarsier-labs-app

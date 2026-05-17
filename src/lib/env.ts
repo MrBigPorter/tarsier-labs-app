@@ -16,6 +16,7 @@
 
 interface EnvConfig {
   API_URL: string;
+  WEB_URL: string;
   SENTRY_DSN: string;
   DEFAULT_LOCALE: string;
   ENABLE_ANALYTICS: boolean;
@@ -28,6 +29,7 @@ interface EnvConfig {
 
 const DEV_CONFIG: EnvConfig = {
   API_URL: 'https://dev-api.joyminis.com',
+  WEB_URL: 'https://blog-dev.joyminis.com',
   SENTRY_DSN: '',
   DEFAULT_LOCALE: 'en',
   ENABLE_ANALYTICS: false,
@@ -38,6 +40,7 @@ const DEV_CONFIG: EnvConfig = {
 
 const PROD_CONFIG: EnvConfig = {
   API_URL: 'https://api.joyminis.com',
+  WEB_URL: 'https://blog.joyminis.com',
   SENTRY_DSN: '',
   DEFAULT_LOCALE: 'en',
   ENABLE_ANALYTICS: true,
@@ -74,6 +77,9 @@ export const env = {
   /** API base URL (without trailing slash), e.g. http://localhost:3001 or https://api.tarsier.app */
   API_URL: config.API_URL,
 
+  /** Web frontend URL (without trailing slash), used for sharing links and deep linking */
+  WEB_URL: config.WEB_URL,
+
   /** Sentry DSN (optional) */
   SENTRY_DSN: config.SENTRY_DSN,
 
@@ -107,8 +113,7 @@ export const isDev = isDevMode();
 /** Check if running in production build */
 export const isProd = !isDevMode();
 
-/** Get the normalized API base URL (ensures trailing slash) */
+/** Get the API base URL (no trailing slash — fetchBaseQuery concatenates correctly without one) */
 export function getApiBaseUrl(): string {
-  const url = env.API_URL;
-  return url.endsWith('/') ? url : `${url}/`;
+  return env.API_URL;
 }

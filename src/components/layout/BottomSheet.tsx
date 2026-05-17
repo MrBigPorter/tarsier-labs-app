@@ -34,9 +34,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
 
 interface BottomSheetProps {
   /** Whether the sheet is visible */
@@ -81,8 +81,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   scrollable = false,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors, isDark } = useTheme();
 
   // Calculate sheet height
   const calculatedHeight = Math.min(
@@ -201,7 +200,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         style={[
           styles.backdrop,
           {
-            backgroundColor: theme.dark
+            backgroundColor: isDark
               ? 'rgba(0,0,0,0.6)'
               : 'rgba(0,0,0,0.4)',
             opacity: backdropOpacity,
@@ -302,7 +301,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   sheet: {
     position: 'absolute',

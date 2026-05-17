@@ -28,16 +28,14 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useGetArticlesQuery } from '../api/endpoints/articles';
-import { useGetCategoriesQuery } from '../api/endpoints/categories';
-import { useGetTagsQuery } from '../api/endpoints/tags';
-import Header from '../components/layout/Header';
-import EmptyState from '../components/core/EmptyState';
-import SvgIcon from '../components/core/SvgIcon';
-import type { ProfileTabScreenProps } from '../navigation/types';
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useGetArticlesQuery } from '@/api/endpoints/articles';
+import { useGetCategoriesQuery } from '@/api/endpoints/categories';
+import { useGetTagsQuery } from '@/api/endpoints/tags';
+import Header from '@/components/layout/Header';
+import { EmptyState } from '@/components/core/EmptyState';
+import SvgIcon from '@/components/core/SvgIcon';
+import type { RootStackScreenProps } from '@/navigation/types';
 
 interface StatCard {
   icon: string;
@@ -55,12 +53,11 @@ const STAT_CARD_COLORS = [
   '#EC4899', // pink - likes
 ];
 
-const StatsScreen: React.FC<ProfileTabScreenProps<'Stats'>> = ({
+const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
 
   // Fetch all data in parallel
   const { data: articlesData, isLoading: articlesLoading } =
@@ -131,7 +128,7 @@ const StatsScreen: React.FC<ProfileTabScreenProps<'Stats'>> = ({
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Statistics" showBack />
+        <Header title="Statistics" showBack hideSearch hideSettings />
         <View style={styles.loadingContainer}>
           {[1, 2, 3, 4, 5, 6].map(i => (
             <View
@@ -151,7 +148,7 @@ const StatsScreen: React.FC<ProfileTabScreenProps<'Stats'>> = ({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Statistics" showBack />
+      <Header title="Statistics" showBack hideSearch hideSettings />
 
       <ScrollView
         contentContainerStyle={[

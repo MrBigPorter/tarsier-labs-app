@@ -49,7 +49,7 @@ function getQualityFromNetInfo(state: NetInfoState): Omit<
       };
     case 'cellular': {
       const cellularGeneration = state.details?.cellularGeneration;
-      if (cellularGeneration === 4 || cellularGeneration === 5) {
+      if (cellularGeneration === '4g' || cellularGeneration === '5g') {
         return {
           quality: 75,
           imageFormat: 'webp',
@@ -59,7 +59,7 @@ function getQualityFromNetInfo(state: NetInfoState): Omit<
           isConnected: true,
         };
       }
-      if (cellularGeneration === 3) {
+      if (cellularGeneration === '3g') {
         return {
           quality: 45,
           imageFormat: 'webp',

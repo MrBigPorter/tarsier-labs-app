@@ -27,27 +27,29 @@ import {
   Text,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useGetArticlesQuery } from '../api/endpoints/articles';
-import ArticleCard from '../components/blog/ArticleCard';
-import Header from '../components/layout/Header';
-import { ArticleListSkeleton } from '../components/core/Skeleton';
-import EmptyState from '../components/core/EmptyState';
-import type { ArticlesTabScreenProps } from '../navigation/types';
-import type { FrontendArticle } from '../types/frontend-blog';
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useGetArticlesQuery } from '@/api/endpoints/articles';
+import { useCurrentLanguage } from '@/lib/i18n';
+import { useTranslation } from 'react-i18next';
+import { ArticleCard } from '@/components/blog/ArticleCard';
+import Header from '@/components/layout/Header';
+import { ArticleListSkeleton } from '@/components/core/Skeleton';
+import { EmptyState } from '@/components/core/EmptyState';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import type { HomeTabScreenProps } from '@/navigation/types';
+import type { FrontendArticle } from '@/types/frontend-blog';
 
 type SortOption = 'newest' | 'popular' | 'trending';
 
 const PAGE_SIZE = 15;
 
 const ArticleListScreen: React.FC<
-  ArticlesTabScreenProps<'ArticleList'>
+  HomeTabScreenProps<'ArticleList'>
 > = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const lang = useCurrentLanguage();
 
   // Extract route params
   const categorySlug = route.params?.categorySlug;
@@ -71,6 +73,7 @@ const ArticleListScreen: React.FC<
     pageSize: PAGE_SIZE,
     categoryId: categorySlug,
     tagId: tagSlug,
+    lang,
   });
 
   // Accumulate articles across pages for infinite scroll
@@ -161,38 +164,35 @@ const ArticleListScreen: React.FC<
       return (
         <EmptyState
           icon="alert-circle"
-          title="Failed to load articles"
-          description="Pull down to retry loading"
-          primaryAction={{ label: 'Retry', onPress: handleRefresh }}
+          title={t('article.error.loadFailed')}
+          description={t('article.error.pullDownToRetry')}
+          primaryAction={{ label: t('common.retry'), onPress: handleRefresh }}
         />
       );
     }
 
     if (categorySlug) {
       return (
-        <EmptyState
-          icon="file-text"
-          title="No articles in this category"
-          description="Check back later for new content"
+        <EmptyLogoContent
+          title={t('categories.emptyArticles')}
+          description={t('common.checkBackLater')}
         />
       );
     }
 
     if (tagSlug) {
       return (
-        <EmptyState
-          icon="file-text"
-          title="No articles with this tag"
-          description="Check back later for new content"
+        <EmptyLogoContent
+          title={t('tags.emptyArticles')}
+          description={t('common.checkBackLater')}
         />
       );
     }
 
     return (
-      <EmptyState
-        icon="file-text"
-        title="No articles yet"
-        description="Check back later for new content"
+      <EmptyLogoContent
+        title={t('home.empty')}
+        description={t('common.checkBackLater')}
       />
     );
   };
@@ -201,8 +201,8 @@ const ArticleListScreen: React.FC<
 
   if (isLoading && page === 1) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title={title} />
+      <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+        <Header title={title} hideSearch hideSettings />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={6} />
         </View>
@@ -213,8 +213,8 @@ const ArticleListScreen: React.FC<
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title={title} />
+    <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+      <Header title={title} hideSearch hideSettings />
 
       <FlatList
         data={allArticles}

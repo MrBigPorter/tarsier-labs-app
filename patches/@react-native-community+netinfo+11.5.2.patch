@@ -1,0 +1,20 @@
+diff --git a/node_modules/@react-native-community/netinfo/android/build.gradle b/node_modules/@react-native-community/netinfo/android/build.gradle
+index d5fda29..1a3e6b5 100644
+--- a/node_modules/@react-native-community/netinfo/android/build.gradle
++++ b/node_modules/@react-native-community/netinfo/android/build.gradle
+@@ -117,8 +117,13 @@ repositories {
+   maven {
+     // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+ 
+-    // Use node resolver to locate react-native package
+-    def reactNativePackage = file(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim())
++    // Use node resolver to locate react-native package (with proper env inheritance)
++    def reactNativePackage = file(
++            providers.exec {
++                workingDir(rootDir)
++                commandLine("node", "--print", "require.resolve('react-native/package.json')")
++            }.standardOutput.asText.get().trim()
++    )
+     if (reactNativePackage.exists()) {
+       url "$reactNativePackage.parentFile/android"
+     }

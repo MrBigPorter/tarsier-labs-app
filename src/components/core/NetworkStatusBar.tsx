@@ -6,12 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
-import { useAppSelector, useAppDispatch } from '../../store';
-import { setOnlineStatus } from '../../store/slices/uiSlice';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
-import { logger } from '../../lib/logger';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { setOnlineStatus } from '@/store/slices/uiSlice';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
+import { logger } from '@/lib/logger';
 
 // @react-native-community/netinfo provides network state detection
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
@@ -107,15 +107,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
-    paddingTop: spacing[2],
-    paddingBottom: spacing[2],
-    paddingHorizontal: spacing[4],
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing[2],
+    gap: spacing.sm,
   },
   icon: {
     fontSize: 14,
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   refreshButton: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
   },
   refreshText: {

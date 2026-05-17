@@ -1,70 +1,109 @@
 import { TextStyle } from 'react-native';
 
 /**
- * Typography scale based on BLOG_DESIGN_GUIDELINES.md
+ * Typography system backed by generated Design Tokens from design_tokens.g.ts.
+ *
+ * Uses generated font sizes, line heights, and font families while
+ * keeping the backward-compatible TextStyle objects.
+ */
+
+import { front } from './design_tokens.g';
+
+/**
+ * Typography scale — TextStyle objects built from generated tokens.
  */
 export const typography: Record<string, TextStyle> = {
   display: {
-    fontFamily: undefined, // Use system default (SF Pro on iOS, Roboto on Android)
-    fontSize: 36,
+    fontFamily: front.fontFamilyDisplay,
+    fontSize: front.displayMd,
     fontWeight: '700',
-    lineHeight: 44,
+    lineHeight: front.leadingDisplayMd,
     letterSpacing: -0.5,
   },
   h1: {
-    fontSize: 28,
+    fontFamily: front.fontFamilyDisplay,
+    fontSize: front.displayXs,
     fontWeight: '700',
-    lineHeight: 36,
+    lineHeight: front.leadingDisplayXs,
     letterSpacing: -0.3,
   },
   h2: {
-    fontSize: 24,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.displayXs,
     fontWeight: '600',
-    lineHeight: 32,
+    lineHeight: front.leadingDisplayXs,
     letterSpacing: -0.2,
   },
   h3: {
-    fontSize: 20,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textXl,
     fontWeight: '600',
-    lineHeight: 28,
+    lineHeight: front.leadingXl,
   },
   h4: {
-    fontSize: 18,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textLg,
     fontWeight: '600',
-    lineHeight: 26,
+    lineHeight: front.leadingLg,
   },
   h5: {
-    fontSize: 16,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textMd,
     fontWeight: '600',
-    lineHeight: 24,
+    lineHeight: front.leadingMd,
   },
   base: {
-    fontSize: 15,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textSm,
     fontWeight: '400',
-    lineHeight: 22,
+    lineHeight: front.leadingSm,
   },
   small: {
-    fontSize: 13,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textXs,
     fontWeight: '400',
-    lineHeight: 18,
+    lineHeight: front.leadingXs,
   },
   xs: {
-    fontSize: 11,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.text2xs,
     fontWeight: '400',
-    lineHeight: 16,
+    lineHeight: front.leading2xs,
   },
   label: {
-    fontSize: 12,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.text2xs,
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: front.leading2xs,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   caption: {
-    fontSize: 12,
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.text2xs,
     fontWeight: '400',
-    lineHeight: 16,
+    lineHeight: front.leading2xs,
     color: '#64748b',
+  },
+
+  // ── Backward-compatible aliases ──────────────────────────
+  body: {
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textSm,
+    fontWeight: '400',
+    lineHeight: front.leadingSm,
+  },
+  body2: {
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textXs,
+    fontWeight: '400',
+    lineHeight: front.leadingXs,
+  },
+  subtitle2: {
+    fontFamily: front.fontFamilyBody,
+    fontSize: front.textMd,
+    fontWeight: '600',
+    lineHeight: front.leadingMd,
   },
 };
 

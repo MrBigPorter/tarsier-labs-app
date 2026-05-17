@@ -1,3 +1,5 @@
+import { env } from '@/lib/env';
+
 const LOG_PREFIX = '[Tarsier]';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -9,7 +11,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   error: 3,
 };
 
-const currentLevel: LogLevel = __DEV__ ? 'debug' : 'warn';
+const currentLevel: LogLevel = env.LOG_LEVEL;
 
 function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS[level] >= LOG_LEVELS[currentLevel];

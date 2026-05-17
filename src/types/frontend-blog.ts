@@ -90,6 +90,10 @@ export interface FrontendCategory {
   description: string;
   coverImage: string;
   articleCount: number;
+  /** Optional color accent (hex code) */
+  color?: string;
+  /** Optional icon emoji or icon name */
+  icon?: string;
 }
 
 /**
@@ -100,6 +104,8 @@ export interface FrontendTag {
   name: string;
   slug: string;
   articleCount: number;
+  /** Optional color accent (hex code) */
+  color?: string;
 }
 
 /**
@@ -111,6 +117,7 @@ export interface FrontendCategoryWithArticles extends FrontendCategory {
     total: number;
     page: number;
     pageSize: number;
+    totalPages: number;
   };
 }
 
@@ -123,6 +130,7 @@ export interface FrontendTagWithArticles extends FrontendTag {
     total: number;
     page: number;
     pageSize: number;
+    totalPages: number;
   };
 }
 

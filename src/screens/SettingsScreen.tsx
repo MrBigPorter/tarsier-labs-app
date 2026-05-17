@@ -1,20 +1,18 @@
 /**
- * SettingsScreen — App settings
+ * SettingsScreen — App settings (Premium Redesign with i18n)
  *
  * Sections:
- * 1. Appearance (theme toggle, language selection)
- * 2. Reading (font size, line spacing)
- * 3. Notifications (push notification toggles)
- * 4. Data (clear cache, export data)
- * 5. Account (sign out, delete account)
- * 6. About link
+ * 1. Profile Header (user avatar, name, email or sign-in prompt)
+ * 2. Appearance (theme toggle, language selection)
+ * 3. Reading (font size, line spacing)
+ * 4. Notifications (push notification toggles)
+ * 5. Data (clear cache, export data)
+ * 6. Account (sign out, delete account) — with destructive styling
+ * 7. Info (about, privacy policy)
  *
- * Each setting item is a row with label, value, and action.
- * Uses BottomSheet for selection (language, theme).
- *
- * Edge cases:
- * - Not logged in: hide account section items
- * - Confirm dialog for destructive actions (clear cache, sign out)
+ * Design tokens: uses the full design_tokens.g.ts system.
+ * Brand accent: utilityBrand500 (#d68a29 gold).
+ * i18n: fully translated via react-i18next (6 languages).
  */
 import React, { useCallback, useState, useEffect } from 'react';
 import {
@@ -28,18 +26,26 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { storage } from '../lib/storage';
-import { useAppSelector, useAppDispatch } from '../store';
-import { logout } from '../store/slices/authSlice';
-import { clearCache } from '../store/slices/bookmarksSlice';
-import { changeLanguage, getCurrentLanguage } from '../lib/i18n';
-import Header from '../components/layout/Header';
-import BottomSheet from '../components/layout/BottomSheet';
-import SvgIcon from '../components/core/SvgIcon';
-import type { ProfileTabScreenProps } from '../navigation/types';
+import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { useTheme, spacing, borderRadius } from '@/lib/theme';
+import { front, TokensLight } from '@/lib/theme/design_tokens.g';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { logout } from '@/store/slices/authSlice';
+import { changeLanguage, getCurrentLanguage } from '@/lib/i18n';
+import { clearAppCache } from '@/lib/cache/clearAppCache';
+import Header from '@/components/layout/Header';
+import BottomSheet from '@/components/layout/BottomSheet';
+import SvgIcon from '@/components/core/SvgIcon';
+import type { RootStackScreenProps } from '@/navigation/types';
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const APP_VERSION = '1.0.0';
+const ICON_CIRCLE_SIZE = 36;
+const PROFILE_AVATAR_SIZE = 56;
+
+type SettingRowKind = 'navigation' | 'toggle' | 'destructive' | 'display';
 
 interface SettingRowProps {
   icon: string;
@@ -48,8 +54,155 @@ interface SettingRowProps {
   onPress?: () => void;
   rightElement?: React.ReactNode;
   destructive?: boolean;
+  kind?: SettingRowKind;
 }
 
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+/**
+ * ProfileHeaderCard — top card showing user avatar + name + email,
+ * or a sign-in prompt when not authenticated.
+ */
+const ProfileHeaderCard: React.FC = () => {
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const navigation = useNavigation<any>();
+  const user = useAppSelector(state => state.auth.user);
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
+
+  const handleSignIn = useCallback(() => {
+    navigation.navigate('Auth');
+  }, [navigation]);
+
+  const initial = user?.nickname?.charAt(0)?.toUpperCase() || '?';
+
+  return (
+    <TouchableOpacity
+      activeOpacity={isAuthenticated ? 0.7 : 0.6}
+      onPress={isAuthenticated ? undefined : handleSignIn}
+      style={[
+        styles.profileCard,
+        {
+          backgroundColor: colors.bgPrimary,
+          borderLeftColor: colors.utilityBrand500 ?? TokensLight.utilityBrand500,
+        },
+        Platform.select({
+          ios: {
+            shadowColor: colors.utilityBrand500 ?? TokensLight.utilityBrand500,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+          },
+          android: {
+            elevation: 3,
+          },
+        }),
+      ]}
+    >
+      {isAuthenticated && user ? (
+        <>
+          <View
+            style={[
+              styles.profileAvatar,
+              {
+                backgroundColor: colors.bgBrandPrimary,
+                borderColor: colors.utilityBrand200 ?? TokensLight.utilityBrand200,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.profileAvatarText,
+                { color: colors.utilityBrand600 ?? TokensLight.utilityBrand600 },
+              ]}
+            >
+              {initial}
+            </Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text
+              style={[
+                styles.profileName,
+                { color: colors.textPrimary },
+              ]}
+              numberOfLines={1}
+            >
+              {user.nickname}
+            </Text>
+            <Text
+              style={[
+                styles.profileEmail,
+                { color: colors.textSecondary },
+              ]}
+              numberOfLines={1}
+            >
+              {user.email}
+            </Text>
+          </View>
+          <SvgIcon
+            name="chevron-right"
+            size={18}
+            color={colors.textQuaternary ?? TokensLight.textQuaternary}
+          />
+        </>
+      ) : (
+        <>
+          <View
+            style={[
+              styles.profileAvatar,
+              {
+                backgroundColor: colors.bgSecondary,
+                borderColor: colors.borderSecondary,
+              },
+            ]}
+          >
+            <SvgIcon
+              name="user"
+              size={24}
+              color={colors.textSecondary}
+            />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text
+              style={[
+                styles.profileName,
+                { color: colors.textPrimary },
+              ]}
+            >
+              {t('settings.profile.signIn')}
+            </Text>
+            <Text
+              style={[
+                styles.profileEmail,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {t('settings.profile.subtitle')}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.signInBadge,
+              { backgroundColor: colors.bgBrandSolid ?? TokensLight.bgBrandSolid },
+            ]}
+          >
+            <Text style={styles.signInBadgeText}>{t('settings.profile.signInBadge')}</Text>
+          </View>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+/**
+ * SettingRow — individual setting item with icon-in-circle design.
+ *
+ * Three visual kinds:
+ * - navigation: grey icon circle + chevron right
+ * - toggle: brand-tinted icon circle + Switch
+ * - destructive: error-tinted icon circle + red label
+ * - display: grey icon circle, no right action (info row)
+ */
 const SettingRow: React.FC<SettingRowProps> = ({
   icon,
   label,
@@ -57,44 +210,84 @@ const SettingRow: React.FC<SettingRowProps> = ({
   onPress,
   rightElement,
   destructive = false,
+  kind = 'navigation',
 }) => {
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+
+  const resolvedKind: SettingRowKind = destructive
+    ? 'destructive'
+    : rightElement
+      ? 'toggle'
+      : kind;
+
+  // Determine icon circle background color
+  const iconBgColor =
+    resolvedKind === 'destructive'
+      ? colors.bgErrorSecondary ?? '#fee4e2'
+      : resolvedKind === 'toggle'
+        ? colors.bgBrandPrimary ?? '#fbf7eb'
+        : colors.bgSecondary;
+
+  // Determine icon color
+  const iconColor =
+    resolvedKind === 'destructive'
+      ? colors.textErrorPrimary ?? '#d92d20'
+      : colors.utilityBrand500 ?? colors.primary;
+
+  // Determine label color
+  const labelColor =
+    resolvedKind === 'destructive'
+      ? colors.textErrorPrimary ?? '#d92d20'
+      : colors.textPrimary;
+
+  const isDisabled = !onPress && !rightElement;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      disabled={!onPress && !rightElement}
+      disabled={isDisabled}
       style={[
         styles.settingRow,
-        { borderBottomColor: colors.border },
+        { borderBottomColor: colors.borderSecondary },
       ]}
       activeOpacity={onPress ? 0.6 : 1}
     >
-      <View style={styles.settingLeft}>
+      {/* Icon circle */}
+      <View
+        style={[
+          styles.iconCircle,
+          { backgroundColor: iconBgColor },
+        ]}
+      >
         <SvgIcon
           name={icon as any}
-          size={20}
-          color={destructive ? '#EF4444' : colors.textSecondary}
+          size={18}
+          color={iconColor}
         />
+      </View>
+
+      {/* Label */}
+      <View style={styles.settingLabelContainer}>
         <Text
           style={[
             styles.settingLabel,
-            {
-              color: destructive ? '#EF4444' : colors.text,
-            },
+            { color: labelColor },
           ]}
+          numberOfLines={1}
         >
           {label}
         </Text>
       </View>
+
+      {/* Right side: value / switch / chevron */}
       <View style={styles.settingRight}>
         {value && (
           <Text
             style={[
               styles.settingValue,
-              { color: colors.textSecondary },
+              { color: colors.textTertiary ?? colors.textSecondary },
             ]}
+            numberOfLines={1}
           >
             {value}
           </Text>
@@ -103,8 +296,8 @@ const SettingRow: React.FC<SettingRowProps> = ({
         {onPress && !rightElement && (
           <SvgIcon
             name="chevron-right"
-            size={16}
-            color={colors.textSecondary}
+            size={18}
+            color={colors.textQuaternary ?? colors.textSecondary}
           />
         )}
       </View>
@@ -112,25 +305,75 @@ const SettingRow: React.FC<SettingRowProps> = ({
   );
 };
 
+/**
+ * SectionHeader — section label with left brand accent bar.
+ */
 interface SectionHeaderProps {
   title: string;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({ title }) => {
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
 
   return (
-    <Text
-      style={[
-        styles.sectionHeader,
-        { color: colors.textSecondary },
-      ]}
-    >
-      {title.toUpperCase()}
-    </Text>
+    <View style={styles.sectionHeaderRow}>
+      <View
+        style={[
+          styles.sectionHeaderAccent,
+          { backgroundColor: colors.utilityBrand500 ?? TokensLight.utilityBrand500 },
+        ]}
+      />
+      <Text
+        style={[
+          styles.sectionHeaderText,
+          { color: colors.textTertiary ?? colors.textSecondary },
+        ]}
+      >
+        {title.toUpperCase()}
+      </Text>
+    </View>
   );
 };
+
+/**
+ * SectionCard — wraps a group of SettingRows.
+ * Can take a `destructive` prop to add red left accent border.
+ */
+const SectionCard: React.FC<{
+  children: React.ReactNode;
+  destructive?: boolean;
+}> = ({ children, destructive = false }) => {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.section,
+        {
+          backgroundColor: colors.bgPrimary,
+          borderLeftColor: destructive
+            ? colors.textErrorPrimary ?? '#d92d20'
+            : 'transparent',
+        },
+        Platform.select({
+          ios: {
+            shadowColor: destructive ? '#d92d20' : '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: destructive ? 0.06 : 0.05,
+            shadowRadius: 6,
+          },
+          android: {
+            elevation: destructive ? 4 : 2,
+          },
+        }),
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
+
+// ─── Language options ───────────────────────────────────────────────────────
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -141,12 +384,14 @@ const LANGUAGES = [
   { code: 'de', label: 'Deutsch' },
 ];
 
-const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
+// ─── Main Screen ────────────────────────────────────────────────────────────
+
+const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme, toggleTheme } = useTheme();
-  const colors = theme.colors;
+  const { colors, isDark, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
 
   const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
@@ -165,45 +410,44 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
 
   const handleClearCache = useCallback(() => {
     Alert.alert(
-      'Clear Cache',
-      'This will clear all cached data including bookmarks. You can re-download it anytime.',
+      t('settings.clearCache.confirm'),
+      t('settings.clearCache.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('settings.clearCache.action'),
           style: 'destructive',
           onPress: () => {
-            storage.clearAll?.();
-            dispatch(clearCache());
+            clearAppCache();
           },
         },
       ],
     );
-  }, [dispatch]);
+  }, [t]);
 
   const handleSignOut = useCallback(() => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out? Your bookmarks will be saved locally.',
+      t('settings.signOut.confirm'),
+      t('settings.signOut.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: t('settings.signOut.name'),
           style: 'destructive',
           onPress: () => dispatch(logout()),
         },
       ],
     );
-  }, [dispatch]);
+  }, [dispatch, t]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
-      'Delete Account',
-      'This action is irreversible. All your data will be permanently deleted.',
+      t('settings.deleteAccount.confirm'),
+      t('settings.deleteAccount.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('settings.deleteAccount.action'),
           style: 'destructive',
           onPress: () => {
             // TODO: API call to delete account
@@ -212,7 +456,7 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
         },
       ],
     );
-  }, [dispatch]);
+  }, [dispatch, t]);
 
   const handleLanguageSelect = useCallback(
     (langCode: string) => {
@@ -225,7 +469,7 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
 
   const handleNavigateTo = useCallback(
     (screen: string) => {
-      (navigation.getParent() as any)?.navigate(screen);
+      (navigation as any).navigate(screen);
     },
     [navigation],
   );
@@ -233,8 +477,8 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Settings" showBack />
+    <View style={[styles.container, { backgroundColor: colors.bgMobilePrimary ?? colors.background }]}>
+      <Header title={t('settings.title')} showBack hideSearch hideSettings />
 
       <ScrollView
         contentContainerStyle={[
@@ -243,118 +487,131 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── Appearance ──────────────────────────────────────────── */}
-        <SectionHeader title="Appearance" />
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        {/* ─── Profile Header ───────────────────────────────────────── */}
+        <ProfileHeaderCard />
+
+        {/* ─── Appearance ───────────────────────────────────────────── */}
+        <SectionHeader title={t('settings.appearance')} />
+        <SectionCard>
           <SettingRow
-            icon={theme.isDark ? 'moon' : 'sun'}
-            label="Dark Mode"
+            icon={isDark ? 'moon' : 'sun'}
+            label={t('settings.theme.dark')}
+            kind="toggle"
             rightElement={
               <Switch
-                value={theme.isDark}
+                value={isDark}
                 onValueChange={toggleTheme}
                 trackColor={{
-                  false: colors.border,
-                  true: colors.primary + '60',
+                  false: colors.borderSecondary,
+                  true: (colors.utilityBrand500 ?? TokensLight.utilityBrand500) + 'CC',
                 }}
-                thumbColor={theme.isDark ? colors.primary : '#f4f3f4'}
+                thumbColor={isDark ? (colors.utilityBrand500 ?? TokensLight.utilityBrand500) : '#f4f3f4'}
+                ios_backgroundColor={colors.borderSecondary}
               />
             }
           />
           <SettingRow
             icon="globe"
-            label="Language"
-            value={LANGUAGES.find(l => l.code === currentLang)?.label || 'English'}
+            label={t('settings.language.name')}
+            value={t(`settings.language.${currentLang}` as any, { defaultValue: 'English' })}
             onPress={() => setShowLanguageSheet(true)}
           />
-        </View>
+        </SectionCard>
 
-        {/* ─── Reading ─────────────────────────────────────────────── */}
-        <SectionHeader title="Reading" />
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <SettingRow
-            icon="file-text"
-            label="Font Size"
-            value="Default"
-          />
-        </View>
-
-        {/* ─── Notifications ───────────────────────────────────────── */}
-        <SectionHeader title="Notifications" />
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        {/* ─── Notifications ────────────────────────────────────────── */}
+        <SectionHeader title={t('settings.notifications')} />
+        <SectionCard>
           <SettingRow
             icon="bell"
-            label="Push Notifications"
+            label={t('settings.pushNotifications')}
+            kind="toggle"
             rightElement={
               <Switch
                 value={false}
                 trackColor={{
-                  false: colors.border,
-                  true: colors.primary + '60',
+                  false: colors.borderSecondary,
+                  true: (colors.utilityBrand500 ?? TokensLight.utilityBrand500) + 'CC',
                 }}
-                thumbColor={colors.primary}
+                thumbColor={colors.utilityBrand500 ?? TokensLight.utilityBrand500}
+                ios_backgroundColor={colors.borderSecondary}
               />
             }
           />
-        </View>
+        </SectionCard>
 
-        {/* ─── Data ────────────────────────────────────────────────── */}
-        <SectionHeader title="Data" />
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        {/* ─── Data ─────────────────────────────────────────────────── */}
+        <SectionHeader title={t('settings.data')} />
+        <SectionCard>
           <SettingRow
             icon="refresh-cw"
-            label="Clear Cache"
+            label={t('settings.clearCache.name')}
             onPress={handleClearCache}
           />
-        </View>
+        </SectionCard>
 
-        {/* ─── Account ─────────────────────────────────────────────── */}
+        {/* ─── Account ──────────────────────────────────────────────── */}
         {isAuthenticated && (
           <>
-            <SectionHeader title="Account" />
-            <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <SectionHeader title={t('settings.account')} />
+            <SectionCard destructive>
               {user && (
                 <SettingRow
                   icon="user"
-                  label={`Signed in as ${user.nickname}`}
+                  label={t('settings.profile.signedInAs', { name: user.nickname })}
                   value={user.email}
+                  kind="display"
                 />
               )}
               <SettingRow
                 icon="x"
-                label="Sign Out"
+                label={t('settings.signOut.name')}
                 onPress={handleSignOut}
                 destructive
               />
               <SettingRow
                 icon="alert-circle"
-                label="Delete Account"
+                label={t('settings.deleteAccount.name')}
                 onPress={handleDeleteAccount}
                 destructive
               />
-            </View>
+            </SectionCard>
           </>
         )}
 
-        {/* ─── Info ────────────────────────────────────────────────── */}
-        <SectionHeader title="Info" />
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        {/* ─── Info ─────────────────────────────────────────────────── */}
+        <SectionHeader title={t('settings.info')} />
+        <SectionCard>
           <SettingRow
             icon="info"
-            label="About Tarsier"
-            onPress={() => handleNavigateTo('About')}
+            label={t('settings.aboutTarsier')}
+            onPress={() =>
+              (navigation as any).navigate('MainTabs', {
+                screen: 'AboutTab',
+                params: { screen: 'About' },
+              })
+            }
           />
           <SettingRow
             icon="external-link"
-            label="Privacy Policy"
-            onPress={() => {
-              // TODO: Open privacy policy URL
-            }}
+            label={t('settings.privacyPolicy')}
+            onPress={() => (navigation as any).navigate('PrivacyPolicy')}
           />
+        </SectionCard>
+
+        {/* ─── Footer ───────────────────────────────────────────────── */}
+        <View style={styles.footer}>
+          <Text
+            style={[
+              styles.footerText,
+              { color: colors.textQuaternary ?? colors.textDisabled },
+            ]}
+          >
+            {t('settings.version')}
+          </Text>
         </View>
       </ScrollView>
 
-      {/* ─── Language Bottom Sheet ─────────────────────────────────── */}
+      {/* ─── Language Bottom Sheet ──────────────────────────────────── */}
       <BottomSheet
         visible={showLanguageSheet}
         onClose={() => setShowLanguageSheet(false)}
@@ -369,26 +626,42 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
               onPress={() => handleLanguageSelect(lang.code)}
               style={[
                 styles.langItem,
-                { borderBottomColor: colors.border },
+                {
+                  borderBottomColor: colors.borderSecondary,
+                  backgroundColor: isSelected
+                    ? (colors.bgBrandPrimary ?? '#fbf7eb')
+                    : 'transparent',
+                },
               ]}
             >
-              <Text
-                style={[
-                  styles.langText,
-                  {
-                    color: isSelected ? colors.primary : colors.text,
-                    fontWeight: isSelected ? '600' : '400',
-                  },
-                ]}
-              >
-                {lang.label}
-              </Text>
+              <View style={styles.langItemLeft}>
+                <Text
+                  style={[
+                    styles.langText,
+                    {
+                      color: isSelected
+                        ? (colors.utilityBrand600 ?? '#ba6b20')
+                        : colors.textPrimary,
+                      fontWeight: isSelected ? '600' : '400',
+                    },
+                  ]}
+                >
+                  {lang.label}
+                </Text>
+              </View>
               {isSelected && (
-                <SvgIcon
-                  name="check"
-                  size={20}
-                  color={colors.primary}
-                />
+                <View
+                  style={[
+                    styles.langCheckCircle,
+                    { backgroundColor: colors.bgBrandSolid ?? '#d68a29' },
+                  ]}
+                >
+                  <SvgIcon
+                    name="check"
+                    size={14}
+                    color="#ffffff"
+                  />
+                </View>
               )}
             </TouchableOpacity>
           );
@@ -398,72 +671,170 @@ const SettingsScreen: React.FC<ProfileTabScreenProps<'Settings'>> = ({
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.sm,
   },
-  section: {
-    marginHorizontal: spacing.lg,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+
+  // ── Profile Card ────────────────────────────────────
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl ?? 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#d68a29',
   },
-  sectionHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    fontSize: 12,
+  profileAvatar: {
+    width: PROFILE_AVATAR_SIZE,
+    height: PROFILE_AVATAR_SIZE,
+    borderRadius: PROFILE_AVATAR_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  profileAvatarText: {
+    fontSize: front.displayXs ?? 24,
+    fontWeight: '700',
+  },
+  profileInfo: {
+    flex: 1,
+    marginLeft: spacing.lg,
+    marginRight: spacing.sm,
+  },
+  profileName: {
+    fontSize: front.textLg ?? 18,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    lineHeight: front.leadingLg ?? 28,
   },
+  profileEmail: {
+    fontSize: front.textSm ?? 14,
+    fontWeight: '400',
+    lineHeight: front.leadingSm ?? 20,
+    marginTop: 2,
+  },
+  signInBadge: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.full ?? 9999,
+  },
+  signInBadgeText: {
+    color: '#ffffff',
+    fontSize: front.textXs ?? 12,
+    fontWeight: '600',
+  },
+
+  // ── Section Header ──────────────────────────────────
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  sectionHeaderAccent: {
+    width: 3,
+    height: 14,
+    borderRadius: 2,
+  },
+  sectionHeaderText: {
+    fontSize: front.textXs ?? 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+
+  // ── Section Card ────────────────────────────────────
+  section: {
+    marginHorizontal: spacing.xl,
+    borderRadius: borderRadius.xl ?? 16,
+    marginBottom: spacing.sm + 4,
+    overflow: 'hidden',
+    borderLeftWidth: 0,
+  },
+
+  // ── Setting Row ─────────────────────────────────────
   settingRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  settingLeft: {
-    flexDirection: 'row',
+  iconCircle: {
+    width: ICON_CIRCLE_SIZE,
+    height: ICON_CIRCLE_SIZE,
+    borderRadius: ICON_CIRCLE_SIZE / 2,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
+  },
+  settingLabelContainer: {
     flex: 1,
+    marginLeft: spacing.lg,
+    marginRight: spacing.sm,
   },
   settingLabel: {
-    fontSize: 15,
+    fontSize: front.textMd ?? 16,
+    fontWeight: '500',
+    lineHeight: front.leadingMd ?? 24,
   },
   settingRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    flexShrink: 0,
   },
   settingValue: {
-    fontSize: 14,
+    fontSize: front.textSm ?? 14,
+    fontWeight: '400',
+    lineHeight: front.leadingSm ?? 20,
   },
+
+  // ── Bottom Sheet ────────────────────────────────────
   langItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xl,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderRadius: borderRadius.sm ?? 6,
+    marginHorizontal: spacing.md,
+    marginVertical: 2,
+  },
+  langItemLeft: {
+    flex: 1,
   },
   langText: {
-    fontSize: 16,
+    fontSize: front.textMd ?? 16,
+    lineHeight: front.leadingMd ?? 24,
+  },
+
+  langCheckCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Footer ──────────────────────────────────────────
+  footer: {
+    alignItems: 'center',
+    paddingTop: spacing.xl + 4,
+    paddingBottom: spacing.sm,
+  },
+  footerText: {
+    fontSize: front.textXs ?? 12,
+    fontWeight: '400',
+    lineHeight: front.leadingXs ?? 18,
   },
 });
 

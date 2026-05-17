@@ -1,8 +1,8 @@
-import { blogApi, ApiResponseWrapper } from '../baseApi';
+import { blogApi, ApiResponseWrapper } from '@/api/baseApi';
 import type {
   FrontendTag,
   FrontendTagWithArticles,
-} from '../../types/frontend-blog';
+} from '@/types/frontend-blog';
 
 function unwrapData<T>(response: ApiResponseWrapper<T>): T {
   return response.data;
@@ -61,11 +61,17 @@ export const tagApi = blogApi.injectEndpoints({
      * Get popular tags
      * GET /api/v1/frontend/blog/tags/popular
      */
-    getPopularTags: builder.query<FrontendTag[], number | void>({
-      query: (limit = 20) => ({
-        url: '/api/v1/frontend/blog/tags/popular',
-        params: { limit },
-      }),
+    getPopularTags: builder.query<
+      FrontendTag[],
+      { limit?: number; lang?: string } | void
+    >({
+      query: (params) => {
+        const { limit = 20, lang } = params || {};
+        return {
+          url: '/api/v1/frontend/blog/tags/popular',
+          params: { limit, ...(lang ? { lang } : {}) },
+        };
+      },
       transformResponse: (response: ApiResponseWrapper<FrontendTag[]>) =>
         unwrapData(response),
       providesTags: [{ type: 'Tag', id: 'POPULAR' }],

@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { storage } from '../../lib/storage';
-import { env } from '../../lib/env';
-import type { FrontendPaginatedResponse, BookmarkedArticle } from '../../types/frontend-blog';
+import { storage } from '@/lib/storage';
+import { env } from '@/lib/env';
+import type { FrontendPaginatedResponse, BookmarkedArticle } from '@/types/frontend-blog';
 
 const BOOKMARKS_KEY = 'bookmarks_cache';
 const BOOKMARK_IDS_KEY = 'bookmark_ids';

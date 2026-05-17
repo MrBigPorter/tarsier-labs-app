@@ -8,7 +8,7 @@
  *
  * States: Loading → skeleton pills | Error → retry | Empty → message
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -16,17 +16,19 @@ import {
   RefreshControl,
   TouchableOpacity,
   Text,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useGetTagsQuery } from '../api/endpoints/tags';
-import Header from '../components/layout/Header';
-import EmptyState from '../components/core/EmptyState';
-import SvgIcon from '../components/core/SvgIcon';
-import type { CategoriesTabScreenProps } from '../navigation/types';
-import type { FrontendTag } from '../types/frontend-blog';
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useGetTagsQuery } from '@/api/endpoints/tags';
+import { useCurrentLanguage } from '@/lib/i18n';
+import { useTranslation } from 'react-i18next';
+import Header from '@/components/layout/Header';
+import { EmptyContent } from '@/components/core/EmptyContent';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import SvgIcon from '@/components/core/SvgIcon';
+import type { TagsTabScreenProps } from '@/navigation/types';
+import type { FrontendTag } from '@/types/frontend-blog';
 
 const TAG_COLORS = [
   '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
@@ -35,22 +37,48 @@ const TAG_COLORS = [
 ];
 
 const TagListScreen: React.FC<
-  CategoriesTabScreenProps<'TagList'>
+  TagsTabScreenProps<'TagList'>
 > = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const lang = useCurrentLanguage();
 
   const {
     data: tags,
     isLoading,
+    isFetching,
     isError,
     refetch,
-  } = useGetTagsQuery(undefined);
+  } = useGetTagsQuery(lang);
+
+  // ─── Identity guard & pull-to-refresh ──────────────────────────────
+  //
+  // On tab switch: useFocusEffect triggers refetch() in the background.
+  // The identity guard (prevTagIdsRef + stableTags useEffect) only updates
+  // state when IDs actually change — keeping old data visible and preventing
+  // UI flash when identical data returns.
+  // Pull-to-refresh: uses requestAnimationFrame to guarantee the spinner
+  // is painted BEFORE the async fetch starts. refetch().finally() stops
+  // the spinner when the network request completes.
+  // No useEffect(isFetching) — that pattern fails when isFetching is
+  // already true from an auto-refetch (race condition).
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    // rAF fires AFTER React commits refreshing=true and RN paints the spinner
+    requestAnimationFrame(() => {
+      refetch().finally(() => {
+        setRefreshing(false);
+      });
+    });
+  }, [refetch]);
 
   const handleTagPress = useCallback(
     (tag: FrontendTag) => {
-      navigation.getParent()?.navigate('ArticlesTab', {
+      navigation.getParent()?.navigate('TagsTab', {
         screen: 'TagArticles',
         params: { tagSlug: tag.slug, tagName: tag.name },
       });
@@ -62,20 +90,36 @@ const TagListScreen: React.FC<
     TAG_COLORS[index % TAG_COLORS.length];
 
   // ─── Loading state ──────────────────────────────────────────────────
+  //
+  // Fill the full screen with skeleton pills so the UI doesn't look empty
+  // while tags are loading (production has many tags).
+  // Calculate dynamic count based on screen height:
+  //   screenHeight - header(≈50) - containerPadding(24) = available height
+  //   each row = pillHeight(36) + gap(6) = 42px → rows × ~4 pills/row
+  const { height: screenHeight } = Dimensions.get('window');
+  const HEADER_ESTIMATE = 50;
+  const PADDING_ESTIMATE = spacing.lg * 2;
+  const PILL_HEIGHT = 36;
+  const GAP = spacing.sm;
+  const availableHeight = screenHeight - HEADER_ESTIMATE - PADDING_ESTIMATE;
+  const rowsNeeded = Math.max(6, Math.ceil(availableHeight / (PILL_HEIGHT + GAP)));
+  const pillsPerRow = 4;
+  const LOADING_PILL_COUNT = rowsNeeded * pillsPerRow;
 
-  if (isLoading) {
+  if (isLoading && !tags) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Tags" />
+      <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+        <Header title="Tags" hideSearch hideSettings />
         <View style={styles.loadingContainer}>
           <View style={styles.tagFlow}>
-            {Array.from({ length: 20 }).map((_, i) => (
+            {Array.from({ length: LOADING_PILL_COUNT }).map((_, i) => (
               <View
                 key={i}
                 style={[
                   styles.loadingPill,
                   {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.bgTertiary,
+                    borderColor: colors.border,
                     width: 60 + (i % 5) * 20,
                   },
                 ]}
@@ -90,8 +134,8 @@ const TagListScreen: React.FC<
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Tags" />
+    <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+      <Header title="Tags" hideSearch hideSettings />
 
       <ScrollView
         contentContainerStyle={[
@@ -100,8 +144,8 @@ const TagListScreen: React.FC<
         ]}
         refreshControl={
           <RefreshControl
-            refreshing={false}
-            onRefresh={refetch}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
@@ -163,18 +207,20 @@ const TagListScreen: React.FC<
               );
             })}
           </View>
-        ) : isError ? (
-          <EmptyState
-            icon="alert-circle"
-            title="Failed to load tags"
-            primaryAction={{ label: 'Retry', onPress: refetch }}
+        ) : isError && !tags ? (
+          <EmptyContent
+            icon="⚠️"
+            title={t('tags.error.loadFailed')}
+            actionLabel={t('common.retry')}
+            onAction={refetch}
           />
         ) : (
-          <EmptyState
-            icon="file-text"
-            title="No tags yet"
-            description="Tags will appear here once articles are categorized"
-          />
+          !tags || tags.length === 0 ? (
+            <EmptyLogoContent
+              title={t('tags.empty')}
+              description={t('tags.emptyState.description')}
+            />
+          ) : null
         )}
       </ScrollView>
     </View>
@@ -228,6 +274,8 @@ const styles = StyleSheet.create({
   loadingPill: {
     height: 36,
     borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
   },
 });
 

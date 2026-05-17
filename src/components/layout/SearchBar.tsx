@@ -29,9 +29,9 @@ import {
   Keyboard,
   Platform,
 } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
 import SvgIcon from '../core/SvgIcon';
 
 interface SearchBarProps {
@@ -72,8 +72,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   showBackdrop = false,
   onBackdropPress,
 }) => {
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors, isDark } = useTheme();
   const inputRef = useRef<TextInput>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [localValue, setLocalValue] = useState(value);
@@ -162,7 +161,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           style={[
             styles.backdrop,
             {
-              backgroundColor: theme.dark
+              backgroundColor: isDark
                 ? 'rgba(0,0,0,0.5)'
                 : 'rgba(0,0,0,0.3)',
               opacity: backdropOpacity,
@@ -193,7 +192,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           >
             <SvgIcon
               name="search"
-              size={18}
+              size={20}
               color={colors.textSecondary}
             />
             <TextInput
@@ -272,7 +271,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 98,
   },
   container: {
@@ -288,10 +287,15 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: spacing.sm,
-    height: 40,
+    height: 44,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   input: {
     flex: 1,

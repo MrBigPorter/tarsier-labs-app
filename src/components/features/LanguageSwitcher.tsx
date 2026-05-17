@@ -21,17 +21,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
 import {
   LOCALES_METADATA,
   getEnabledLocales,
   type Locale,
-} from '../../lib/i18n/config';
-import { changeLanguage } from '../../lib/i18n/index';
-import { useAppDispatch } from '../../store';
-import { setLanguage } from '../../store/slices/uiSlice';
+} from '@/lib/i18n/config';
+import { changeLanguage } from '@/lib/i18n/index';
+import { useAppDispatch } from '@/store';
+import { setLanguage } from '@/store/slices/uiSlice';
 import SvgIcon from '../core/SvgIcon';
 
 type LanguageSwitcherVariant = 'inline' | 'bottomSheet';
@@ -66,8 +66,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   maxInlineItems = 5,
 }) => {
   const { t, i18n } = useTranslation();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
   const dispatch = useAppDispatch();
 
   const activeLocale: Locale =
@@ -192,9 +191,6 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
                     styles.rowNativeName,
                     {
                       color: isActive ? colors.primary : colors.text,
-                      fontFamily: isActive
-                        ? typography.fontFamilyBold
-                        : typography.fontFamily,
                     },
                   ]}
                 >
@@ -248,16 +244,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   inlineLabel: {
-    fontSize: typography.fontSizeSm,
-    fontFamily: typography.fontFamilyMedium,
+    fontSize: typography.small.fontSize,
   },
   /* bottomSheet variant */
   bottomSheetContainer: {
     paddingTop: spacing.md,
   },
   bottomSheetTitle: {
-    fontSize: typography.fontSizeLg,
-    fontFamily: typography.fontFamilyBold,
+    fontSize: typography.h4.fontSize,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.sm,
   },
@@ -278,12 +272,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   rowNativeName: {
-    fontSize: typography.fontSizeMd,
-    fontFamily: typography.fontFamily,
+    fontSize: typography.base.fontSize,
   },
   rowEnglishName: {
-    fontSize: typography.fontSizeXs,
-    fontFamily: typography.fontFamily,
+    fontSize: typography.xs.fontSize,
     marginTop: 2,
   },
 });

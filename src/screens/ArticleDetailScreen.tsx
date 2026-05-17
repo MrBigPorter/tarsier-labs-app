@@ -1,3 +1,5 @@
+import { useCurrentLanguage } from '@/lib/i18n';
+import { useTranslation } from 'react-i18next';
 /**
  * ArticleDetailScreen — Full article view
  *
@@ -30,45 +32,58 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Share,
   Animated,
 } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardAwareScrollViewRef, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
+import { useTheme, spacing, typography } from '@/lib/theme';
 import {
   useGetArticleBySlugQuery,
   useGetRelatedArticlesQuery,
-} from '../api/endpoints/articles';
-import { useGetCommentsQuery, useCreateCommentMutation } from '../api/endpoints/comments';
-import { useAppSelector, useAppDispatch } from '../store';
-import { toggleBookmarkOptimistic } from '../store/slices/bookmarksSlice';
-import MarkdownRenderer from '../components/blog/MarkdownRenderer';
-import CommentItem from '../components/blog/CommentItem';
-import ArticleCard from '../components/blog/ArticleCard';
-import Header from '../components/layout/Header';
-import NetworkStatusBar from '../components/core/NetworkStatusBar';
-import { ArticleDetailSkeleton } from '../components/core/Skeleton';
-import EmptyState from '../components/core/EmptyState';
-import SvgIcon from '../components/core/SvgIcon';
-import type { RootStackScreenProps } from '../navigation/types';
-import type { FrontendArticle } from '../types/frontend-blog';
+} from '@/api/endpoints/articles';
+import { useCreateCommentMutation } from '@/api/endpoints/comments';
+import { useCommentsInfiniteQuery } from '@/lib/hooks/useCommentsInfiniteQuery';
+import { useCommentSSE } from '@/lib/hooks/useCommentSSE';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { toggleBookmarkOptimistic } from '@/store/slices/bookmarksSlice';
+import { toggleLikeOptimistic } from '@/store/slices/likesSlice';
+import {
+  useAddBookmarkMutation,
+  useRemoveBookmarkMutation,
+} from '@/api/endpoints/bookmarks';
+import {
+  useLikeArticleMutation,
+  useUnlikeArticleMutation,
+} from '@/api/endpoints/likes';
+import { env } from '@/lib/env';
+import { shareArticle } from '@/lib/utils/share';
+import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer';
+import { CommentItem } from '@/components/blog/CommentItem';
+import { ArticleCard } from '@/components/blog/ArticleCard';
+import Header from '@/components/layout/Header';
+import { NetworkStatusBar } from '@/components/core/NetworkStatusBar';
+import { ArticleDetailSkeleton } from '@/components/core/Skeleton';
+import { EmptyState } from '@/components/core/EmptyState';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import SvgIcon from '@/components/core/SvgIcon';
+import type { RootStackScreenProps } from '@/navigation/types';
+import type { FrontendArticle } from '@/types/frontend-blog';
+import type { Comment } from '@/types/blog';
 
 const ArticleDetailScreen: React.FC<
   RootStackScreenProps<'ArticleDetail'>
 > = ({ navigation, route }) => {
   const { slug } = route.params;
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
+  const { t } = useTranslation();
+  const lang = route.params?.locale ?? useCurrentLanguage();
 
   // ─── Redux ──────────────────────────────────────────────────────────
   const dispatch = useAppDispatch();
   const bookmarkedIds = useAppSelector(state => state.bookmarks.bookmarkedIds);
+  const likedIds = useAppSelector(state => state.likes.likedIds);
   const user = useAppSelector(state => state.auth.user);
 
   // ─── Data fetching ──────────────────────────────────────────────────
@@ -78,24 +93,20 @@ const ArticleDetailScreen: React.FC<
     isError,
     error,
     refetch,
-  } = useGetArticleBySlugQuery({ slug });
+  } = useGetArticleBySlugQuery({ slug, lang });
 
   const {
     data: relatedArticles,
     isLoading: relatedLoading,
   } = useGetRelatedArticlesQuery(
-    { articleId: article?.id || '', limit: 5 },
+    { articleId: article?.id || '', limit: 5, lang },
     { skip: !article?.id },
   );
 
-  const {
-    data: commentsData,
-    isLoading: commentsLoading,
-    refetch: refetchComments,
-  } = useGetCommentsQuery(
-    { articleId: article?.id || '', page: 1, pageSize: 20 },
-    { skip: !article?.id },
-  );
+  // ─── Comments (infinite scroll + SSE) ────────────────────────────────
+  // Note: comments API expects a slug, not a database ID
+  const commentsQuery = useCommentsInfiniteQuery(slug);
+  useCommentSSE(slug);
 
   const [createComment, { isLoading: isSubmittingComment }] =
     useCreateCommentMutation();
@@ -104,16 +115,23 @@ const ArticleDetailScreen: React.FC<
   const [isBookmarked, setIsBookmarked] = useState(
     article ? !!bookmarkedIds[article.id] : false,
   );
-  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [isLiked, setIsLiked] = useState(
+    article ? !!likedIds[article.id] : false,
+  );
   const [replyTo, setReplyTo] = useState<{
     commentId: string;
     author: string;
   } | null>(null);
   const [commentText, setCommentText] = useState('');
-  const [authorName, setAuthorName] = useState('');
-  const [authorEmail, setAuthorEmail] = useState('');
-  const [showAuthorForm, setShowAuthorForm] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+
+  // ─── Bookmark mutations ───────────────────────────────────────────────
+  const [addBookmark] = useAddBookmarkMutation();
+  const [removeBookmark] = useRemoveBookmarkMutation();
+
+  // ─── Like mutations ───────────────────────────────────────────────────
+  const [likeArticle] = useLikeArticleMutation();
+  const [unlikeArticle] = useUnlikeArticleMutation();
 
   // Like animation
   const likeScale = useRef(new Animated.Value(1)).current;
@@ -125,16 +143,44 @@ const ArticleDetailScreen: React.FC<
     }
   }, [article, bookmarkedIds]);
 
+  // Sync like state
+  React.useEffect(() => {
+    if (article) {
+      setIsLiked(!!likedIds[article.id]);
+    }
+  }, [article, likedIds]);
+
   // ─── Handlers ───────────────────────────────────────────────────────
 
   const handleBookmark = useCallback(() => {
     if (!article) return;
+    const newIsBookmarked = !isBookmarked;
+    // Optimistic local update
     dispatch(toggleBookmarkOptimistic(article.id));
-    setIsBookmarked(prev => !prev);
-    // TODO: Call API to persist bookmark (optimistic update handled by Redux)
-  }, [article, dispatch]);
+    setIsBookmarked(newIsBookmarked);
+    // Persist to server
+    if (newIsBookmarked) {
+      addBookmark({ articleId: article.id }).catch(() => {
+        // Rollback on failure — revert optimistic update
+        dispatch(toggleBookmarkOptimistic(article.id));
+        setIsBookmarked(false);
+      });
+    } else {
+      removeBookmark({ articleId: article.id }).catch(() => {
+        // Rollback on failure
+        dispatch(toggleBookmarkOptimistic(article.id));
+        setIsBookmarked(true);
+      });
+    }
+  }, [article, dispatch, isBookmarked, addBookmark, removeBookmark]);
 
   const handleLike = useCallback(() => {
+    if (!article) return;
+    const newIsLiked = !isLiked;
+    // Optimistic local update
+    dispatch(toggleLikeOptimistic(article.id));
+    setIsLiked(newIsLiked);
+    // Animation
     Animated.sequence([
       Animated.timing(likeScale, {
         toValue: 1.3,
@@ -147,25 +193,35 @@ const ArticleDetailScreen: React.FC<
         bounciness: 12,
       }),
     ]).start();
-  }, [likeScale]);
+    // Persist to server
+    // Note: backend uses slug (URL-friendly string), not database UUID
+    if (newIsLiked) {
+      likeArticle({ slug: article.slug }).catch(() => {
+        // Rollback on failure
+        dispatch(toggleLikeOptimistic(article.id));
+        setIsLiked(false);
+      });
+    } else {
+      unlikeArticle({ slug: article.slug }).catch(() => {
+        // Rollback on failure
+        dispatch(toggleLikeOptimistic(article.id));
+        setIsLiked(true);
+      });
+    }
+  }, [article, dispatch, isLiked, likeScale, likeArticle, unlikeArticle]);
 
   const handleShare = useCallback(async () => {
     if (!article) return;
-    try {
-      await Share.share({
-        title: article.title,
-        message: `${article.title}\n\n${article.excerpt}`,
-        url: `https://tarsierlabs.com/blog/${article.slug}`,
-      });
-    } catch {
-      // User cancelled share
-    }
-  }, [article]);
+    await shareArticle(article, lang);
+  }, [article, lang]);
 
-  const handleReply = useCallback((commentId: string, author: string) => {
-    setReplyTo({ commentId, author });
-    setShowCommentInput(true);
-  }, []);
+  const handleReply = useCallback((comment: Comment) => {
+    if (!user) {
+      navigation.navigate('Auth');
+      return;
+    }
+    setReplyTo({ commentId: comment.id, author: comment.author });
+  }, [user, navigation]);
 
   const handleCancelReply = useCallback(() => {
     setReplyTo(null);
@@ -175,36 +231,42 @@ const ArticleDetailScreen: React.FC<
   const handleSubmitComment = useCallback(async () => {
     if (!article || !commentText.trim()) return;
 
-    if (!user && !authorName.trim()) {
-      setShowAuthorForm(true);
+    if (!user) {
+      navigation.navigate('Auth');
       return;
     }
 
     try {
-      await createComment({
-        articleId: article.id,
+      const result = await createComment({
+        articleId: slug,
         content: commentText.trim(),
-        author: user?.nickname || authorName.trim() || 'Anonymous',
-        email: user?.email || authorEmail || undefined,
         parentId: replyTo?.commentId || undefined,
       }).unwrap();
 
+      // Insert into the correct position based on whether it's a reply or top-level
+      if (replyTo?.commentId) {
+        // Reply: insert into parent comment's children array
+        commentsQuery.addReply(replyTo.commentId, result);
+      } else {
+        // Top-level comment: insert at the top of the list
+        commentsQuery.prependComment(result);
+      }
+
       setCommentText('');
       setReplyTo(null);
-      setShowCommentInput(false);
-      refetchComments();
-    } catch {
-      // Error handling via RTK Query
+      scrollRef.current?.scrollToEnd({ animated: false });
+    } catch (error) {
+      console.warn('[Comment] Failed to submit comment:', error);
     }
   }, [
     article,
     commentText,
     user,
-    authorName,
-    authorEmail,
     replyTo,
     createComment,
-    refetchComments,
+    navigation,
+    slug,
+    commentsQuery,
   ]);
 
   const handleRelatedArticlePress = useCallback(
@@ -222,7 +284,7 @@ const ArticleDetailScreen: React.FC<
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header showBack />
+        <Header showBack hideSearch hideSettings />
         <ArticleDetailSkeleton />
       </View>
     );
@@ -233,14 +295,14 @@ const ArticleDetailScreen: React.FC<
   if (isError || !article) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header showBack />
+        <Header showBack hideSearch hideSettings />
         <EmptyState
           icon="alert-circle"
-          title="Failed to load article"
-          description={(error as any)?.data?.message || 'An error occurred'}
-          primaryAction={{ label: 'Retry', onPress: refetch }}
+          title={t('article.error.loadFailedSingle')}
+          description={(error as any)?.data?.message || t('article.error.generic')}
+          primaryAction={{ label: t('common.retry'), onPress: refetch }}
           secondaryAction={{
-            label: 'Go back',
+            label: t('common.goBack'),
             onPress: () => navigation.goBack(),
           }}
         />
@@ -248,71 +310,24 @@ const ArticleDetailScreen: React.FC<
     );
   }
 
-  // ─── Format date ─────────────────────────────────────────────────────
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  // ─── Extract image URL with fallback ────────────────────────────────
-
-  const coverImageUrl =
-    article.meta?.images?.large?.webp ||
-    article.meta?.images?.large?.jpg ||
-    article.coverImage ||
-    '';
 
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header showBack />
+      <Header showBack hideSearch hideSettings />
 
       <NetworkStatusBar />
 
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
+        ref={scrollRef}
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + spacing.xl,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.flex}
-          contentContainerStyle={{
-            paddingBottom: insets.bottom + spacing.xl,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* ─── Cover Image ─────────────────────────────────────────── */}
-          {coverImageUrl ? (
-            <View style={styles.coverImageContainer}>
-              <View
-                style={[
-                  styles.coverImagePlaceholder,
-                  { backgroundColor: colors.surface },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.coverImageText,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  {article.title.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
           {/* ─── Article Header ──────────────────────────────────────── */}
           <View style={styles.articleHeader}>
             {/* Category badge */}
@@ -349,22 +364,22 @@ const ArticleDetailScreen: React.FC<
               {article.title}
             </Text>
 
-            {/* Author & date */}
+            {/* Author */}
             <View style={styles.metaRow}>
-              {article.author && (
-                <View style={styles.authorContainer}>
-                  <View
-                    style={[
-                      styles.authorAvatar,
-                      { backgroundColor: colors.primary + '30' },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.authorInitial, { color: colors.primary }]}
+              {article.author?.name && (
+                  <View style={styles.authorContainer}>
+                    <View
+                      style={[
+                        styles.authorAvatar,
+                        { backgroundColor: colors.primary + '30' },
+                      ]}
                     >
-                      {article.author.name.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
+                      <Text
+                        style={[styles.authorInitial, { color: colors.primary }]}
+                      >
+                        {article.author.name?.charAt(0)?.toUpperCase() ?? ''}
+                      </Text>
+                    </View>
                   <Text
                     style={[
                       styles.authorName,
@@ -375,14 +390,6 @@ const ArticleDetailScreen: React.FC<
                   </Text>
                 </View>
               )}
-              <Text
-                style={[
-                  styles.dateText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {formatDate(article.publishedAt || article.updatedAt)}
-              </Text>
             </View>
 
             {/* Stats row */}
@@ -409,14 +416,6 @@ const ArticleDetailScreen: React.FC<
                   style={[styles.statText, { color: colors.textSecondary }]}
                 >
                   {article.commentsCount}
-                </Text>
-              </View>
-              <View style={styles.stat}>
-                <SvgIcon name="clock" size={16} color={colors.textSecondary} />
-                <Text
-                  style={[styles.statText, { color: colors.textSecondary }]}
-                >
-                  {formatDate(article.publishedAt || article.updatedAt)}
                 </Text>
               </View>
             </View>
@@ -464,7 +463,7 @@ const ArticleDetailScreen: React.FC<
                 <SvgIcon
                   name="heart"
                   size={22}
-                  color={colors.textSecondary}
+                  color={isLiked ? colors.primary : colors.textSecondary}
                 />
               </Animated.View>
             </TouchableOpacity>
@@ -481,7 +480,7 @@ const ArticleDetailScreen: React.FC<
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => setShowCommentInput(true)}
+              onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
               style={styles.actionButton}
             >
               <SvgIcon
@@ -551,156 +550,170 @@ const ArticleDetailScreen: React.FC<
               Comments ({article.commentsCount})
             </Text>
 
-            {commentsLoading ? (
-              <View style={styles.commentsLoading}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            ) : commentsData?.items && commentsData.items.length > 0 ? (
-              commentsData.items.map(comment => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  onReply={handleReply}
-                />
-              ))
-            ) : (
-              <EmptyState
-                icon="message-circle"
-                title="No comments yet"
-                description="Be the first to share your thoughts"
-                primaryAction={{
-                  label: 'Write a comment',
-                  onPress: () => setShowCommentInput(true),
-                }}
-              />
-            )}
-          </View>
-        </ScrollView>
-
-        {/* ─── Comment Input (bottom) ────────────────────────────────── */}
-        {showCommentInput && (
-          <View
-            style={[
-              styles.commentInputContainer,
-              {
-                backgroundColor: colors.background,
-                borderTopColor: colors.border,
-                paddingBottom: Math.max(insets.bottom, spacing.sm),
-              },
-            ]}
-          >
-            {replyTo && (
-              <View style={styles.replyIndicator}>
-                <Text
-                  style={[
-                    styles.replyText,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Replying to {replyTo.author}
+            {commentsQuery.error ? (
+              <View style={styles.commentsError}>
+                <Text style={[styles.commentsErrorText, { color: colors.error }]}>
+                  {t('common.loadFailed')}
                 </Text>
-                <TouchableOpacity onPress={handleCancelReply}>
-                  <SvgIcon
-                    name="x"
-                    size={16}
-                    color={colors.textSecondary}
-                  />
+                <TouchableOpacity onPress={commentsQuery.reload}>
+                  <Text style={[styles.retryText, { color: colors.primary }]}>
+                    {t('common.retry')}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            )}
-
-            {showAuthorForm && !user && (
-              <View style={styles.authorForm}>
-                <TextInput
-                  style={[
-                    styles.authorInput,
-                    {
-                      color: colors.text,
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  placeholder="Your name *"
-                  placeholderTextColor={colors.textSecondary}
-                  value={authorName}
-                  onChangeText={setAuthorName}
-                  autoCapitalize="words"
-                />
-                <TextInput
-                  style={[
-                    styles.authorInput,
-                    {
-                      color: colors.text,
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  placeholder="Email (optional)"
-                  placeholderTextColor={colors.textSecondary}
-                  value={authorEmail}
-                  onChangeText={setAuthorEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            )}
-
-            <View style={styles.commentInputRow}>
-              <TextInput
-                style={[
-                  styles.commentInput,
-                  {
-                    color: colors.text,
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                    fontFamily: typography.base.fontFamily,
-                    fontSize: typography.base.fontSize,
-                  },
-                ]}
-                placeholder={
-                  replyTo
-                    ? `Reply to ${replyTo.author}...`
-                    : 'Write a comment...'
-                }
-                placeholderTextColor={colors.textSecondary}
-                value={commentText}
-                onChangeText={setCommentText}
-                multiline
-                maxLength={2000}
+            ) : commentsQuery.items.length > 0 ? (
+              <>
+                {commentsQuery.items.map(comment => (
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    onReply={handleReply}
+                    isAuthenticated={!!user}
+                    articleId={slug}
+                    onNavigateToAuth={() => navigation.navigate('Auth')}
+                  />
+                ))}
+                {commentsQuery.hasMore && (
+                  <TouchableOpacity
+                    onPress={commentsQuery.loadMore}
+                    style={styles.loadMoreButton}
+                    disabled={commentsQuery.isLoadingMore}
+                  >
+                    {commentsQuery.isLoadingMore ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.loadMoreText,
+                          { color: colors.primary },
+                        ]}
+                      >
+                        {t('common.loadMore')}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <EmptyLogoContent
+                title={t('comment.noComments')}
+                description={t('comment.beFirst')}
               />
-              <TouchableOpacity
-                onPress={handleSubmitComment}
-                disabled={
-                  !commentText.trim() || isSubmittingComment
-                }
+            )}
+          </View>
+
+      </KeyboardAwareScrollView>
+
+      {/* ─── Floating Comment Input ────────────────────────────────── */}
+      <KeyboardStickyView
+          offset={{ closed: 0, opened: 0 }}
+          style={[
+            styles.commentInputContainer,
+            {
+              backgroundColor: colors.background,
+              borderTopColor: colors.border,
+              paddingBottom: Math.max(insets.bottom, spacing.sm),
+            },
+          ]}
+        >
+          {replyTo && (
+            <View style={styles.replyIndicator}>
+              <Text
                 style={[
-                  styles.sendButton,
-                  {
-                    backgroundColor:
-                      commentText.trim() && !isSubmittingComment
-                        ? colors.primary
-                        : colors.surface,
-                  },
+                  styles.replyText,
+                  { color: colors.textSecondary },
                 ]}
               >
-                {isSubmittingComment ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <SvgIcon
-                    name="arrow-right"
-                    size={20}
-                    color={
-                      commentText.trim()
-                        ? '#FFFFFF'
-                        : colors.textSecondary
-                    }
-                  />
-                )}
+                Replying to {replyTo.author}
+              </Text>
+              <TouchableOpacity onPress={handleCancelReply}>
+                <SvgIcon
+                  name="x"
+                  size={16}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             </View>
+          )}
+
+          {!user && (
+            <View style={styles.loginPrompt}>
+              <Text
+                style={[
+                  styles.loginPromptText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                {t('comment.loginToComment')}
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Auth')}
+                style={[
+                  styles.loginPromptButton,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
+                <Text style={styles.loginPromptButtonText}>
+                  {t('auth.login.title')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.commentInputRow}>
+            <TextInput
+              style={[
+                styles.commentInput,
+                {
+                  color: colors.text,
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  fontFamily: typography.base.fontFamily,
+                  fontSize: typography.base.fontSize,
+                },
+              ]}
+              placeholder={
+                replyTo
+                  ? `Reply to ${replyTo.author}...`
+                  : 'Write a comment...'
+              }
+              placeholderTextColor={colors.textSecondary}
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
+              maxLength={2000}
+            />
+            <TouchableOpacity
+              onPress={handleSubmitComment}
+              disabled={
+                !commentText.trim() || isSubmittingComment
+              }
+              style={[
+                styles.sendButton,
+                {
+                  backgroundColor:
+                    commentText.trim() && !isSubmittingComment
+                      ? colors.primary
+                      : colors.surface,
+                },
+              ]}
+            >
+              {isSubmittingComment ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <SvgIcon
+                  name="arrow-right"
+                  size={20}
+                  color={
+                    commentText.trim()
+                      ? '#FFFFFF'
+                      : colors.textSecondary
+                  }
+                />
+              )}
+            </TouchableOpacity>
           </View>
-        )}
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
     </View>
   );
 };
@@ -715,6 +728,10 @@ const styles = StyleSheet.create({
   coverImageContainer: {
     width: '100%',
     aspectRatio: 16 / 9,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
   },
   coverImagePlaceholder: {
     flex: 1,
@@ -769,9 +786,6 @@ const styles = StyleSheet.create({
   authorName: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  dateText: {
-    fontSize: 13,
   },
   statsRow: {
     flexDirection: 'row',
@@ -831,10 +845,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
-  commentsLoading: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
   commentInputContainer: {
     borderTopWidth: 1,
     paddingHorizontal: spacing.md,
@@ -850,17 +860,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
   },
-  authorForm: {
+  loginPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.sm,
-    gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
-  authorInput: {
-    borderWidth: 1,
+  loginPromptText: {
+    fontSize: 13,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  loginPromptButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
     borderRadius: 8,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+  },
+  loginPromptButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  commentsError: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  commentsErrorText: {
     fontSize: 14,
-    height: 40,
+    textAlign: 'center',
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loadMoreButton: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   commentInputRow: {
     flexDirection: 'row',

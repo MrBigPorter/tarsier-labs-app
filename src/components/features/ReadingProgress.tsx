@@ -36,8 +36,8 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { borderRadius } from '../../lib/theme/spacing';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { borderRadius } from '@/lib/theme/spacing';
 
 interface ReadingProgressProps {
   /** Native animated value from scrollY (alternative to progress) */
@@ -61,8 +61,7 @@ const ReadingProgress: React.FC<ReadingProgressProps> = ({
   color,
   trackColor,
 }) => {
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
 
   // Internal animated value for controlled progress mode
   const internalAnim = useRef(new Animated.Value(0)).current;

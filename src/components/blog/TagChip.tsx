@@ -1,71 +1,49 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
-import type { FrontendTag } from '../../types/frontend-blog';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
+import type { FrontendTag } from '@/types/frontend-blog';
 
 interface TagChipProps {
   tag: FrontendTag;
   onPress?: (tag: FrontendTag) => void;
-  /** Whether this tag is currently selected */
-  selected?: boolean;
-  /** Whether to show the article count badge */
+  active?: boolean;
   showCount?: boolean;
-  /** Compact mode (smaller size for tag clouds) */
-  compact?: boolean;
+  size?: 'small' | 'medium';
 }
 
-/**
- * Tag chip component.
- *
- * Used in:
- * - Tag cloud/list views
- * - Article detail page (tags section)
- * - Filter chips in search
- *
- * Features:
- * - Selected/unselected states
- * - Optional count badge
- * - Compact mode for wrapping layouts
- * - Accent color from tag.color or default primary
- */
 export function TagChip({
   tag,
   onPress,
-  selected = false,
-  showCount = true,
-  compact = false,
+  active = false,
+  showCount = false,
+  size = 'medium',
 }: TagChipProps) {
   const { colors } = useTheme();
-  const accentColor = tag.color || colors.primary;
 
   return (
     <TouchableOpacity
       style={[
-        styles.container,
-        compact && styles.compactContainer,
-        selected
-          ? {
-              backgroundColor: accentColor + '20',
-              borderColor: accentColor,
-            }
-          : {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            },
+        styles.chip,
+        {
+          backgroundColor: active ? colors.primary : colors.surface,
+          borderColor: active ? colors.primary : colors.border,
+          borderWidth: 1,
+        },
+        size === 'small' && styles.chipSmall,
       ]}
       onPress={() => onPress?.(tag)}
       activeOpacity={0.7}
-      disabled={!onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Tag: ${tag.name}`}
+      accessibilityState={{ selected: active }}
     >
       <Text
         style={[
-          styles.text,
-          compact && styles.compactText,
-          selected
-            ? { color: accentColor, fontWeight: '600' }
-            : { color: colors.textSecondary },
+          styles.label,
+          { color: active ? '#fff' : colors.textSecondary },
+          size === 'small' && styles.labelSmall,
         ]}
         numberOfLines={1}
       >
@@ -76,16 +54,13 @@ export function TagChip({
         <View
           style={[
             styles.countBadge,
-            selected
-              ? { backgroundColor: accentColor + '25' }
-              : { backgroundColor: colors.border },
+            { backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.border },
           ]}
         >
           <Text
             style={[
               styles.countText,
-              compact && styles.compactCountText,
-              { color: selected ? accentColor : colors.textTertiary },
+              { color: active ? '#fff' : colors.textTertiary },
             ]}
           >
             {tag.articleCount}
@@ -97,38 +72,34 @@ export function TagChip({
 }
 
 const styles = StyleSheet.create({
-  container: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1.5],
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
     borderRadius: borderRadius.full,
-    borderWidth: 1,
-    gap: spacing[1.5],
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs,
   },
-  compactContainer: {
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[1],
+  chipSmall: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  text: {
-    fontSize: typography.small.fontSize,
-    lineHeight: typography.small.lineHeight,
+  label: {
+    ...typography.button,
+    fontSize: 14,
   },
-  compactText: {
-    fontSize: typography.xs.fontSize,
+  labelSmall: {
+    fontSize: 12,
   },
   countBadge: {
-    paddingHorizontal: spacing[1.5],
-    paddingVertical: spacing[0.25],
+    marginLeft: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 1,
     borderRadius: borderRadius.full,
-    minWidth: 20,
-    alignItems: 'center',
   },
   countText: {
-    fontSize: typography.xs.fontSize,
+    fontSize: 11,
     fontWeight: '600',
-  },
-  compactCountText: {
-    fontSize: 10,
   },
 });

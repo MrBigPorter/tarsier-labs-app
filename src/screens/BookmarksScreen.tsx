@@ -14,7 +14,7 @@
  * - MMKV cache for offline access
  *
  * Edge cases:
- * - Not logged in: show login prompt
+ * - Not logged in: show login prompt with logo + sign-in button
  * - No bookmarks: friendly empty state
  * - Network error: show cached bookmarks from MMKV
  */
@@ -27,31 +27,32 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Text,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useAppSelector, useAppDispatch } from '../store';
+import { useTheme, spacing, typography, borderRadius } from '@/lib/theme';
+import { useAppSelector, useAppDispatch } from '@/store';
 import {
   fetchBookmarks,
   removeBookmark,
-} from '../store/slices/bookmarksSlice';
-import ArticleCard from '../components/blog/ArticleCard';
-import Header from '../components/layout/Header';
-import { ArticleListSkeleton } from '../components/core/Skeleton';
-import EmptyState from '../components/core/EmptyState';
-import type { ProfileTabScreenProps } from '../navigation/types';
-import type { FrontendArticle } from '../types/frontend-blog';
+} from '@/store/slices/bookmarksSlice';
+import { ArticleCard } from '@/components/blog/ArticleCard';
+import Header from '@/components/layout/Header';
+import { ArticleListSkeleton } from '@/components/core/Skeleton';
+import { EmptyState } from '@/components/core/EmptyState';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import { useTranslation } from 'react-i18next';
+import type { BookmarksTabScreenProps } from '@/navigation/types';
+import type { FrontendArticle } from '@/types/frontend-blog';
 
 const PAGE_SIZE = 20;
 
 const BookmarksScreen: React.FC<
-  ProfileTabScreenProps<'Bookmarks'>
+  BookmarksTabScreenProps<'Bookmarks'>
 > = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
 
   // ─── Redux state ────────────────────────────────────────────────────
@@ -163,17 +164,35 @@ const BookmarksScreen: React.FC<
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Bookmarks" />
-        <EmptyState
-          icon="bookmark"
-          title="Sign in to view bookmarks"
-          description="Save articles to read later by tapping the bookmark icon"
-          primaryAction={{
-            label: 'Sign In',
-            onPress: handleSignIn,
-          }}
-        />
+      <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+        <Header title="Bookmarks" hideSearch hideSettings />
+        <View style={styles.centerContainer}>
+          {/* Logo */}
+          <Image
+            source={require('@assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+
+          {/* Title */}
+          <Text style={[styles.title, { color: colors.text }]}>
+            {t('bookmarks.signInToView')}
+          </Text>
+
+          {/* Description */}
+          <Text style={[styles.description, { color: colors.textSecondary }]}>
+            {t('bookmarks.saveDescription')}
+          </Text>
+
+          {/* Sign In Button */}
+          <TouchableOpacity
+            style={[styles.signInButton, { backgroundColor: colors.primary }]}
+            onPress={handleSignIn}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.signInButtonText}>{t('bookmarks.signIn')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -182,8 +201,8 @@ const BookmarksScreen: React.FC<
 
   if (isLoading && currentPage === 1 && allArticles.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title={`Bookmarks (${total})`} />
+      <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+        <Header title={`Bookmarks (${total})`} hideSearch hideSettings />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={5} />
         </View>
@@ -194,8 +213,8 @@ const BookmarksScreen: React.FC<
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title={`Bookmarks${total > 0 ? ` (${total})` : ''}`} />
+    <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+      <Header title={`Bookmarks${total > 0 ? ` (${total})` : ''}`} hideSearch hideSettings />
 
       <FlatList
         data={allArticles}
@@ -215,10 +234,9 @@ const BookmarksScreen: React.FC<
           />
         }
         ListEmptyComponent={
-          <EmptyState
-            icon="bookmark"
-            title="No bookmarks yet"
-            description="Tap the bookmark icon on any article to save it here"
+          <EmptyLogoContent
+            title={t('bookmarks.emptyTitle')}
+            description={t('bookmarks.emptyHint')}
           />
         }
         ListFooterComponent={renderFooter}
@@ -234,6 +252,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // ─── Not authenticated ──────────────────────────────────────────────
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing['3xl'],
+    paddingBottom: spacing['5xl'],
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.xl,
+    borderRadius: borderRadius.xl,
+  },
+  title: {
+    fontSize: typography.h3.fontSize,
+    fontWeight: typography.h3.fontWeight as any,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  description: {
+    fontSize: typography.body.fontSize,
+    lineHeight: typography.body.lineHeight,
+    textAlign: 'center',
+    marginBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  signInButton: {
+    width: '100%',
+    height: 52,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  // ─── Authenticated states ────────────────────────────────────────────
   loadingContainer: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,

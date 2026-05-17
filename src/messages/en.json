@@ -20,6 +20,9 @@
     "error": "Failed to load, please try again later",
     "loadFailed": "Failed to load",
     "retry": "Retry",
+    "goBack": "Go back",
+    "pullDownToRetry": "Pull down to retry",
+    "checkBackLater": "Check back later for new content",
     "articleCount": "{count} articles",
     "totalTags": "{count} tags, {total} articles",
     "about": "About",
@@ -34,7 +37,13 @@
     "notFound": "Category not found",
     "empty": "No categories yet",
     "emptyArticles": "No articles in this category yet",
-    "emptyDescription": "Content in this category is being prepared, you can check articles in other categories first"
+    "emptyDescription": "Content in this category is being prepared, you can check articles in other categories first",
+    "error": {
+      "loadFailed": "Failed to load categories"
+    },
+    "emptyState": {
+      "description": "Categories will appear here once articles are created"
+    }
   },
   "tags": {
     "title": "Tag Cloud",
@@ -42,7 +51,13 @@
     "notFound": "Tag not found",
     "empty": "No tags yet",
     "emptyArticles": "No articles using this tag yet",
-    "emptyDescription": "Check out articles with other popular tags"
+    "emptyDescription": "Check out articles with other popular tags",
+    "error": {
+      "loadFailed": "Failed to load tags"
+    },
+    "emptyState": {
+      "description": "Tags will appear here once articles are categorized"
+    }
   },
   "home": {
     "title": "Latest Articles",
@@ -51,7 +66,10 @@
     "featured": "Featured",
     "featuredArticles": "Featured Articles",
     "viewAll": "View All",
-    "heroSubtitle": "Discover our handpicked featured content"
+    "heroSubtitle": "Discover our handpicked featured content",
+    "error": {
+      "unableToLoad": "Unable to load articles"
+    }
   },
   "article": {
     "readTime": "Read time",
@@ -64,7 +82,16 @@
     "notFound": "Article not found",
     "notFoundDescription": "The article you are looking for does not exist or has been removed.",
     "notPublished": "Not published yet",
-    "minutes": "minutes"
+    "minutes": "minutes",
+    "empty": {
+      "inCategory": "Try selecting a different category"
+    },
+    "error": {
+      "loadFailed": "Failed to load articles",
+      "loadFailedSingle": "Failed to load article",
+      "generic": "An error occurred",
+      "pullDownToRetry": "Pull down to retry loading"
+    }
   },
   "auth": {
     "email": "Email address",
@@ -85,6 +112,7 @@
     "fillAllFields": "Please fill all fields",
     "invalidCode": "Invalid verification code",
     "loginFailed": "Login failed",
+    "done": "Done",
     "oauth": {
       "githubNotConfigured": "GitHub OAuth is not configured",
       "githubFailed": "GitHub login failed",
@@ -136,11 +164,15 @@
     "contentPlaceholder": "Write your comment here...",
     "noComments": "No comments yet",
     "beFirst": "Be the first to comment!",
+    "beFirstThoughts": "Be the first to share your thoughts",
     "currentUser": "Current User",
     "pageInfo": "Page {page} of {totalPages}",
     "allCommentsLoaded": "All comments loaded",
     "totalComments": "Total {count} comments",
-    "loadingComment": "Loading comment..."
+    "loadingComment": "Loading comment...",
+    "commentPending": "Your comment is being reviewed...",
+    "commentApproved": "Your comment has been published",
+    "commentRejected": "Comment does not meet community guidelines, automatically removed"
   },
   "search": {
     "title": "Search Articles",
@@ -151,22 +183,37 @@
     "emptyDescription": "Search article titles, content or tags",
     "noResults": "No results found",
     "noResultsDescription": "Try using different keywords",
-    "clear": "Clear search",
+    "clear": "Clear",
     "shortcutHint": "Press Cmd/Ctrl + K to open search",
     "viewAllResults": "View all results",
     "loadFailed": "Search failed, please try again",
     "showingFirst": "Showing first {count} results",
-    "visitFullPage": "Visit full search page for more results"
+    "visitFullPage": "Visit full search page for more results",
+    "recent": "Recent Searches",
+    "resultCount": "{{count}} results",
+    "popularTags": "Popular Tags",
+    "noRecentSearches": "No recent searches",
+    "empty": {
+      "hint": "Type at least 2 characters to search across all articles",
+      "noResultsFor": "No articles matching \"{{query}}\""
+    },
+    "error": {
+      "connection": "Please check your connection and try again"
+    }
   },
   "bookmarks": {
     "title": "My Bookmarks",
     "subtitle": "All articles you have bookmarked",
     "totalCount": "Total {count} bookmarked articles",
     "empty": "No bookmarked articles yet",
-    "emptyTitle": "No bookmarked articles yet",
+    "emptyTitle": "No bookmarks yet",
     "emptyDescription": "Start exploring articles and bookmark your favorites",
     "browseArticles": "Browse articles",
-    "loadFailed": "Failed to load bookmarks"
+    "loadFailed": "Failed to load bookmarks",
+    "signInToView": "Sign in to view bookmarks",
+    "saveDescription": "Save articles to read later by tapping the bookmark icon",
+    "signIn": "Sign In",
+    "emptyHint": "Tap the bookmark icon on any article to save it here"
   },
   "about": {
     "title": "About Tarsier Labs",
@@ -254,6 +301,7 @@
   },
   "settings": {
     "title": "Settings",
+    "appearance": "Appearance",
     "theme": {
       "name": "Theme",
       "dark": "Dark Mode",
@@ -269,6 +317,36 @@
       "ko": "Korean",
       "fr": "French",
       "de": "German"
+    },
+    "notifications": "Notifications",
+    "pushNotifications": "Push Notifications",
+    "data": "Data",
+    "clearCache": {
+      "name": "Clear Cache",
+      "confirm": "Clear Cache",
+      "message": "This will clear all cached data including bookmarks. You can re-download it anytime.",
+      "action": "Clear"
+    },
+    "account": "Account",
+    "signOut": {
+      "name": "Sign Out",
+      "confirm": "Sign Out",
+      "message": "Are you sure you want to sign out? Your bookmarks will be saved locally."
+    },
+    "deleteAccount": {
+      "name": "Delete Account",
+      "confirm": "Delete Account",
+      "message": "This action is irreversible. All your data will be permanently deleted.",
+      "action": "Delete"
+    },
+    "info": "Info",
+    "aboutTarsier": "About Tarsier",
+    "privacyPolicy": "Privacy Policy",
+    "profile": {
+      "signIn": "Sign in",
+      "subtitle": "Sync your bookmarks and preferences",
+      "signedInAs": "Signed in as {{name}}",
+      "signInBadge": "Sign In"
     },
     "logout": {
       "name": "Logout",
@@ -304,6 +382,15 @@
       "check": "Check for Updates",
       "checking": "Checking...",
       "complete": "Page will refresh automatically after update..."
+    }
+  },
+  "archive": {
+    "error": {
+      "loadFailed": "Failed to load archive"
+    },
+    "empty": {
+      "noArchived": "No archived articles",
+      "description": "Articles will appear here once published"
     }
   }
 }

@@ -26,7 +26,10 @@
     "bookmarks": "Favoris",
     "cancel": "Annuler",
     "close": "Fermer",
-    "pageInfo": "Page {page} sur {totalPages}"
+    "pageInfo": "Page {page} sur {totalPages}",
+    "goBack": "Retour",
+    "pullDownToRetry": "Tirez vers le bas pour réessayer",
+    "checkBackLater": "Revenez plus tard pour du nouveau contenu"
   },
   "categories": {
     "title": "Catégories d'articles",
@@ -34,7 +37,13 @@
     "notFound": "Catégorie introuvable",
     "empty": "Pas encore de catégories",
     "emptyArticles": "Pas encore d'articles dans cette catégorie",
-    "emptyDescription": "Le contenu de cette catégorie est en préparation, vous pouvez consulter les articles d'autres catégories"
+    "emptyDescription": "Le contenu de cette catégorie est en préparation, vous pouvez consulter les articles d'autres catégories",
+    "error": {
+      "loadFailed": "Échec du chargement des catégories"
+    },
+    "emptyState": {
+      "description": "Les catégories apparaîtront ici une fois les articles créés"
+    }
   },
   "tags": {
     "title": "Nuage de tags",
@@ -42,7 +51,13 @@
     "notFound": "Tag introuvable",
     "empty": "Pas encore de tags",
     "emptyArticles": "Pas encore d'articles utilisant ce tag",
-    "emptyDescription": "Consultez les articles avec d'autres tags populaires"
+    "emptyDescription": "Consultez les articles avec d'autres tags populaires",
+    "error": {
+      "loadFailed": "Échec du chargement des tags"
+    },
+    "emptyState": {
+      "description": "Les tags apparaîtront ici une fois les articles catégorisés"
+    }
   },
   "home": {
     "title": "Articles récents",
@@ -51,7 +66,10 @@
     "featured": "À la une",
     "featuredArticles": "Articles à la une",
     "viewAll": "Voir tout",
-    "heroSubtitle": "Découvrez notre contenu vedette sélectionné"
+    "heroSubtitle": "Découvrez notre contenu vedette sélectionné",
+    "error": {
+      "unableToLoad": "Impossible de charger les articles"
+    }
   },
   "article": {
     "readTime": "Temps de lecture",
@@ -64,7 +82,16 @@
     "notFound": "Article introuvable",
     "notFoundDescription": "L'article que vous recherchez n'existe pas ou a été supprimé.",
     "notPublished": "Pas encore publié",
-    "minutes": "minutes"
+    "minutes": "minutes",
+    "empty": {
+      "inCategory": "Essayez de sélectionner une autre catégorie"
+    },
+    "error": {
+      "loadFailed": "Échec du chargement des articles",
+      "loadFailedSingle": "Échec du chargement de l'article",
+      "generic": "Une erreur est survenue",
+      "pullDownToRetry": "Tirez vers le bas pour réessayer le chargement"
+    }
   },
   "auth": {
     "email": "Adresse e-mail",
@@ -85,6 +112,7 @@
     "fillAllFields": "Veuillez remplir tous les champs",
     "invalidCode": "Code de vérification invalide",
     "loginFailed": "Échec de la connexion",
+    "done": "Terminé",
     "oauth": {
       "githubNotConfigured": "GitHub OAuth n'est pas configuré",
       "githubFailed": "Échec de la connexion GitHub",
@@ -136,11 +164,15 @@
     "contentPlaceholder": "Écrivez votre commentaire ici...",
     "noComments": "Pas encore de commentaires",
     "beFirst": "Soyez le premier à commenter !",
+    "beFirstThoughts": "Soyez le premier à partager vos pensées",
     "currentUser": "Utilisateur actuel",
     "pageInfo": "Page {page} sur {totalPages}",
     "allCommentsLoaded": "Tous les commentaires chargés",
     "totalComments": "Total {count} commentaires",
-    "loadingComment": "Chargement du commentaire..."
+    "loadingComment": "Chargement du commentaire...",
+    "commentPending": "Votre commentaire est en cours de révision...",
+    "commentApproved": "Votre commentaire a été publié",
+    "commentRejected": "Le commentaire ne respecte pas les directives de la communauté, supprimé automatiquement"
   },
   "search": {
     "title": "Rechercher des articles",
@@ -151,12 +183,23 @@
     "emptyDescription": "Recherchez dans les titres, le contenu ou les tags des articles",
     "noResults": "Aucun résultat trouvé",
     "noResultsDescription": "Essayez d'utiliser des mots-clés différents",
-    "clear": "Effacer la recherche",
+    "clear": "Effacer",
     "shortcutHint": "Appuyez sur Cmd/Ctrl + K pour ouvrir la recherche",
     "viewAllResults": "Voir tous les résultats",
     "loadFailed": "La recherche a échoué, veuillez réessayer",
     "showingFirst": "Affichage des {count} premiers résultats",
-    "visitFullPage": "Visitez la page de recherche complète pour plus de résultats"
+    "visitFullPage": "Visitez la page de recherche complète pour plus de résultats",
+    "recent": "Recherches récentes",
+    "resultCount": "{{count}} résultats",
+    "popularTags": "Tags populaires",
+    "noRecentSearches": "Aucune recherche récente",
+    "empty": {
+      "hint": "Tapez au moins 2 caractères pour rechercher dans tous les articles",
+      "noResultsFor": "Aucun article correspondant à \"{{query}}\""
+    },
+    "error": {
+      "connection": "Veuillez vérifier votre connexion et réessayer"
+    }
   },
   "bookmarks": {
     "title": "Mes favoris",
@@ -166,7 +209,12 @@
     "emptyTitle": "Pas encore d'articles favoris",
     "emptyDescription": "Commencez à explorer les articles et ajoutez vos favoris",
     "browseArticles": "Parcourir les articles",
-    "loadFailed": "Échec du chargement des favoris"
+    "loadFailed": "Échec du chargement des favoris",
+    "signInToView": "Connectez-vous pour voir vos favoris",
+    "saveDescription": "Enregistrez des articles à lire plus tard en appuyant sur l'icône de favori",
+    "signIn": "Se connecter",
+    "emptyTitle": "Pas encore de favoris",
+    "emptyHint": "Appuyez sur l'icône de favori sur n'importe quel article pour l'enregistrer ici"
   },
   "about": {
     "title": "À propos de Tarsier Labs",
@@ -254,6 +302,7 @@
   },
   "settings": {
     "title": "Paramètres",
+    "appearance": "Apparence",
     "theme": {
       "name": "Thème",
       "dark": "Mode sombre",
@@ -269,6 +318,36 @@
       "ko": "Coréen",
       "fr": "Français",
       "de": "Allemand"
+    },
+    "notifications": "Notifications",
+    "pushNotifications": "Notifications push",
+    "data": "Données",
+    "clearCache": {
+      "name": "Vider le cache",
+      "confirm": "Vider le cache",
+      "message": "Cela effacera toutes les données en cache, y compris les favoris. Vous pouvez les télécharger à nouveau à tout moment.",
+      "action": "Vider"
+    },
+    "account": "Compte",
+    "signOut": {
+      "name": "Déconnexion",
+      "confirm": "Déconnexion",
+      "message": "Êtes-vous sûr de vouloir vous déconnecter ? Vos favoris seront sauvegardés localement."
+    },
+    "deleteAccount": {
+      "name": "Supprimer le compte",
+      "confirm": "Supprimer le compte",
+      "message": "Cette action est irréversible. Toutes vos données seront définitivement supprimées.",
+      "action": "Supprimer"
+    },
+    "info": "Informations",
+    "aboutTarsier": "À propos de Tarsier",
+    "privacyPolicy": "Politique de confidentialité",
+    "profile": {
+      "signIn": "Connexion",
+      "subtitle": "Synchronisez vos favoris et préférences",
+      "signedInAs": "Connecté en tant que {{name}}",
+      "signInBadge": "Connexion"
     },
     "logout": {
       "name": "Déconnexion",
@@ -304,6 +383,15 @@
       "check": "Vérifier les mises à jour",
       "checking": "Vérification...",
       "complete": "La page se rafraîchira automatiquement après la mise à jour..."
+    }
+  },
+  "archive": {
+    "error": {
+      "loadFailed": "Échec du chargement des archives"
+    },
+    "empty": {
+      "noArchived": "Aucun article archivé",
+      "description": "Les articles apparaîtront ici une fois publiés"
     }
   }
 }

@@ -6,7 +6,7 @@
  *
  * Architecture:
  * - RootStack: BottomTab + stack screens that overlay tabs
- * - MainTabs: Bottom tab navigator (Home, Articles, Categories, Profile)
+ * - MainTabs: Bottom tab navigator (Home, Tags, Categories, Bookmarks, About)
  * - Each tab has its own nested stack for screen transitions
  */
 import type { NavigatorScreenParams } from '@react-navigation/native';
@@ -20,11 +20,19 @@ export type RootStackParamList = {
   /** Main tab navigator */
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   /** Article detail (overlays tabs) */
-  ArticleDetail: { slug: string; articleId?: string };
+  ArticleDetail: { slug: string; locale?: string; articleId?: string };
   /** Full-screen search */
   Search: undefined;
   /** Auth screen (login/register) */
   Auth: undefined;
+  /** Archive screen (articles by year/month) */
+  Archive: undefined;
+  /** Settings screen */
+  Settings: undefined;
+  /** Stats screen (blog statistics) */
+  Stats: undefined;
+  /** Privacy policy screen */
+  PrivacyPolicy: undefined;
 };
 
 // ─── Main Tab Navigator ──────────────────────────────────────────────────────
@@ -32,25 +40,27 @@ export type RootStackParamList = {
 export type MainTabParamList = {
   /** Home tab */
   HomeTab: NavigatorScreenParams<HomeStackParamList>;
-  /** Articles tab */
-  ArticlesTab: NavigatorScreenParams<ArticlesStackParamList>;
+  /** Tags tab */
+  TagsTab: NavigatorScreenParams<TagsStackParamList>;
   /** Categories tab */
   CategoriesTab: NavigatorScreenParams<CategoriesStackParamList>;
-  /** Profile tab */
-  ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
+  /** Bookmarks tab */
+  BookmarksTab: NavigatorScreenParams<BookmarksStackParamList>;
+  /** About tab */
+  AboutTab: NavigatorScreenParams<AboutStackParamList>;
 };
 
 // ─── Home Stack ──────────────────────────────────────────────────────────────
 
 export type HomeStackParamList = {
   Home: undefined;
+  ArticleList: { categorySlug?: string; tagSlug?: string } | undefined;
 };
 
-// ─── Articles Stack ──────────────────────────────────────────────────────────
+// ─── Tags Stack ──────────────────────────────────────────────────────────────
 
-export type ArticlesStackParamList = {
-  ArticleList: { categorySlug?: string; tagSlug?: string } | undefined;
-  CategoryArticles: { categorySlug: string; categoryName: string };
+export type TagsStackParamList = {
+  TagList: undefined;
   TagArticles: { tagSlug: string; tagName: string };
 };
 
@@ -58,18 +68,19 @@ export type ArticlesStackParamList = {
 
 export type CategoriesStackParamList = {
   CategoryList: undefined;
-  TagList: undefined;
+  CategoryArticles: { categorySlug: string; categoryName: string };
 };
 
-// ─── Profile Stack ───────────────────────────────────────────────────────────
+// ─── Bookmarks Stack ─────────────────────────────────────────────────────────
 
-export type ProfileStackParamList = {
-  Profile: undefined;
+export type BookmarksStackParamList = {
   Bookmarks: undefined;
-  Settings: undefined;
+};
+
+// ─── About Stack ─────────────────────────────────────────────────────────────
+
+export type AboutStackParamList = {
   About: undefined;
-  Archive: undefined;
-  Stats: undefined;
 };
 
 // ─── Screen Props ────────────────────────────────────────────────────────────
@@ -85,9 +96,9 @@ export type HomeTabScreenProps<T extends keyof HomeStackParamList> =
     BottomTabScreenProps<MainTabParamList>
   >;
 
-export type ArticlesTabScreenProps<T extends keyof ArticlesStackParamList> =
+export type TagsTabScreenProps<T extends keyof TagsStackParamList> =
   CompositeScreenProps<
-    NativeStackScreenProps<ArticlesStackParamList, T>,
+    NativeStackScreenProps<TagsStackParamList, T>,
     BottomTabScreenProps<MainTabParamList>
   >;
 
@@ -97,9 +108,15 @@ export type CategoriesTabScreenProps<T extends keyof CategoriesStackParamList> =
     BottomTabScreenProps<MainTabParamList>
   >;
 
-export type ProfileTabScreenProps<T extends keyof ProfileStackParamList> =
+export type BookmarksTabScreenProps<T extends keyof BookmarksStackParamList> =
   CompositeScreenProps<
-    NativeStackScreenProps<ProfileStackParamList, T>,
+    NativeStackScreenProps<BookmarksStackParamList, T>,
+    BottomTabScreenProps<MainTabParamList>
+  >;
+
+export type AboutTabScreenProps<T extends keyof AboutStackParamList> =
+  CompositeScreenProps<
+    NativeStackScreenProps<AboutStackParamList, T>,
     BottomTabScreenProps<MainTabParamList>
   >;
 

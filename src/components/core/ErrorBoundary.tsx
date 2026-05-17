@@ -7,10 +7,11 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
-import { logger } from '../../lib/logger';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
+import { logger } from '@/lib/logger';
+import { captureException, addBreadcrumb } from '@/lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -42,8 +43,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logger.error('ErrorBoundary caught:', error);
+    addBreadcrumb('ErrorBoundary caught error', 'error', {
+      componentStack: errorInfo.componentStack ?? '',
+    });
+    // Capture to Sentry (if onError not provided, fallback to direct capture)
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
+    } else {
+      captureException(error, { componentStack: errorInfo.componentStack });
     }
   }
 
@@ -147,7 +154,7 @@ export function ScreenErrorBoundary({ children }: ErrorBoundaryWrapperProps) {
   return (
     <ErrorBoundary
       fallback={
-        <View style={{ padding: spacing[6], paddingTop: spacing[12] }}>
+        <View style={{ padding: spacing.xxl, paddingTop: spacing['5xl'] }}>
           <DefaultErrorFallback
             error={null}
             onRetry={() => {
@@ -202,11 +209,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing[6],
+    paddingHorizontal: spacing.xxl,
     minHeight: 400,
   },
   iconContainer: {
-    marginBottom: spacing[6],
+    marginBottom: spacing.xxl,
   },
   iconCircle: {
     width: 64,
@@ -222,27 +229,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.h2.fontSize,
     fontWeight: typography.h2.fontWeight as any,
-    marginBottom: spacing[2],
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   description: {
     fontSize: typography.body.fontSize,
     lineHeight: typography.body.lineHeight,
     textAlign: 'center',
-    marginBottom: spacing[6],
-    paddingHorizontal: spacing[4],
+    marginBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
   },
   errorDetails: {
     width: '100%',
-    padding: spacing[4],
+    padding: spacing.lg,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    marginBottom: spacing[6],
+    marginBottom: spacing.xxl,
   },
   errorLabel: {
     fontSize: typography.small.fontSize,
     fontWeight: '600',
-    marginBottom: spacing[2],
+    marginBottom: spacing.sm,
   },
   errorText: {
     fontSize: typography.xs.fontSize,
@@ -250,12 +257,12 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: spacing[3],
-    marginBottom: spacing[6],
+    gap: spacing.md,
+    marginBottom: spacing.xxl,
   },
   primaryButton: {
-    paddingHorizontal: spacing[6],
-    paddingVertical: spacing[3],
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
   },
   primaryButtonText: {
@@ -268,7 +275,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   compactContainer: {
-    padding: spacing[4],
+    padding: spacing.lg,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
   },

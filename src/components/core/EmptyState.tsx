@@ -1,8 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
+
+interface ActionItem {
+  label: string;
+  onPress: () => void;
+}
 
 interface EmptyStateProps {
   /** Emoji or text icon displayed above the title */
@@ -18,6 +23,10 @@ interface EmptyStateProps {
   /** Optional secondary action */
   secondaryLabel?: string;
   onSecondaryAction?: () => void;
+  /** Primary action (alternative to actionLabel + onAction) */
+  primaryAction?: ActionItem;
+  /** Secondary action (alternative to secondaryLabel + onSecondaryAction) */
+  secondaryAction?: ActionItem;
 }
 
 /**
@@ -40,6 +49,8 @@ export function EmptyState({
   onAction,
   secondaryLabel,
   onSecondaryAction,
+  primaryAction,
+  secondaryAction,
 }: EmptyStateProps) {
   const { colors } = useTheme();
 
@@ -64,19 +75,21 @@ export function EmptyState({
         </Text>
       )}
 
-      {(actionLabel || secondaryLabel) && (
+      {(actionLabel || onAction || primaryAction || secondaryLabel || onSecondaryAction || secondaryAction) && (
         <View style={styles.actions}>
-          {actionLabel && onAction && (
+          {(actionLabel && onAction) || primaryAction ? (
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={onAction}
+              onPress={primaryAction?.onPress ?? onAction!}
               activeOpacity={0.8}
             >
-              <Text style={styles.primaryButtonText}>{actionLabel}</Text>
+              <Text style={styles.primaryButtonText}>
+                {primaryAction?.label ?? actionLabel}
+              </Text>
             </TouchableOpacity>
-          )}
+          ) : null}
 
-          {secondaryLabel && onSecondaryAction && (
+          {(secondaryLabel && onSecondaryAction) || secondaryAction ? (
             <TouchableOpacity
               style={[
                 styles.secondaryButton,
@@ -85,14 +98,14 @@ export function EmptyState({
                   backgroundColor: colors.surface,
                 },
               ]}
-              onPress={onSecondaryAction}
+              onPress={secondaryAction?.onPress ?? onSecondaryAction!}
               activeOpacity={0.8}
             >
               <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-                {secondaryLabel}
+                {secondaryAction?.label ?? secondaryLabel}
               </Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       )}
     </View>
@@ -104,8 +117,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing[8],
-    paddingVertical: spacing[12],
+    paddingHorizontal: spacing['3xl'],
+    paddingVertical: spacing['5xl'],
     minHeight: 300,
   },
   iconContainer: {
@@ -114,7 +127,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing[5],
+    marginBottom: spacing.xl,
   },
   icon: {
     fontSize: 36,
@@ -123,22 +136,22 @@ const styles = StyleSheet.create({
     fontSize: typography.h3.fontSize,
     fontWeight: typography.h3.fontWeight as any,
     textAlign: 'center',
-    marginBottom: spacing[2],
+    marginBottom: spacing.sm,
   },
   description: {
     fontSize: typography.body.fontSize,
     lineHeight: typography.body.lineHeight,
     textAlign: 'center',
-    marginBottom: spacing[6],
-    paddingHorizontal: spacing[4],
+    marginBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
   },
   actions: {
-    gap: spacing[3],
+    gap: spacing.md,
     alignItems: 'center',
   },
   primaryButton: {
-    paddingHorizontal: spacing[8],
-    paddingVertical: spacing[3],
+    paddingHorizontal: spacing['3xl'],
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     minWidth: 160,
     alignItems: 'center',
@@ -149,8 +162,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   secondaryButton: {
-    paddingHorizontal: spacing[8],
-    paddingVertical: spacing[3],
+    paddingHorizontal: spacing['3xl'],
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     minWidth: 160,

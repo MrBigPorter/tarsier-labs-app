@@ -1,8 +1,8 @@
-import { blogApi, ApiResponseWrapper } from '../baseApi';
+import { blogApi, ApiResponseWrapper } from '@/api/baseApi';
 import type {
   FrontendCategory,
   FrontendCategoryWithArticles,
-} from '../../types/frontend-blog';
+} from '@/types/frontend-blog';
 
 function unwrapData<T>(response: ApiResponseWrapper<T>): T {
   return response.data;

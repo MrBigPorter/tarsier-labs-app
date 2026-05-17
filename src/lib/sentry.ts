@@ -1,0 +1,97 @@
+/**
+ * Sentry Performance Monitoring & Crash Reporting
+ *
+ * Initializes @sentry/react-native with Performance Tracing.
+ * Only activates when a valid DSN is configured (staging/production).
+ *
+ * Usage:
+ *   import { initSentry, captureException } from '@/lib/sentry';
+ *
+ *   initSentry();                    // call at app startup
+ *   captureException(error);         // manually report errors
+ */
+import * as Sentry from '@sentry/react-native';
+import { env } from '@/lib/env';
+import { logger } from '@/lib/logger';
+
+let initialized = false;
+
+/**
+ * Initialize Sentry SDK.
+ * Safe to call multiple times — only runs once.
+ */
+export function initSentry(): void {
+  if (initialized) {
+    return;
+  }
+
+  if (!env.SENTRY_DSN) {
+    logger.info('[Sentry] DSN not configured — skipping initialization');
+    return;
+  }
+
+  // React Navigation instrumentation for automatic route tracing
+  const reactNavigationIntegration = Sentry.reactNavigationIntegration({
+    // Route names to ignore (e.g., modal screens or auth)
+    routeChangeTimeoutMs: 500,
+  });
+
+  Sentry.init({
+    dsn: env.SENTRY_DSN,
+    enabled: env.SENTRY_ENABLED,
+    environment: env.BUILD_VARIANT,
+    release: `frontend-blog-mobile@${__DEV__ ? 'dev' : env.BUILD_VARIANT}`,
+
+    // ── Performance Tracing ──────────────────────────────────────────
+    // 100% in dev, 20% in production to reduce overhead
+    tracesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0,
+    // Profiling for transactions (requires Hermes)
+    profilesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0,
+
+    // ── Session Replay ───────────────────────────────────────────────
+    // Only enable for production with lower rate to save bandwidth
+    replaysSessionSampleRate: env.SENTRY_ENABLED && !__DEV__ ? 0.1 : 0,
+    replaysOnErrorSampleRate: env.SENTRY_ENABLED ? 1.0 : 0,
+
+    // ── Integrations ─────────────────────────────────────────────────
+    integrations: [reactNavigationIntegration],
+
+    debug: __DEV__ && !!env.SENTRY_DSN,
+  });
+
+  initialized = true;
+  logger.info('[Sentry] Initialized', {
+    environment: env.BUILD_VARIANT,
+    tracesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0,
+  });
+}
+
+/**
+ * Report an exception to Sentry with optional context.
+ */
+export function captureException(
+  error: Error,
+  context?: Record<string, unknown>,
+): void {
+  Sentry.captureException(error, {
+    extra: context,
+  });
+}
+
+/**
+ * Record a breadcrumb for Sentry event trail.
+ */
+export function addBreadcrumb(
+  message: string,
+  category?: string,
+  data?: Record<string, unknown>,
+): void {
+  Sentry.addBreadcrumb({
+    message,
+    category: category ?? 'app',
+    data,
+    level: 'info',
+  });
+}
+
+export { Sentry };

@@ -1,167 +1,278 @@
 /**
- * AuthScreen — Login and registration
+ * AuthScreen — Passwordless email verification code login
+ *
+ * Flow:
+ * 1. User enters email
+ * 2. User taps "Send code" → POST /v1/auth/email/send-code
+ * 3. Backend sends 6-digit code to email
+ * 4. User enters 6-digit code
+ * 5. User taps "Login" → POST /v1/auth/email/login (email + code)
+ * 6. If account doesn't exist → auto-creates (Web's "login to register" philosophy)
  *
  * Features:
- * - Login form (email + password)
- * - Registration form (nickname + email + password + confirm)
- * - Toggle between login/register modes
- * - Form validation
- * - Loading state during submission
- * - Error display
- * - Social login buttons (Google, Apple) — placeholder
+ * - App logo image at top
+ * - Email input with Mail icon
+ * - Send code button with countdown (60s)
+ * - Verification code input with Lock icon
+ * - Tip box: "New user? Login to register!"
+ * - Submit button with ArrowRight icon
+ * - OAuth buttons (Google, Facebook, Apple) with proper icons
+ * - i18n support
  *
- * Data:
- * - Redux authSlice login thunk
- * - register endpoint (RTK Query mutation)
- *
- * Edge cases:
- * - Network error
- * - Validation errors
- * - Already authenticated → redirect
+ * External deps:
+ * - Redux: dispatch setCredentials to update auth state after login
+ * - RTK Query: useSendEmailCodeMutation, useLoginWithEmailCodeMutation
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
+  Image,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   ActivityIndicator,
-  Alert,
   Keyboard,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useAppDispatch, useAppSelector } from '../store';
-import { login, clearError } from '../store/slices/authSlice';
-import { useRegisterMutation } from '../api/endpoints/auth';
-import Header from '../components/layout/Header';
-import SvgIcon from '../components/core/SvgIcon';
-import type { RootStackScreenProps } from '../navigation/types';
+import { useTranslation } from 'react-i18next';
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useAppDispatch } from '@/store';
+import { setCredentials } from '@/store/slices/authSlice';
+import {
+  useSendEmailCodeMutation,
+  useLoginWithEmailCodeMutation,
+} from '@/api/endpoints/auth';
+import Header from '@/components/layout/Header';
+import SvgIcon from '@/components/core/SvgIcon';
+import { useOAuth } from '@/lib/hooks/useOAuth';
+import type { RootStackScreenProps } from '@/navigation/types';
 
-type AuthMode = 'login' | 'register';
-
-interface FormErrors {
-  nickname?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-}
+const CODE_REGEX = /^\d{6}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const COUNTDOWN_SECONDS = 60;
 
 const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { isLoading, error: authError } = useAppSelector(state => state.auth);
 
   // ─── State ──────────────────────────────────────────────────────────
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [code, setCode] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
   const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
-  const confirmPasswordRef = useRef<TextInput>(null);
+  const codeRef = useRef<TextInput>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // RTK Query mutation for registration
-  const [registerMutation, { isLoading: isRegistering }] =
-    useRegisterMutation();
+  // RTK Query mutations
+  const [sendEmailCodeMutation, { isLoading: isSendLoading }] =
+    useSendEmailCodeMutation();
+  const [loginWithEmailCodeMutation, { isLoading: isLoginLoading }] =
+    useLoginWithEmailCodeMutation();
 
-  // ─── Validation ─────────────────────────────────────────────────────
+  const isSubmitting = isLoginLoading;
 
-  const validate = useCallback((): FormErrors => {
-    const errors: FormErrors = {};
+  // OAuth login
+  const { loginGoogle, loginFacebook, loginApple } = useOAuth();
 
-    if (mode === 'register') {
-      if (!nickname.trim()) {
-        errors.nickname = 'Nickname is required';
-      } else if (nickname.trim().length < 2) {
-        errors.nickname = 'Nickname must be at least 2 characters';
+  // ─── Countdown timer ────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (countdown > 0) {
+      countdownRef.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current);
+              countdownRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
       }
-    }
-
-    if (!email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      errors.email = 'Please enter a valid email address';
-    }
-
-    if (!password) {
-      errors.password = 'Password is required';
-    } else if (password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-
-    if (mode === 'register') {
-      if (!confirmPassword) {
-        errors.confirmPassword = 'Please confirm your password';
-      } else if (password !== confirmPassword) {
-        errors.confirmPassword = 'Passwords do not match';
-      }
-    }
-
-    return errors;
-  }, [mode, nickname, email, password, confirmPassword]);
+    };
+  }, [countdown]);
 
   // ─── Handlers ───────────────────────────────────────────────────────
-
-  const handleModeSwitch = useCallback(() => {
-    setMode(prev => (prev === 'login' ? 'register' : 'login'));
-    setFormErrors({});
-    dispatch(clearError());
-  }, [dispatch]);
-
-  const handleSubmit = useCallback(async () => {
-    Keyboard.dismiss();
-    const errors = validate();
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    setFormErrors({});
-
-    if (mode === 'login') {
-      dispatch(login({ email: email.trim(), password }));
-    } else {
-      try {
-        await registerMutation({
-          nickname: nickname.trim(),
-          email: email.trim(),
-          password,
-        }).unwrap();
-        // Auto-switch to login mode after successful registration
-        setMode('login');
-        Alert.alert(
-          'Registration Successful',
-          'Please check your email to verify your account, then sign in.',
-        );
-      } catch {
-        // Error is handled by RTK Query
-      }
-    }
-  }, [mode, email, password, nickname, validate, dispatch, registerMutation]);
 
   const handleGoBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
-  const isSubmitting = isLoading || isRegistering;
+  const validateEmail = useCallback((): string | null => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      return t('auth.fillAllFields');
+    }
+    if (!EMAIL_REGEX.test(trimmed)) {
+      return t('auth.invalidEmail');
+    }
+    return null;
+  }, [email, t]);
 
-  // ─── Main render ────────────────────────────────────────────────────
+  const handleSendCode = useCallback(async () => {
+    Keyboard.dismiss();
+    const emailError = validateEmail();
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+
+    setError(null);
+    setIsSendingCode(true);
+
+    try {
+      await sendEmailCodeMutation({
+        email: email.trim(),
+      }).unwrap();
+      setCountdown(COUNTDOWN_SECONDS);
+    } catch (err: any) {
+      const status = err?.status ?? err?.originalStatus ?? '';
+      const serverMsg = err?.data?.message || err?.error || '';
+      const statusPrefix = status ? `[${status}] ` : '';
+      const message =
+        `${statusPrefix}${serverMsg}`.trim() || t('auth.sendCodeFailed');
+      setError(message);
+    } finally {
+      setIsSendingCode(false);
+    }
+  }, [email, validateEmail, sendEmailCodeMutation, t]);
+
+  const handleSubmit = useCallback(async () => {
+    Keyboard.dismiss();
+    setError(null);
+
+    // Validate email
+    const emailError = validateEmail();
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+
+    // Validate code
+    const trimmedCode = code.trim();
+    if (!trimmedCode) {
+      setError(t('auth.fillAllFields'));
+      return;
+    }
+    if (!CODE_REGEX.test(trimmedCode)) {
+      setError(t('auth.invalidCode'));
+      return;
+    }
+
+    try {
+      const result = await loginWithEmailCodeMutation({
+        email: email.trim(),
+        code: trimmedCode,
+      }).unwrap();
+
+      console.log('[Auth] ✅ Email code login success, dispatching setCredentials', {
+        userId: result.id,
+        email: result.email,
+      });
+
+      // Update Redux auth state with the response (nested tokens.* format)
+      dispatch(
+        setCredentials({
+          user: {
+            id: result.id,
+            email: result.email,
+            nickname: result.nickname,
+            avatar: result.avatar ?? undefined,
+          },
+          accessToken: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken,
+        }),
+      );
+
+      // Navigate back to main screen after successful login
+      console.log('[Auth] 🔙 Navigating back to MainTabs');
+      navigation.goBack();
+    } catch (err: any) {
+      const status = err?.status ?? err?.originalStatus ?? '';
+      const serverMsg = err?.data?.message || err?.error || '';
+      const statusPrefix = status ? `[${status}] ` : '';
+      const message =
+        `${statusPrefix}${serverMsg}`.trim() || t('auth.loginFailed');
+      setError(message);
+    }
+  }, [email, code, validateEmail, loginWithEmailCodeMutation, dispatch, t]);
+
+  const handleGoogleLogin = useCallback(async () => {
+    try {
+      setIsOAuthLoading(true);
+      setError(null);
+      await loginGoogle();
+      console.log('[Auth] ✅ Google login success, navigating back');
+      navigation.goBack();
+    } catch (err: any) {
+      if (err?.code !== 'CANCELLED') {
+        setError(err?.message || t('auth.oauth.googleFailed'));
+      }
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  }, [loginGoogle, navigation, t]);
+
+  const handleFacebookLogin = useCallback(async () => {
+    try {
+      setIsOAuthLoading(true);
+      setError(null);
+      await loginFacebook();
+      console.log('[Auth] ✅ Facebook login success, navigating back');
+      navigation.goBack();
+    } catch (err: any) {
+      if (err?.code !== 'CANCELLED') {
+        setError(err?.message || t('auth.oauth.facebookNotReady'));
+      }
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  }, [loginFacebook, navigation, t]);
+
+  const handleAppleLogin = useCallback(async () => {
+    try {
+      setIsOAuthLoading(true);
+      setError(null);
+      await loginApple();
+      console.log('[Auth] ✅ Apple login success, navigating back');
+      navigation.goBack();
+    } catch (err: any) {
+      if (err?.code !== 'CANCELLED') {
+        setError(err?.message || t('auth.oauth.googleFailed'));
+      }
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  }, [loginApple, navigation, t]);
+
+  // ─── Derived state for send-code button ─────────────────────────────
+
+  const canSendCode = !isSendingCode && !isSendLoading && countdown === 0;
+  const sendButtonLabel = isSendingCode || isSendLoading
+    ? t('auth.sending')
+    : countdown > 0
+      ? `${t('auth.resendIn')} ${countdown}s`
+      : t('auth.sendCode');
+
+  // ─── Render ─────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -170,35 +281,28 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
         showBack
         onBackPress={handleGoBack}
         hideSearch
-        hideAvatar
+        hideSettings
       />
 
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + spacing.sm },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + spacing.xl },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* ─── Header ────────────────────────────────────────────── */}
-          <View style={styles.authHeader}>
-            <View
-              style={[
-                styles.logoIcon,
-                { backgroundColor: colors.primary },
-              ]}
-            >
-              <Text style={styles.logoText}>T</Text>
-            </View>
+          {/* ─── Title Section ─────────────────────────────────────── */}
+          <View style={styles.titleSection}>
+            <Image
+              source={require('@assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text
               style={[
-                styles.welcomeText,
+                styles.title,
                 {
                   color: colors.text,
                   fontFamily: typography.h3.fontFamily,
@@ -207,7 +311,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
                 },
               ]}
             >
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
+              {t('auth.login.title')}
             </Text>
             <Text
               style={[
@@ -215,75 +319,49 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
                 { color: colors.textSecondary },
               ]}
             >
-              {mode === 'login'
-                ? 'Sign in to access your bookmarks and comments'
-                : 'Join the Tarsier community'}
+              {t('auth.login.subtitle')}
             </Text>
           </View>
 
-          {/* ─── Form ──────────────────────────────────────────────── */}
-          <View style={styles.form}>
-            {/* Nickname (register only) */}
-            {mode === 'register' && (
-              <View style={styles.inputGroup}>
-                <Text
-                  style={[
-                    styles.inputLabel,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Nickname
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      color: colors.text,
-                      backgroundColor: colors.surface,
-                      borderColor: formErrors.nickname
-                        ? '#EF4444'
-                        : colors.border,
-                    },
-                  ]}
-                  placeholder="Your display name"
-                  placeholderTextColor={colors.textSecondary}
-                  value={nickname}
-                  onChangeText={setNickname}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                  onSubmitEditing={() => emailRef.current?.focus()}
-                />
-                {formErrors.nickname && (
-                  <Text style={styles.errorText}>
-                    {formErrors.nickname}
-                  </Text>
-                )}
-              </View>
-            )}
+          {/* ─── Tip Box ──────────────────────────────────────────── */}
+          <View style={[styles.tipBox, { backgroundColor: colors.utilityBlue50, borderColor: colors.utilityBlue200 }]}>
+            <Text style={[styles.tipText, { color: colors.utilityBlue700 }]}>{t('auth.login.tip')}</Text>
+          </View>
 
-            {/* Email */}
-            <View style={styles.inputGroup}>
-              <Text
-                style={[
-                  styles.inputLabel,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Email
-              </Text>
+            {/* Email Input */}
+            <Text
+              style={[
+                styles.inputLabel,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {t('auth.email')}
+            </Text>
+            <View
+              style={[
+                styles.inputWrapper,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: error
+                    ? colors.borderError
+                    : colors.border,
+                },
+              ]}
+            >
+              <View style={styles.inputIcon}>
+                <SvgIcon
+                  name="mail"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </View>
               <TextInput
                 ref={emailRef}
                 style={[
                   styles.input,
-                  {
-                    color: colors.text,
-                    backgroundColor: colors.surface,
-                    borderColor: formErrors.email
-                      ? '#EF4444'
-                      : colors.border,
-                  },
+                  { color: colors.text },
                 ]}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 value={email}
                 onChangeText={setEmail}
@@ -291,128 +369,89 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
+                onSubmitEditing={() => codeRef.current?.focus()}
               />
-              {formErrors.email && (
-                <Text style={styles.errorText}>{formErrors.email}</Text>
-              )}
             </View>
 
-            {/* Password */}
-            <View style={styles.inputGroup}>
+            {/* Verification Code + Send Code Button */}
+            <View style={styles.codeHeaderRow}>
               <Text
                 style={[
                   styles.inputLabel,
                   { color: colors.textSecondary },
                 ]}
               >
-                Password
+                {t('auth.verificationCode')}
               </Text>
-              <View
-                style={[
-                  styles.passwordContainer,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: formErrors.password
-                      ? '#EF4444'
-                      : colors.border,
-                  },
-                ]}
+              <TouchableOpacity
+                onPress={handleSendCode}
+                disabled={!canSendCode}
+                activeOpacity={0.7}
               >
-                <TextInput
-                  ref={passwordRef}
-                  style={[
-                    styles.passwordInput,
-                    { color: colors.text },
-                  ]}
-                  placeholder={
-                    mode === 'register'
-                      ? 'At least 6 characters'
-                      : 'Your password'
-                  }
-                  placeholderTextColor={colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  returnKeyType={
-                    mode === 'register' ? 'next' : 'done'
-                  }
-                  onSubmitEditing={() => {
-                    if (mode === 'register') {
-                      confirmPasswordRef.current?.focus();
-                    } else {
-                      handleSubmit();
-                    }
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(prev => !prev)}
-                  style={styles.eyeButton}
-                >
-                  <SvgIcon
-                    name={showPassword ? 'eye' : 'eye-off'}
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
-              {formErrors.password && (
-                <Text style={styles.errorText}>
-                  {formErrors.password}
-                </Text>
-              )}
-            </View>
-
-            {/* Confirm Password (register only) */}
-            {mode === 'register' && (
-              <View style={styles.inputGroup}>
                 <Text
                   style={[
-                    styles.inputLabel,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Confirm Password
-                </Text>
-                <TextInput
-                  ref={confirmPasswordRef}
-                  style={[
-                    styles.input,
+                    styles.sendCodeText,
                     {
-                      color: colors.text,
-                      backgroundColor: colors.surface,
-                      borderColor: formErrors.confirmPassword
-                        ? '#EF4444'
-                        : colors.border,
+                      color: canSendCode
+                        ? colors.primary
+                        : colors.textSecondary,
                     },
                   ]}
-                  placeholder="Confirm your password"
-                  placeholderTextColor={colors.textSecondary}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit}
+                >
+                  {sendButtonLabel}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View
+              style={[
+                styles.inputWrapper,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: error
+                    ? colors.borderError
+                    : colors.border,
+                },
+              ]}
+            >
+              <View style={styles.inputIcon}>
+                <SvgIcon
+                  name="lock"
+                  size={18}
+                  color={colors.textSecondary}
                 />
-                {formErrors.confirmPassword && (
-                  <Text style={styles.errorText}>
-                    {formErrors.confirmPassword}
-                  </Text>
-                )}
               </View>
-            )}
+              <TextInput
+                ref={codeRef}
+                style={[
+                  styles.input,
+                  { color: colors.text },
+                ]}
+                placeholder={t('auth.codePlaceholder')}
+                placeholderTextColor={colors.textSecondary}
+                value={code}
+                onChangeText={text => {
+                  // Only allow digits, max 6
+                  const filtered = text.replace(/[^0-9]/g, '').slice(0, 6);
+                  setCode(filtered);
+                }}
+                keyboardType="number-pad"
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={6}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+              />
+            </View>
 
-            {/* API Error */}
-            {authError && (
-              <View style={styles.apiError}>
+            {/* Error Message */}
+            {error && (
+              <View style={styles.errorContainer}>
                 <SvgIcon
                   name="alert-circle"
                   size={16}
-                  color="#EF4444"
+                  color={colors.textErrorPrimary}
                 />
-                <Text style={styles.apiErrorText}>{authError}</Text>
+                <Text style={[styles.errorText, { color: colors.textErrorPrimary }]}>{error}</Text>
               </View>
             )}
 
@@ -432,39 +471,20 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitButtonText}>
-                  {mode === 'login' ? 'Sign In' : 'Create Account'}
-                </Text>
+                <View style={styles.submitContent}>
+                  <Text style={styles.submitButtonText}>
+                    {t('auth.login.button')}
+                  </Text>
+                  <SvgIcon
+                    name="arrow-right"
+                    size={18}
+                    color="#FFFFFF"
+                  />
+                </View>
               )}
             </TouchableOpacity>
 
-            {/* Mode Switch */}
-            <View style={styles.switchRow}>
-              <Text
-                style={[
-                  styles.switchText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {mode === 'login'
-                  ? "Don't have an account?"
-                  : 'Already have an account?'}
-              </Text>
-              <TouchableOpacity onPress={handleModeSwitch}>
-                <Text
-                  style={[
-                    styles.switchLink,
-                    { color: colors.primary },
-                  ]}
-                >
-                  {mode === 'login' ? 'Sign Up' : 'Sign In'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* ─── Social Login ───────────────────────────────────────── */}
-          <View style={styles.socialSection}>
+            {/* ─── Divider ────────────────────────────────────────────── */}
             <View style={styles.divider}>
               <View
                 style={[
@@ -478,7 +498,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
                   { color: colors.textSecondary },
                 ]}
               >
-                OR
+                {t('auth.orContinueWith')}
               </Text>
               <View
                 style={[
@@ -488,52 +508,82 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
               />
             </View>
 
-            {/* Google Sign In */}
+            {/* ─── OAuth Buttons ──────────────────────────────────────── */}
+
+            {/* Google */}
             <TouchableOpacity
+              onPress={handleGoogleLogin}
+              disabled={isOAuthLoading}
               style={[
-                styles.socialButton,
+                styles.oauthButton,
                 {
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.background,
                   borderColor: colors.border,
                 },
               ]}
-              disabled
+              activeOpacity={0.7}
             >
+              <SvgIcon name="google" size={20} />
               <Text
                 style={[
-                  styles.socialButtonText,
+                  styles.oauthButtonText,
                   { color: colors.text },
                 ]}
               >
-                Continue with Google
+                {t('auth.login.google')}
               </Text>
             </TouchableOpacity>
 
-            {/* Apple Sign In */}
+            {/* Facebook */}
+            <TouchableOpacity
+              onPress={handleFacebookLogin}
+              disabled={isOAuthLoading}
+              style={[
+                styles.oauthButton,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              <SvgIcon name="facebook" size={20} />
+              <Text
+                style={[
+                  styles.oauthButtonText,
+                  { color: colors.text },
+                ]}
+              >
+                {t('auth.login.facebook')}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Apple (iOS only) */}
             {Platform.OS === 'ios' && (
               <TouchableOpacity
+                onPress={handleAppleLogin}
+                disabled={isOAuthLoading}
                 style={[
-                  styles.socialButton,
+                  styles.oauthButton,
                   {
-                    backgroundColor: theme.dark ? '#FFFFFF' : '#000000',
-                    borderColor: colors.border,
+                    backgroundColor: isDark ? '#1C1C1E' : '#000000',
+                    borderColor: isDark ? '#333333' : '#000000',
                   },
                 ]}
-                disabled
+                activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.socialButtonText,
-                    { color: theme.dark ? '#000000' : '#FFFFFF' },
-                  ]}
-                >
-                  Continue with Apple
+                <SvgIcon
+                  name="apple"
+                  size={20}
+                  color="#FFFFFF"
+                />
+                <Text style={[styles.oauthButtonText, { color: '#FFFFFF' }]}>
+                  Apple
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+
     </View>
   );
 };
@@ -547,26 +597,23 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     flexGrow: 1,
   },
-  authHeader: {
+
+  // ─── Title Section ──────────────────────────────────────────────────
+  titleSection: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    paddingTop: spacing['4xl'],
+    paddingBottom: spacing.md,
   },
-  logoIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+  logoImage: {
+    width: 96,
+    height: 96,
+    marginBottom: spacing.lg,
+    alignSelf: 'center',
   },
-  logoText: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  welcomeText: {
+  title: {
     marginBottom: spacing.xs,
   },
   subtitle: {
@@ -574,90 +621,94 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  form: {
-    marginTop: spacing.md,
-  },
-  inputGroup: {
+
+  // ─── Tip Box ────────────────────────────────────────────────────────
+  tipBox: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
   },
+  tipText: {
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+
+  // ─── Input Fields ───────────────────────────────────────────────────
   inputLabel: {
     fontSize: 13,
     fontWeight: '500',
     marginBottom: spacing.xs,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
-    height: 48,
-  },
-  passwordContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 10,
-    height: 48,
+    borderRadius: 16,
+    height: 54,
+    marginBottom: spacing.lg,
   },
-  passwordInput: {
+  inputIcon: {
+    marginLeft: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  input: {
     flex: 1,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     fontSize: 16,
     height: '100%',
   },
-  eyeButton: {
-    padding: spacing.sm,
+
+  // ─── Code Header Row (label + send code button) ────────────────────
+  codeHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
+  sendCodeText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  apiError: {
+
+  // ─── Error ─────────────────────────────────────────────────────────
+  errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
     padding: spacing.sm,
     borderRadius: 8,
     marginBottom: spacing.md,
     gap: spacing.xs,
   },
-  apiErrorText: {
-    color: '#DC2626',
+  errorText: {
     fontSize: 13,
     flex: 1,
   },
+
+  // ─── Submit Button ─────────────────────────────────────────────────
   submitButton: {
-    height: 48,
-    borderRadius: 10,
+    height: 54,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  submitContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    gap: spacing.xs,
-  },
-  switchText: {
-    fontSize: 14,
-  },
-  switchLink: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  socialSection: {
-    marginTop: spacing.xl,
-    gap: spacing.sm,
-  },
+
+  // ─── Divider ────────────────────────────────────────────────────────
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -672,17 +723,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  socialButton: {
+
+  // ─── OAuth Buttons ──────────────────────────────────────────────────
+  oauthButton: {
     height: 48,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  socialButtonText: {
+  oauthButtonText: {
     fontSize: 15,
     fontWeight: '500',
   },
+
 });
 
 export default AuthScreen;

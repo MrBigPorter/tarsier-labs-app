@@ -20,6 +20,9 @@
     "error": "加载失败，请稍后重试",
     "loadFailed": "加载失败",
     "retry": "重试",
+    "goBack": "返回",
+    "pullDownToRetry": "下拉重试",
+    "checkBackLater": "稍后再来看看吧",
     "articleCount": "{count} 篇文章",
     "totalTags": "共 {count} 个标签，{total} 篇文章",
     "about": "关于",
@@ -34,7 +37,13 @@
     "notFound": "该分类不存在",
     "empty": "暂无分类",
     "emptyArticles": "暂时还没有相关文章",
-    "emptyDescription": "这个分类下的内容正在准备中，您可以先看看其他分类的文章"
+    "emptyDescription": "这个分类下的内容正在准备中，您可以先看看其他分类的文章",
+    "error": {
+      "loadFailed": "加载分类失败"
+    },
+    "emptyState": {
+      "description": "分类将在文章创建后显示"
+    }
   },
   "tags": {
     "title": "标签云",
@@ -42,7 +51,13 @@
     "notFound": "该标签不存在",
     "empty": "暂无标签",
     "emptyArticles": "还没有使用此标签的文章",
-    "emptyDescription": "看看其他热门标签的文章吧"
+    "emptyDescription": "看看其他热门标签的文章吧",
+    "error": {
+      "loadFailed": "加载标签失败"
+    },
+    "emptyState": {
+      "description": "标签将在文章分类后显示"
+    }
   },
   "home": {
     "title": "最新文章",
@@ -51,7 +66,10 @@
     "featured": "精选",
     "featuredArticles": "精选文章",
     "viewAll": "查看全部",
-    "heroSubtitle": "发现我们精心挑选的精选内容"
+    "heroSubtitle": "发现我们精心挑选的精选内容",
+    "error": {
+      "unableToLoad": "无法加载文章"
+    }
   },
   "article": {
     "readTime": "阅读时间",
@@ -64,7 +82,16 @@
     "notFound": "文章未找到",
     "notFoundDescription": "您查找的文章不存在或已被删除。",
     "notPublished": "尚未发布",
-    "minutes": "分钟"
+    "minutes": "分钟",
+    "empty": {
+      "inCategory": "试试选择其他分类"
+    },
+    "error": {
+      "loadFailed": "加载文章失败",
+      "loadFailedSingle": "加载文章失败",
+      "generic": "发生了一个错误",
+      "pullDownToRetry": "下拉重试加载"
+    }
   },
   "auth": {
     "email": "邮箱地址",
@@ -85,6 +112,7 @@
     "fillAllFields": "请填写所有必填项",
     "invalidCode": "验证码格式不正确",
     "loginFailed": "登录失败",
+    "done": "完成",
     "oauth": {
       "githubNotConfigured": "GitHub OAuth 未配置",
       "githubFailed": "GitHub 登录失败",
@@ -120,6 +148,7 @@
     "title": "评论",
     "writeComment": "发表评论",
     "writeReply": "回复",
+    "beFirstThoughts": "成为第一个分享想法的人吧！",
     "reply": "回复",
     "cancel": "取消",
     "submit": "提交",
@@ -140,7 +169,10 @@
     "pageInfo": "第 {page} 页，共 {totalPages} 页",
     "allCommentsLoaded": "已加载所有评论",
     "totalComments": "共 {count} 条评论",
-    "loadingComment": "评论加载中..."
+    "loadingComment": "评论加载中...",
+    "commentPending": "您的评论正在审核中...",
+    "commentApproved": "您的评论已成功发布",
+    "commentRejected": "评论内容不符合社区规范，已自动移除"
   },
   "search": {
     "title": "搜索文章",
@@ -151,22 +183,37 @@
     "emptyDescription": "搜索文章标题、内容或标签",
     "noResults": "没有找到相关结果",
     "noResultsDescription": "尝试使用不同的关键词",
-    "clear": "清除搜索",
+    "clear": "清除",
     "shortcutHint": "按 Cmd/Ctrl + K 打开搜索",
     "viewAllResults": "查看所有结果",
     "loadFailed": "搜索失败，请重试",
     "showingFirst": "显示前 {count} 个结果",
-    "visitFullPage": "访问完整搜索页面查看更多结果"
+    "visitFullPage": "访问完整搜索页面查看更多结果",
+    "recent": "最近搜索",
+    "resultCount": "{{count}} 条结果",
+    "popularTags": "热门标签",
+    "noRecentSearches": "暂无搜索记录",
+    "empty": {
+      "hint": "输入至少2个字符搜索所有文章",
+      "noResultsFor": "没有找到与 \"{{query}}\" 匹配的文章"
+    },
+    "error": {
+      "connection": "请检查网络连接后重试"
+    }
   },
   "bookmarks": {
     "title": "我的收藏",
     "subtitle": "你收藏的所有文章",
     "totalCount": "共收藏 {count} 篇文章",
     "empty": "暂无收藏文章",
-    "emptyTitle": "暂无收藏文章",
+    "emptyTitle": "暂无收藏",
     "emptyDescription": "开始探索文章并收藏你喜欢的",
     "browseArticles": "浏览文章",
-    "loadFailed": "加载收藏失败"
+    "loadFailed": "加载收藏失败",
+    "signInToView": "登录后查看收藏",
+    "saveDescription": "点击文章上的收藏图标即可保存到此处",
+    "signIn": "登录",
+    "emptyHint": "点击任意文章上的收藏图标即可保存到此处"
   },
   "about": {
     "title": "关于 Tarsier Labs",
@@ -254,6 +301,7 @@
   },
   "settings": {
     "title": "设置",
+    "appearance": "外观",
     "theme": {
       "name": "主题",
       "dark": "深色模式",
@@ -269,6 +317,36 @@
       "ko": "韩文",
       "fr": "法文",
       "de": "德文"
+    },
+    "notifications": "通知",
+    "pushNotifications": "推送通知",
+    "data": "数据",
+    "clearCache": {
+      "name": "清除缓存",
+      "confirm": "清除缓存",
+      "message": "这将清除所有缓存数据，包括收藏。您可以随时重新下载。",
+      "action": "清除"
+    },
+    "account": "账户",
+    "signOut": {
+      "name": "退出登录",
+      "confirm": "退出登录",
+      "message": "确定要退出登录吗？您的收藏将保存在本地。"
+    },
+    "deleteAccount": {
+      "name": "删除账号",
+      "confirm": "删除账号",
+      "message": "此操作不可撤销。您的所有数据将被永久删除。",
+      "action": "删除"
+    },
+    "info": "信息",
+    "aboutTarsier": "关于 Tarsier",
+    "privacyPolicy": "隐私政策",
+    "profile": {
+      "signIn": "登录",
+      "subtitle": "同步您的收藏和偏好设置",
+      "signedInAs": "已登录为 {{name}}",
+      "signInBadge": "登录"
     },
     "logout": {
       "name": "退出登录",
@@ -304,6 +382,15 @@
       "check": "检查更新",
       "checking": "检查中...",
       "complete": "更新完成后页面将自动刷新..."
+    }
+  },
+  "archive": {
+    "error": {
+      "loadFailed": "加载归档失败"
+    },
+    "empty": {
+      "noArchived": "暂无归档文章",
+      "description": "文章发布后将显示在此处"
     }
   }
 }

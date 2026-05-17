@@ -1,8 +1,8 @@
-import { blogApi, ApiPaginatedResponse, ApiResponseWrapper } from '../baseApi';
+import { blogApi, ApiPaginatedResponse, ApiResponseWrapper } from '@/api/baseApi';
 import type {
   FrontendArticle,
   FrontendPaginatedResponse,
-} from '../../types/frontend-blog';
+} from '@/types/frontend-blog';
 
 /**
  * Article query parameters
@@ -19,6 +19,7 @@ interface SearchParams {
   q: string;
   page?: number;
   pageSize?: number;
+  lang?: string;
 }
 
 /**
@@ -85,11 +86,17 @@ export const articleApi = blogApi.injectEndpoints({
      * Get popular articles
      * GET /api/v1/frontend/blog/articles/popular
      */
-    getPopularArticles: builder.query<FrontendArticle[], number | void>({
-      query: (limit = 10) => ({
-        url: '/api/v1/frontend/blog/articles/popular',
-        params: { limit },
-      }),
+    getPopularArticles: builder.query<
+      FrontendArticle[],
+      { limit?: number; lang?: string } | void
+    >({
+      query: (params) => {
+        const { limit = 10, lang } = params || {};
+        return {
+          url: '/api/v1/frontend/blog/articles/popular',
+          params: { limit, ...(lang ? { lang } : {}) },
+        };
+      },
       transformResponse: (response: ApiResponseWrapper<FrontendArticle[]>) =>
         unwrapData(response),
       providesTags: [{ type: 'Article', id: 'POPULAR' }],
@@ -99,10 +106,13 @@ export const articleApi = blogApi.injectEndpoints({
      * Get related articles
      * GET /api/v1/frontend/blog/articles/:id/related
      */
-    getRelatedArticles: builder.query<FrontendArticle[], { articleId: string; limit?: number }>({
-      query: ({ articleId, limit = 5 }) => ({
+    getRelatedArticles: builder.query<
+      FrontendArticle[],
+      { articleId: string; limit?: number; lang?: string }
+    >({
+      query: ({ articleId, limit = 5, lang }) => ({
         url: `/api/v1/frontend/blog/articles/${articleId}/related`,
-        params: { limit },
+        params: { limit, ...(lang ? { lang } : {}) },
       }),
       transformResponse: (response: ApiResponseWrapper<FrontendArticle[]>) =>
         unwrapData(response),

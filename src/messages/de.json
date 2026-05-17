@@ -26,7 +26,10 @@
     "bookmarks": "Lesezeichen",
     "cancel": "Abbrechen",
     "close": "Schließen",
-    "pageInfo": "Seite {page} von {totalPages}"
+    "pageInfo": "Seite {page} von {totalPages}",
+    "goBack": "Zurück",
+    "pullDownToRetry": "Zum Wiederholen nach unten ziehen",
+    "checkBackLater": "Schauen Sie später wieder vorbei für neue Inhalte"
   },
   "categories": {
     "title": "Artikelkategorien",
@@ -34,7 +37,13 @@
     "notFound": "Kategorie nicht gefunden",
     "empty": "Noch keine Kategorien",
     "emptyArticles": "Noch keine Artikel in dieser Kategorie",
-    "emptyDescription": "Die Inhalte dieser Kategorie werden vorbereitet. Sie können sich zunächst Artikel in anderen Kategorien ansehen"
+    "emptyDescription": "Die Inhalte dieser Kategorie werden vorbereitet. Sie können sich zunächst Artikel in anderen Kategorien ansehen",
+    "error": {
+      "loadFailed": "Kategorien konnten nicht geladen werden"
+    },
+    "emptyState": {
+      "description": "Kategorien werden hier angezeigt, sobald Artikel erstellt wurden"
+    }
   },
   "tags": {
     "title": "Tag-Cloud",
@@ -42,7 +51,13 @@
     "notFound": "Tag nicht gefunden",
     "empty": "Noch keine Tags",
     "emptyArticles": "Noch keine Artikel mit diesem Tag",
-    "emptyDescription": "Sehen Sie sich Artikel mit anderen beliebten Tags an"
+    "emptyDescription": "Sehen Sie sich Artikel mit anderen beliebten Tags an",
+    "error": {
+      "loadFailed": "Tags konnten nicht geladen werden"
+    },
+    "emptyState": {
+      "description": "Tags werden hier angezeigt, sobald Artikel kategorisiert wurden"
+    }
   },
   "home": {
     "title": "Neueste Artikel",
@@ -51,7 +66,10 @@
     "featured": "Empfohlen",
     "featuredArticles": "Empfohlene Artikel",
     "viewAll": "Alle anzeigen",
-    "heroSubtitle": "Entdecken Sie unsere handverlesenen empfohlenen Inhalte"
+    "heroSubtitle": "Entdecken Sie unsere handverlesenen empfohlenen Inhalte",
+    "error": {
+      "unableToLoad": "Artikel konnten nicht geladen werden"
+    }
   },
   "article": {
     "readTime": "Lesezeit",
@@ -64,7 +82,16 @@
     "notFound": "Artikel nicht gefunden",
     "notFoundDescription": "Der gesuchte Artikel existiert nicht oder wurde entfernt.",
     "notPublished": "Noch nicht veröffentlicht",
-    "minutes": "Minuten"
+    "minutes": "Minuten",
+    "empty": {
+      "inCategory": "Versuchen Sie es mit einer anderen Kategorie"
+    },
+    "error": {
+      "loadFailed": "Artikel konnten nicht geladen werden",
+      "loadFailedSingle": "Artikel konnte nicht geladen werden",
+      "generic": "Ein Fehler ist aufgetreten",
+      "pullDownToRetry": "Zum erneuten Laden nach unten ziehen"
+    }
   },
   "auth": {
     "email": "E-Mail-Adresse",
@@ -85,6 +112,7 @@
     "fillAllFields": "Bitte füllen Sie alle Felder aus",
     "invalidCode": "Ungültiger Bestätigungscode",
     "loginFailed": "Anmeldung fehlgeschlagen",
+    "done": "Fertig",
     "oauth": {
       "githubNotConfigured": "GitHub OAuth ist nicht konfiguriert",
       "githubFailed": "GitHub-Anmeldung fehlgeschlagen",
@@ -136,11 +164,15 @@
     "contentPlaceholder": "Schreiben Sie Ihren Kommentar hier...",
     "noComments": "Noch keine Kommentare",
     "beFirst": "Seien Sie der Erste, der kommentiert!",
+    "beFirstThoughts": "Teilen Sie als Erster Ihre Gedanken",
     "currentUser": "Aktueller Benutzer",
     "pageInfo": "Seite {page} von {totalPages}",
     "allCommentsLoaded": "Alle Kommentare geladen",
     "totalComments": "Insgesamt {count} Kommentare",
-    "loadingComment": "Kommentar wird geladen..."
+    "loadingComment": "Kommentar wird geladen...",
+    "commentPending": "Ihr Kommentar wird überprüft...",
+    "commentApproved": "Ihr Kommentar wurde veröffentlicht",
+    "commentRejected": "Der Kommentar entspricht nicht den Community-Richtlinien und wurde automatisch entfernt"
   },
   "search": {
     "title": "Artikel suchen",
@@ -151,12 +183,23 @@
     "emptyDescription": "Durchsuchen Sie Artikeltitel, Inhalte oder Tags",
     "noResults": "Keine Ergebnisse gefunden",
     "noResultsDescription": "Versuchen Sie es mit anderen Suchbegriffen",
-    "clear": "Suche löschen",
+    "clear": "Löschen",
     "shortcutHint": "Drücken Sie Cmd/Ctrl + K, um die Suche zu öffnen",
     "viewAllResults": "Alle Ergebnisse anzeigen",
     "loadFailed": "Suche fehlgeschlagen, bitte erneut versuchen",
     "showingFirst": "Zeige die ersten {count} Ergebnisse",
-    "visitFullPage": "Besuchen Sie die vollständige Suchseite für weitere Ergebnisse"
+    "visitFullPage": "Besuchen Sie die vollständige Suchseite für weitere Ergebnisse",
+    "recent": "Letzte Suchanfragen",
+    "resultCount": "{{count}} Ergebnisse",
+    "popularTags": "Beliebte Tags",
+    "noRecentSearches": "Keine letzten Suchanfragen",
+    "empty": {
+      "hint": "Geben Sie mindestens 2 Zeichen ein, um in allen Artikeln zu suchen",
+      "noResultsFor": "Keine Artikel gefunden für \"{{query}}\""
+    },
+    "error": {
+      "connection": "Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut"
+    }
   },
   "bookmarks": {
     "title": "Meine Lesezeichen",
@@ -166,7 +209,12 @@
     "emptyTitle": "Noch keine gespeicherten Artikel",
     "emptyDescription": "Entdecken Sie Artikel und speichern Sie Ihre Favoriten",
     "browseArticles": "Artikel durchsuchen",
-    "loadFailed": "Laden der Lesezeichen fehlgeschlagen"
+    "loadFailed": "Laden der Lesezeichen fehlgeschlagen",
+    "signInToView": "Anmelden, um Lesezeichen anzuzeigen",
+    "saveDescription": "Speichern Sie Artikel zum späteren Lesen, indem Sie auf das Lesezeichen-Symbol tippen",
+    "signIn": "Anmelden",
+    "emptyTitle": "Noch keine Lesezeichen",
+    "emptyHint": "Tippen Sie auf das Lesezeichen-Symbol bei einem Artikel, um ihn hier zu speichern"
   },
   "about": {
     "title": "Über Tarsier Labs",
@@ -254,6 +302,7 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "appearance": "Erscheinungsbild",
     "theme": {
       "name": "Design",
       "dark": "Dunkelmodus",
@@ -269,6 +318,36 @@
       "ko": "Koreanisch",
       "fr": "Französisch",
       "de": "Deutsch"
+    },
+    "notifications": "Benachrichtigungen",
+    "pushNotifications": "Push-Benachrichtigungen",
+    "data": "Daten",
+    "clearCache": {
+      "name": "Cache leeren",
+      "confirm": "Cache leeren",
+      "message": "Dies löscht alle zwischengespeicherten Daten einschließlich Lesezeichen. Sie können sie jederzeit erneut herunterladen.",
+      "action": "Leeren"
+    },
+    "account": "Konto",
+    "signOut": {
+      "name": "Abmelden",
+      "confirm": "Abmelden",
+      "message": "Sind Sie sicher, dass Sie sich abmelden möchten? Ihre Lesezeichen bleiben lokal gespeichert."
+    },
+    "deleteAccount": {
+      "name": "Konto löschen",
+      "confirm": "Konto löschen",
+      "message": "Diese Aktion ist unwiderruflich. Alle Ihre Daten werden dauerhaft gelöscht.",
+      "action": "Löschen"
+    },
+    "info": "Info",
+    "aboutTarsier": "Über Tarsier",
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "profile": {
+      "signIn": "Anmelden",
+      "subtitle": "Synchronisieren Sie Ihre Lesezeichen und Einstellungen",
+      "signedInAs": "Angemeldet als {{name}}",
+      "signInBadge": "Anmelden"
     },
     "logout": {
       "name": "Abmelden",
@@ -304,6 +383,15 @@
       "check": "Nach Updates suchen",
       "checking": "Suche...",
       "complete": "Die Seite wird nach dem Update automatisch aktualisiert..."
+    }
+  },
+  "archive": {
+    "error": {
+      "loadFailed": "Archiv konnte nicht geladen werden"
+    },
+    "empty": {
+      "noArchived": "Keine archivierten Artikel",
+      "description": "Artikel werden hier angezeigt, sobald sie veröffentlicht wurden"
     }
   }
 }

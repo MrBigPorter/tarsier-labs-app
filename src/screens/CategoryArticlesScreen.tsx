@@ -11,6 +11,7 @@
  * Data: useGetCategoryBySlugQuery + articles filtered via route param
  */
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   FlatList,
@@ -20,26 +21,28 @@ import {
   Text,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useGetCategoryBySlugQuery } from '../api/endpoints/categories';
-import ArticleCard from '../components/blog/ArticleCard';
-import Header from '../components/layout/Header';
-import { ArticleListSkeleton, ArticleCardSkeleton } from '../components/core/Skeleton';
-import EmptyState from '../components/core/EmptyState';
-import type { ArticlesTabScreenProps } from '../navigation/types';
-import type { FrontendArticle } from '../types/frontend-blog';
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useGetCategoryBySlugQuery } from '@/api/endpoints/categories';
+import { useCurrentLanguage } from '@/lib/i18n';
+import { ArticleCard } from '@/components/blog/ArticleCard';
+import Header from '@/components/layout/Header';
+import { ArticleListSkeleton, ArticleCardSkeleton } from '@/components/core/Skeleton';
+import { EmptyState } from '@/components/core/EmptyState';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import type { CategoriesTabScreenProps } from '@/navigation/types';
+import type { FrontendArticle } from '@/types/frontend-blog';
 
 const CategoryArticlesScreen: React.FC<
-  ArticlesTabScreenProps<'CategoryArticles'>
+  CategoriesTabScreenProps<'CategoryArticles'>
 > = ({ navigation, route }) => {
   const { categorySlug, categoryName } = route.params;
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const lang = useCurrentLanguage();
 
   const [page, setPage] = useState(1);
+  const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
 
   const {
     data: categoryData,
@@ -51,11 +54,43 @@ const CategoryArticlesScreen: React.FC<
     slug: categorySlug,
     page,
     pageSize: 15,
+    lang,
   });
 
-  const articles = categoryData?.articles?.items || [];
   const totalPages = categoryData?.articles?.totalPages || 1;
   const hasMore = page < totalPages;
+
+  // Accumulate articles across pages
+  React.useEffect(() => {
+    if (categoryData?.articles?.items) {
+      if (page === 1) {
+        setAllArticles(categoryData.articles.items);
+      } else {
+        setAllArticles(prev => {
+          const existingIds = new Set(prev.map(a => a.id));
+          const newItems = categoryData.articles.items.filter(a => !existingIds.has(a.id));
+          if (newItems.length === 0) return prev;
+          return [...prev, ...newItems];
+        });
+      }
+    }
+  }, [categoryData, page]);
+
+  const category = categoryData
+    ? {
+        name: categoryData.name || categoryName || categorySlug,
+        description: categoryData.description,
+        articleCount: categoryData.articleCount ?? allArticles.length,
+        icon: categoryData.icon,
+        color: categoryData.color,
+      }
+    : {
+        name: categoryName || categorySlug,
+        description: undefined as string | undefined,
+        articleCount: 0,
+        icon: undefined as string | undefined,
+        color: undefined as string | undefined,
+      };
 
   const handleArticlePress = useCallback(
     (article: FrontendArticle) => {
@@ -75,6 +110,7 @@ const CategoryArticlesScreen: React.FC<
 
   const handleRefresh = useCallback(() => {
     setPage(1);
+    setAllArticles([]);
     refetch();
   }, [refetch]);
 
@@ -100,12 +136,54 @@ const CategoryArticlesScreen: React.FC<
     );
   };
 
+  const renderListHeader = () => (
+    <View style={styles.categoryHeader}>
+      {/* Icon / emoji row */}
+      {category.icon ? (
+        <View style={styles.iconRow}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: (category.color || colors.primary) + '20' },
+            ]}
+          >
+            <Text style={[styles.iconText, { color: category.color || colors.primary }]}>
+              {category.icon}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* Category name */}
+      <Text style={[styles.categoryName, { color: colors.text }]}>
+        {category.name}
+      </Text>
+
+      {/* Description */}
+      {category.description ? (
+        <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+          {category.description}
+        </Text>
+      ) : null}
+
+      {/* Article count */}
+      <View style={styles.metaRow}>
+        <Text style={[styles.articleCount, { color: colors.textTertiary || colors.textSecondary }]}>
+          {category.articleCount} {category.articleCount === 1 ? 'article' : 'articles'}
+        </Text>
+      </View>
+
+      {/* Divider */}
+      <View style={[styles.headerDivider, { backgroundColor: colors.borderSecondary }]} />
+    </View>
+  );
+
   // ─── Loading state ──────────────────────────────────────────────────
 
   if (isLoading && page === 1) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title={categoryName || categorySlug} showBack />
+      <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+        <Header title={categoryName || categorySlug} showBack hideSearch hideSettings />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={5} />
         </View>
@@ -116,18 +194,19 @@ const CategoryArticlesScreen: React.FC<
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title={categoryName || categorySlug} showBack />
+    <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+      <Header title={category.name} showBack hideSearch hideSettings />
 
       <FlatList
-        data={articles}
+        data={allArticles}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + spacing.xl },
-          articles.length === 0 && styles.emptyList,
+          allArticles.length === 0 && styles.emptyList,
         ]}
+        ListHeaderComponent={allArticles.length > 0 ? renderListHeader : null}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && page === 1}
@@ -140,15 +219,14 @@ const CategoryArticlesScreen: React.FC<
           isError ? (
             <EmptyState
               icon="alert-circle"
-              title="Failed to load articles"
-              description="Pull down to retry"
-              primaryAction={{ label: 'Retry', onPress: handleRefresh }}
+              title={t('article.error.loadFailed')}
+              description={t('common.pullDownToRetry')}
+              primaryAction={{ label: t('common.retry'), onPress: handleRefresh }}
             />
           ) : (
-            <EmptyState
-              icon="file-text"
-              title="No articles in this category"
-              description="Check back later for new content"
+            <EmptyLogoContent
+              title={t('categories.emptyArticles')}
+              description={t('common.checkBackLater')}
             />
           )
         }
@@ -171,10 +249,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
-    paddingTop: spacing.sm,
   },
   emptyList: {
-    justifyContent: 'center',
+    // justifyContent: 'center' removed — keep top-aligned
   },
   articleItem: {
     paddingHorizontal: spacing.md,
@@ -183,6 +260,52 @@ const styles = StyleSheet.create({
   footer: {
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  // ── Category header ─────────────────────────────────────────────
+  categoryHeader: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  iconRow: {
+    marginBottom: spacing.sm,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconText: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  categoryName: {
+    fontFamily: typography.h3.fontFamily,
+    fontSize: typography.h3.fontSize,
+    fontWeight: typography.h3.fontWeight,
+    marginBottom: spacing.xs,
+  },
+  categoryDescription: {
+    fontFamily: typography.base.fontFamily,
+    fontSize: typography.base.fontSize,
+    fontWeight: '400',
+    lineHeight: typography.base.lineHeight,
+    marginBottom: spacing.sm,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  articleCount: {
+    fontFamily: typography.caption.fontFamily,
+    fontSize: typography.caption.fontSize,
+    fontWeight: '500',
+  },
+  headerDivider: {
+    height: 1,
+    marginTop: spacing.md,
   },
 });
 

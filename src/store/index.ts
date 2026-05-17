@@ -3,12 +3,14 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 import authReducer from './slices/authSlice';
 import uiReducer from './slices/uiSlice';
 import bookmarksReducer from './slices/bookmarksSlice';
-import { blogApi } from '../api/baseApi';
+import likesReducer from './slices/likesSlice';
+import { blogApi } from '@/api/baseApi';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   ui: uiReducer,
   bookmarks: bookmarksReducer,
+  likes: likesReducer,
   [blogApi.reducerPath]: blogApi.reducer,
 });
 

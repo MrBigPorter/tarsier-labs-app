@@ -13,7 +13,8 @@
  * - Error: retry
  * - Empty: "No archived articles"
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -23,16 +24,17 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../lib/theme/ThemeContext';
-import { spacing } from '../lib/theme/spacing';
-import { typography } from '../lib/theme/typography';
-import { useGetArticlesQuery } from '../api/endpoints/articles';
-import Header from '../components/layout/Header';
-import { ArticleListSkeleton } from '../components/core/Skeleton';
-import EmptyState from '../components/core/EmptyState';
-import SvgIcon from '../components/core/SvgIcon';
-import type { ProfileTabScreenProps } from '../navigation/types';
-import type { FrontendArticle } from '../types/frontend-blog';
+import { useTheme, spacing, typography } from '@/lib/theme';
+import { useGetArticlesQuery } from '@/api/endpoints/articles';
+import { useCurrentLanguage } from '@/lib/i18n';
+import { groupArticlesByYearMonth } from '@/lib/utils/date';
+import Header from '@/components/layout/Header';
+import { ArticleListSkeleton } from '@/components/core/Skeleton';
+import { EmptyState } from '@/components/core/EmptyState';
+import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import SvgIcon from '@/components/core/SvgIcon';
+import type { RootStackScreenProps } from '@/navigation/types';
+import type { FrontendArticle } from '@/types/frontend-blog';
 
 interface ArchiveSection {
   title: string; // "2024"
@@ -43,17 +45,13 @@ interface ArchiveSection {
   }>;
 }
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const ArchiveScreen: React.FC<ProfileTabScreenProps<'Archive'>> = ({
+const ArchiveScreen: React.FC<RootStackScreenProps<'Archive'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
-  const colors = theme.colors;
+  const { colors } = useTheme();
+  const { t } = useTranslation();
+  const lang = useCurrentLanguage();
 
   const PAGE_SIZE = 200; // Fetch a large batch for archive grouping
 
@@ -62,42 +60,10 @@ const ArchiveScreen: React.FC<ProfileTabScreenProps<'Archive'>> = ({
     isLoading,
     isError,
     refetch,
-  } = useGetArticlesQuery({ page: 1, pageSize: PAGE_SIZE });
+  } = useGetArticlesQuery({ page: 1, pageSize: PAGE_SIZE, lang });
 
-  // Group articles by year → month
-  const sections = useMemo(() => {
-    if (!data?.items?.length) return [];
-
-    const grouped: Record<number, Record<number, FrontendArticle[]>> = {};
-
-    data.items.forEach(article => {
-      const date = new Date(article.publishedAt || article.updatedAt);
-      const year = date.getFullYear();
-      const month = date.getMonth();
-
-      if (!grouped[year]) grouped[year] = {};
-      if (!grouped[year][month]) grouped[year][month] = [];
-      grouped[year][month].push(article);
-    });
-
-    return Object.entries(grouped)
-      .sort(([a], [b]) => Number(b) - Number(a)) // Descending years
-      .map(([yearStr, months]) => {
-        const year = Number(yearStr);
-        const monthEntries = Object.entries(months)
-          .sort(([a], [b]) => Number(b) - Number(a)) // Descending months
-          .map(([monthStr, articles]) => ({
-            month: MONTH_NAMES[Number(monthStr)],
-            monthIndex: Number(monthStr),
-            articles,
-          }));
-
-        return {
-          title: String(year),
-          data: monthEntries,
-        };
-      });
-  }, [data]);
+  // Group articles by year → month using shared utility
+  const sections = groupArticlesByYearMonth(data?.items || []);
 
   const handleArticlePress = useCallback(
     (article: FrontendArticle) => {
@@ -184,8 +150,8 @@ const ArchiveScreen: React.FC<ProfileTabScreenProps<'Archive'>> = ({
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Archive" showBack />
+      <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+        <Header title="Archive" showBack hideSearch hideSettings />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={8} />
         </View>
@@ -196,8 +162,8 @@ const ArchiveScreen: React.FC<ProfileTabScreenProps<'Archive'>> = ({
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Archive" showBack />
+    <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
+      <Header title="Archive" showBack hideSearch hideSettings />
 
       <SectionList
         sections={sections}
@@ -221,14 +187,13 @@ const ArchiveScreen: React.FC<ProfileTabScreenProps<'Archive'>> = ({
           isError ? (
             <EmptyState
               icon="alert-circle"
-              title="Failed to load archive"
-              primaryAction={{ label: 'Retry', onPress: refetch }}
+              title={t('archive.error.loadFailed')}
+              primaryAction={{ label: t('common.retry'), onPress: refetch }}
             />
           ) : (
-            <EmptyState
-              icon="clock"
-              title="No archived articles"
-              description="Articles will appear here once published"
+            <EmptyLogoContent
+              title={t('archive.empty.noArchived')}
+              description={t('archive.empty.description')}
             />
           )
         }

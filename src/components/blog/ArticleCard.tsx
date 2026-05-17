@@ -1,122 +1,236 @@
+/**
+ * ArticleCard — Reusable article card (vertical layout, web-aligned)
+ *
+ * Displays a vertically laid out card with:
+ * - Full-width cover image (16:9 aspect ratio) via AppImage (blurhash + Cloudflare)
+ * - Category badge (brand color)
+ * - Article title, excerpt
+ * - Meta row: views, comments, time ago, bookmark
+ * - Inline video playback via useVideoPlayback hook
+ *
+ * Layout variants:
+ * - **Default**: Full vertical card with image on top, content below
+ * - **Compact**: Smaller variant for horizontal scroll lists
+ * - **Featured**: Hero-style with larger image and gradient overlay
+ *
+ * Props:
+ * - `networkQuality`: optional, pass from parent (HomeScreen) for centralized
+ *   control. Falls back to internal useNetworkQuality() if omitted.
+ * - `priority`: true for first 2 items (LCP optimization — triggers prefetch
+ *   and Cloudflare optimization priority hint).
+ *
+ * Design aligned with web app's ArticleCard (Tailwind classes → token system).
+ */
+
 import React from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
-import type { FrontendArticle } from '../../types/frontend-blog';
-import { useNetworkQuality } from '../../lib/hooks/useNetworkQuality';
+import Video from 'react-native-video';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import type { FrontendArticle } from '@/types/frontend-blog';
+import type { NetworkQuality } from '@/lib/hooks/useNetworkQuality';
+import { useNetworkQuality } from '@/lib/hooks/useNetworkQuality';
+import { useVideoPlayback } from '@/lib/hooks/useVideoPlayback';
+import { AppImage } from '@/components/core/AppImage';
+import { isVideoUrl } from '@/lib/utils/image';
 
 interface ArticleCardProps {
   article: FrontendArticle;
-  onPress: (article: FrontendArticle) => void;
-  onBookmark?: (articleId: string) => void;
+  onPress?: (article: FrontendArticle) => void;
+  onBookmark?: (article: FrontendArticle) => void;
   isBookmarked?: boolean;
   showExcerpt?: boolean;
-  /** Compact mode for related articles sidebar */
   compact?: boolean;
+  /** Featured hero variant — larger image, gradient overlay on title */
+  featured?: boolean;
+  /** Network quality from parent (centralized). Falls back to internal hook. */
+  networkQuality?: NetworkQuality;
+  /** Priority image (first 2 items for LCP) */
+  priority?: boolean;
 }
 
-/**
- * Article card for list views.
- *
- * Features:
- * - Adaptive image loading based on network quality (WebP/JPG, size tier)
- * - Author avatar + name
- * - Category badge
- * - Relative publish date
- * - Bookmark button (optional)
- * - Compact mode for related articles
- */
+/** Format a number for display (e.g., 1234 → "1.2k") */
+function formatCount(num: number): string {
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  }
+  return String(num);
+}
+
 export function ArticleCard({
   article,
   onPress,
   onBookmark,
-  isBookmarked,
+  isBookmarked = false,
   showExcerpt = true,
   compact = false,
+  featured = false,
+  networkQuality: externalNetworkQuality,
+  priority = false,
 }: ArticleCardProps) {
   const { colors } = useTheme();
-  const network = useNetworkQuality();
-  const screenWidth = Dimensions.get('window').width;
+  // Fallback to internal hook if parent doesn't provide networkQuality
+  const internalNetworkQuality = useNetworkQuality();
+  const networkQuality = externalNetworkQuality ?? internalNetworkQuality;
 
-  // Determine image URL based on network quality
-  const imageUrl = React.useMemo(() => {
-    if (!article.meta?.images) {
-      return article.coverImage;
-    }
-    const { images } = article.meta;
-    if (network.quality >= 75) {
-      return network.preferWebp ? images.large.webp : images.large.jpg;
-    }
-    if (network.quality >= 45) {
-      return network.preferWebp ? images.medium.webp : images.medium.jpg;
-    }
-    return network.preferWebp ? images.thumbnail.webp : images.thumbnail.jpg;
-  }, [article, network]);
+  // ─── Video playback (extracted hook) ───────────────────────────────
 
-  // Relative time formatter
-  const timeAgo = React.useMemo(() => {
-    const now = Date.now();
-    const published = new Date(article.publishedAt).getTime();
-    const diffMs = now - published;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const {
+    hasVideo,
+    videoPlaying,
+    videoPaused,
+    videoUri,
+    videoFailed,
+    hlsUrl,
+    mp4Url,
+    posterUrl,
+    handlePlayPress,
+    handleVideoLoad,
+    handleVideoError,
+    handleVideoEnd,
+  } = useVideoPlayback(article);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return new Date(article.publishedAt).toLocaleDateString();
-  }, [article.publishedAt]);
+  // ─── Image detection ───────────────────────────────────────────────
 
-  const cardWidth = compact
-    ? screenWidth - spacing[6] * 2
-    : screenWidth - spacing[6] * 2;
-  const imageHeight = compact ? 100 : cardWidth * (9 / 16);
+  // Whether the article has a static (non-video) cover image
+  const hasCoverImage = Boolean(
+    article.meta?.images ||
+    (article.coverImage && !isVideoUrl(article.coverImage)),
+  );
+
+  const showImageContainer = hasCoverImage || hasVideo;
+
+  // ── Render ──
 
   return (
     <TouchableOpacity
       style={[
-        styles.container,
+        styles.card,
         {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
+          backgroundColor: colors.bgPrimary ?? colors.surface,
+          borderColor: colors.borderSecondary ?? colors.border,
         },
-        compact && styles.compactContainer,
+        compact && styles.compactCard,
+        featured && styles.featuredCard,
       ]}
-      onPress={() => onPress(article)}
+      onPress={() => onPress?.(article)}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Article: ${article.title}`}
     >
-      {/* Cover image */}
-      <Image
-        source={{ uri: imageUrl }}
-        style={[
-          styles.coverImage,
-          { height: imageHeight },
-          compact && styles.compactImage,
-        ]}
-        resizeMode="cover"
-      />
+      {/* ── Cover Image / Video ── */}
+      {showImageContainer && (
+        <View style={[
+          styles.imageContainer,
+          compact && styles.compactImageContainer,
+          featured && styles.featuredImageContainer,
+        ]}>
+          {hasVideo ? (
+            <View style={styles.videoContainer}>
+              {videoPlaying && videoUri ? (
+                /* Video (mounted only after play tap) */
+                <Video
+                  source={{ uri: videoUri }}
+                  style={[styles.image, compact && styles.compactImage, featured && styles.featuredImage]}
+                  poster={posterUrl || ''}
+                  posterResizeMode="cover"
+                  resizeMode="contain"
+                  controls={false}
+                  paused={videoPaused}
+                  onLoad={handleVideoLoad}
+                  onError={handleVideoError}
+                  onEnd={handleVideoEnd}
+                />
+              ) : (
+                /* Static poster via AppImage (blurhash + Cloudflare optimized) */
+                <AppImage
+                  uri={posterUrl}
+                  images={article.meta?.images}
+                  coverImage={article.coverImage && isVideoUrl(article.coverImage) ? undefined : article.coverImage}
+                  blurhash={article.meta?.blurhash}
+                  style={[styles.image, compact && styles.compactImage, featured && styles.featuredImage]}
+                  priority={priority}
+                />
+              )}
 
-      {/* Content */}
-      <View style={[styles.content, compact && styles.compactContent]}>
-        {/* Category badge */}
-        {article.category && (
+              {/* Tap overlay: play when idle, pause/resume when playing */}
+              <TouchableOpacity
+                style={styles.playButtonOverlay}
+                activeOpacity={0.7}
+                onPress={handlePlayPress}
+                accessibilityRole="button"
+                accessibilityLabel={videoPlaying && !videoPaused ? 'Pause video' : 'Play video'}
+              >
+                {/* Show ▶ when not started yet, or when paused */}
+                {(!videoPlaying || videoPaused) && !videoFailed && (
+                  <View style={styles.playButtonCircle}>
+                    <Text style={styles.playButtonIcon}>▶</Text>
+                  </View>
+                )}
+                {/* Show ✕ when both HLS and MP4 failed */}
+                {videoFailed && (
+                  <View style={styles.playButtonCircle}>
+                    <Text style={styles.playButtonIcon}>✕</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* Static image (no video) — AppImage handles blurhash + Cloudflare */
+            <AppImage
+              images={article.meta?.images}
+              coverImage={article.coverImage}
+              blurhash={article.meta?.blurhash}
+              style={[styles.image, compact && styles.compactImage, featured && styles.featuredImage]}
+              priority={priority}
+            />
+          )}
+
+          {/* Category badge overlay on image (web style) */}
+          {article.category && (
+            <View
+              style={[
+                styles.imageCategoryBadge,
+                { backgroundColor: colors.utilityBrand50 ?? (colors.primary + '20') },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.imageCategoryText,
+                  { color: colors.fgBrandSecondary ?? colors.primary },
+                ]}
+              >
+                {article.category.name}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ── Content Area ── */}
+      <View style={[
+        styles.content,
+        compact && styles.compactContent,
+        featured && styles.featuredContent,
+      ]}>
+        {/* Category Badge (no image fallback) */}
+        {!showImageContainer && article.category && (
           <View
             style={[
               styles.categoryBadge,
-              { backgroundColor: colors.primary + '15' },
+              { backgroundColor: colors.utilityBrand50 ?? (colors.primary + '20') },
             ]}
           >
-            <Text style={[styles.categoryText, { color: colors.primary }]}>
+            <Text
+              style={[
+                styles.categoryText,
+                { color: colors.fgBrandSecondary ?? colors.primary },
+              ]}
+            >
               {article.category.name}
             </Text>
           </View>
@@ -126,59 +240,60 @@ export function ArticleCard({
         <Text
           style={[
             styles.title,
-            { color: colors.text },
+            { color: colors.textPrimary ?? colors.text },
             compact && styles.compactTitle,
+            featured && styles.featuredTitle,
           ]}
-          numberOfLines={compact ? 2 : 2}
+          numberOfLines={compact ? 2 : (featured ? 3 : 3)}
         >
           {article.title}
         </Text>
 
         {/* Excerpt */}
-        {showExcerpt && !compact && (
+        {showExcerpt && !compact && !featured && (
           <Text
-            style={[styles.excerpt, { color: colors.textSecondary }]}
-            numberOfLines={3}
+            style={[styles.excerpt, { color: colors.fgTertiary ?? colors.textTertiary }]}
+            numberOfLines={2}
           >
             {article.excerpt}
           </Text>
         )}
 
-        {/* Meta row */}
+        {/* ── Meta Row (views, comments, bookmark) ── */}
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
-            {/* Author avatar */}
-            {article.author?.avatar && (
-              <Image
-                source={{ uri: article.author.avatar }}
-                style={[
-                  styles.avatar,
-                  { borderColor: colors.border },
-                ]}
-              />
+            {/* Views count */}
+            <View style={styles.metaItem}>
+              <Text style={[styles.metaIcon, { color: colors.fgQuaternary }]}>👁</Text>
+              <Text style={[styles.metaText, { color: colors.fgTertiary ?? colors.textTertiary }]}>
+                {formatCount(article.views)}
+              </Text>
+            </View>
+
+            {/* Comments count */}
+            <View style={styles.metaItem}>
+              <Text style={[styles.metaIcon, { color: colors.fgQuaternary }]}>💬</Text>
+              <Text style={[styles.metaText, { color: colors.fgTertiary ?? colors.textTertiary }]}>
+                {formatCount(article.commentsCount)}
+              </Text>
+            </View>
+
+            {/* Author name */}
+            {article.author?.name && !compact && (
+              <Text style={[styles.metaText, { color: colors.fgTertiary ?? colors.textTertiary }]}>
+                {article.author.name}
+              </Text>
             )}
-            <Text
-              style={[styles.metaText, { color: colors.textTertiary }]}
-              numberOfLines={1}
-            >
-              {article.author?.name ?? 'Anonymous'} · {timeAgo}
-            </Text>
           </View>
 
-          {/* Stats */}
           <View style={styles.metaRight}>
-            <Text style={[styles.metaText, { color: colors.textTertiary }]}>
-              {article.views ?? 0} views
-            </Text>
-
             {/* Bookmark button */}
             {onBookmark && (
               <TouchableOpacity
-                onPress={() => onBookmark(article.id)}
+                onPress={() => onBookmark(article)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.bookmarkButton}
               >
-                <Text style={{ fontSize: 16 }}>
+                <Text style={[styles.bookmarkIcon, { color: colors.fgBrandSecondary ?? colors.primary }]}>
                   {isBookmarked ? '★' : '☆'}
                 </Text>
               </TouchableOpacity>
@@ -190,88 +305,183 @@ export function ArticleCard({
   );
 }
 
+ArticleCard.whyDidYouRender = true;
+
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: borderRadius.xl,
+  // ── Card Container ──
+  card: {
+    flexDirection: 'column',
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: spacing[4],
+    marginBottom: 16,
+    // Shadow (matches web shadow-md)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  compactContainer: {
-    flexDirection: 'row',
-    marginBottom: spacing[3],
+  compactCard: {
+    width: 280,
+    marginBottom: 0,
+    borderRadius: 10,
   },
-  coverImage: {
-    width: '100%',
-  },
-  compactImage: {
-    width: 120,
-    borderTopLeftRadius: borderRadius.xl,
-    borderBottomLeftRadius: borderRadius.xl,
-  },
-  content: {
-    padding: spacing[4],
-  },
-  compactContent: {
-    flex: 1,
-    padding: spacing[3],
-    justifyContent: 'center',
-  },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[0.5],
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing[2],
-  },
-  categoryText: {
-    fontSize: typography.xs.fontSize,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: typography.h4.fontSize,
-    fontWeight: typography.h4.fontWeight as any,
-    marginBottom: spacing[1],
-    lineHeight: typography.h4.lineHeight,
-  },
-  compactTitle: {
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
+  featuredCard: {
+    borderRadius: 14,
     marginBottom: 0,
   },
-  excerpt: {
-    fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight,
-    marginBottom: spacing[3],
+
+  // ── Image / Video Container ──
+  imageContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    overflow: 'hidden',
   },
+  compactImageContainer: {
+    aspectRatio: 16 / 10,
+  },
+  featuredImageContainer: {
+    aspectRatio: 16 / 9,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  compactImage: {
+    width: '100%',
+    height: '100%',
+  },
+  featuredImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoContainer: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  videoPlaceholder: {
+    backgroundColor: '#000',
+  },
+
+  // ── Video Play Button Overlay ──
+  playButtonOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playButtonCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playButtonIcon: {
+    fontSize: 22,
+    color: '#FFFFFF',
+    marginLeft: 4,
+  },
+
+  // ── Image Category Badge ──
+  imageCategoryBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  imageCategoryText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // ── Content ──
+  content: {
+    padding: 16,
+  },
+  compactContent: {
+    padding: 12,
+  },
+  featuredContent: {
+    padding: 20,
+  },
+
+  // ── Category Badge (no image) ──
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  categoryText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // ── Title ──
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 24,
+    marginBottom: 6,
+  },
+  compactTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  featuredTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 28,
+  },
+
+  // ── Excerpt ──
+  excerpt: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+
+  // ── Meta Row ──
   metaRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing[2],
+    justifyContent: 'space-between',
+    paddingTop: 10,
   },
   metaLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[1.5],
-    flex: 1,
+    gap: 12,
   },
   metaRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[2],
+    gap: 10,
   },
-  avatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  metaIcon: {
+    fontSize: 12,
   },
   metaText: {
-    fontSize: typography.small.fontSize,
-    lineHeight: typography.small.lineHeight,
+    fontSize: 12,
+    lineHeight: 16,
   },
-  bookmarkButton: {
-    padding: spacing[1],
+  bookmarkIcon: {
+    fontSize: 16,
   },
 });

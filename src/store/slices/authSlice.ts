@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { storage } from '../../lib/storage';
-import { env } from '../../lib/env';
+import { storage } from '@/lib/storage';
+import { env } from '@/lib/env';
 
 interface User {
   id: string;

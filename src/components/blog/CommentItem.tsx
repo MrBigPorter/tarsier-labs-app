@@ -3,13 +3,13 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
 } from 'react-native';
-import { useTheme } from '../../lib/theme/ThemeContext';
-import { spacing, borderRadius } from '../../lib/theme/spacing';
-import { typography } from '../../lib/theme/typography';
-import type { Comment } from '../../types/blog';
+import { useTheme } from '@/lib/theme/ThemeContext';
+import { spacing, borderRadius } from '@/lib/theme/spacing';
+import { typography } from '@/lib/theme/typography';
+import { useTranslation } from 'react-i18next';
+import type { Comment } from '@/types/blog';
 
 interface CommentItemProps {
   comment: Comment;
@@ -21,6 +21,12 @@ interface CommentItemProps {
   onReply?: (comment: Comment) => void;
   /** Whether user can reply */
   canReply?: boolean;
+  /** Whether user is authenticated */
+  isAuthenticated?: boolean;
+  /** Article ID for reply submission */
+  articleId?: string;
+  /** Navigate to auth screen */
+  onNavigateToAuth?: () => void;
 }
 
 /**
@@ -28,11 +34,10 @@ interface CommentItemProps {
  *
  * Features:
  * - Author avatar (with initials fallback)
- * - Author name + website link
- * - Relative publish date
- * - Comment content (with basic formatting)
+ * - Author name + relative date
+ * - Comment content
  * - Recursive replies (up to maxDepth)
- * - Reply button
+ * - Reply button with auth gate
  */
 export function CommentItem({
   comment,
@@ -40,13 +45,27 @@ export function CommentItem({
   maxDepth = 3,
   onReply,
   canReply = true,
+  isAuthenticated = false,
+  articleId,
+  onNavigateToAuth,
 }: CommentItemProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const [showReplies, setShowReplies] = useState(true);
   const hasReplies = comment.children && comment.children.length > 0;
   const isDeepNested = depth >= maxDepth;
 
-  // Generate initials for avatar fallback
+
+  const handleReplyPress = () => {
+    if (!isAuthenticated) {
+      onNavigateToAuth?.();
+      return;
+    }
+
+    onReply?.(comment);
+  };
+
+  // ─── Avatar initials ────────────────────────────────────────────
   const initials = comment.author
     ? comment.author
         .split(' ')
@@ -72,6 +91,9 @@ export function CommentItem({
     return new Date(comment.createdAt).toLocaleDateString();
   }, [comment.createdAt]);
 
+  const isCommentLoaded =
+    comment.id && (comment.approved || !comment.id.startsWith('temp-'));
+
   return (
     <View style={depth > 0 && styles.nestedMargin}>
       <View
@@ -84,36 +106,23 @@ export function CommentItem({
           depth > 0 && {
             borderLeftWidth: 2,
             borderLeftColor: colors.border,
-            paddingLeft: spacing[3],
+            paddingLeft: spacing.md,
           },
         ]}
       >
         {/* Author row */}
         <View style={styles.header}>
           {/* Avatar */}
-          {comment.author ? (
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: colors.primary + '20' },
-              ]}
-            >
-              <Text style={[styles.avatarText, { color: colors.primary }]}>
-                {initials}
-              </Text>
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: colors.surface },
-              ]}
-            >
-              <Text style={[styles.avatarText, { color: colors.textTertiary }]}>
-                ?
-              </Text>
-            </View>
-          )}
+          <View
+            style={[
+              styles.avatar,
+              { backgroundColor: colors.primary + '20' },
+            ]}
+          >
+            <Text style={[styles.avatarText, { color: colors.primary }]}>
+              {initials}
+            </Text>
+          </View>
 
           {/* Name + date */}
           <View style={styles.authorInfo}>
@@ -124,6 +133,7 @@ export function CommentItem({
               {timeAgo}
             </Text>
           </View>
+
         </View>
 
         {/* Comment content */}
@@ -137,17 +147,25 @@ export function CommentItem({
             {comment.likes ? `${comment.likes} likes` : ''}
           </Text>
 
-          {canReply && onReply && (
+          {(canReply || isAuthenticated) && (
             <TouchableOpacity
-              onPress={() => onReply(comment)}
+              onPress={handleReplyPress}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              disabled={!isCommentLoaded}
             >
-              <Text style={[styles.replyButton, { color: colors.primary }]}>
-                Reply
+              <Text
+                style={[
+                  styles.replyButton,
+                  { color: colors.primary },
+                  !isCommentLoaded && { opacity: 0.5 },
+                ]}
+              >
+                {t('comment.reply')}
               </Text>
             </TouchableOpacity>
           )}
         </View>
+
       </View>
 
       {/* Recursive replies */}
@@ -161,6 +179,9 @@ export function CommentItem({
               maxDepth={maxDepth}
               onReply={onReply}
               canReply={canReply}
+              isAuthenticated={isAuthenticated}
+              articleId={articleId}
+              onNavigateToAuth={onNavigateToAuth}
             />
           ))}
         </View>
@@ -195,19 +216,20 @@ export function CommentItem({
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing[3],
+    padding: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    marginBottom: spacing[2],
+    marginBottom: spacing.sm,
   },
   nestedMargin: {
-    marginLeft: spacing[4],
+    marginLeft: spacing.lg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing[2],
-    gap: spacing[2],
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+    flexWrap: 'wrap',
   },
   avatar: {
     width: 32,
@@ -233,12 +255,12 @@ const styles = StyleSheet.create({
   content: {
     fontSize: typography.body.fontSize,
     lineHeight: typography.body.lineHeight,
-    marginBottom: spacing[2],
+    marginBottom: spacing.sm,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[3],
+    gap: spacing.md,
   },
   likes: {
     fontSize: typography.xs.fontSize,
@@ -248,9 +270,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   showRepliesButton: {
-    paddingVertical: spacing[1],
-    paddingLeft: spacing[4],
-    marginBottom: spacing[1],
+    paddingVertical: spacing.xs,
+    paddingLeft: spacing.lg,
+    marginBottom: spacing.xs,
   },
   showRepliesText: {
     fontSize: typography.small.fontSize,

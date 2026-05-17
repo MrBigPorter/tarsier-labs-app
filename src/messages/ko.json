@@ -20,6 +20,9 @@
     "error": "로드에 실패했습니다. 나중에 다시 시도해 주세요",
     "loadFailed": "로드 실패",
     "retry": "재시도",
+    "goBack": "뒤로 가기",
+    "pullDownToRetry": "아래로 당겨서 재시도",
+    "checkBackLater": "나중에 다시 확인해 주세요",
     "articleCount": "{count}개의 글",
     "totalTags": "{count}개의 태그, {total}개의 글",
     "about": "소개",
@@ -34,7 +37,13 @@
     "notFound": "카테고리를 찾을 수 없습니다",
     "empty": "아직 카테고리가 없습니다",
     "emptyArticles": "이 카테고리에 아직 글이 없습니다",
-    "emptyDescription": "이 카테고리의 콘텐츠는 준비 중입니다. 다른 카테고리의 글을 먼저 확인해 보세요"
+    "emptyDescription": "이 카테고리의 콘텐츠는 준비 중입니다. 다른 카테고리의 글을 먼저 확인해 보세요",
+    "error": {
+      "loadFailed": "카테고리 로드 실패"
+    },
+    "emptyState": {
+      "description": "글이 생성되면 카테고리가 표시됩니다"
+    }
   },
   "tags": {
     "title": "태그 클라우드",
@@ -42,7 +51,13 @@
     "notFound": "태그를 찾을 수 없습니다",
     "empty": "아직 태그가 없습니다",
     "emptyArticles": "이 태그를 사용한 글이 아직 없습니다",
-    "emptyDescription": "다른 인기 태그의 글을 확인해 보세요"
+    "emptyDescription": "다른 인기 태그의 글을 확인해 보세요",
+    "error": {
+      "loadFailed": "태그 로드 실패"
+    },
+    "emptyState": {
+      "description": "글이 분류되면 태그가 표시됩니다"
+    }
   },
   "home": {
     "title": "최신 글",
@@ -51,7 +66,10 @@
     "featured": "추천",
     "featuredArticles": "추천 글",
     "viewAll": "모두 보기",
-    "heroSubtitle": "엄선된 추천 콘텐츠를 만나보세요"
+    "heroSubtitle": "엄선된 추천 콘텐츠를 만나보세요",
+    "error": {
+      "unableToLoad": "글을 불러올 수 없습니다"
+    }
   },
   "article": {
     "readTime": "읽는 시간",
@@ -64,7 +82,16 @@
     "notFoundDescription": "찾고 계신 글이 존재하지 않거나 삭제되었습니다.",
     "notPublished": "아직 게시되지 않았습니다",
     "minutes": "분",
-    "popularArticles": "인기 글"
+    "popularArticles": "인기 글",
+    "empty": {
+      "inCategory": "다른 카테고리를 선택해 보세요"
+    },
+    "error": {
+      "loadFailed": "글 로드 실패",
+      "loadFailedSingle": "글 로드 실패",
+      "generic": "오류가 발생했습니다",
+      "pullDownToRetry": "아래로 당겨서 다시 로드"
+    }
   },
   "auth": {
     "email": "이메일 주소",
@@ -85,6 +112,7 @@
     "fillAllFields": "모든 필수 항목을 입력해 주세요",
     "invalidCode": "인증 코드 형식이 올바르지 않습니다",
     "loginFailed": "로그인에 실패했습니다",
+    "done": "완료",
     "oauth": {
       "githubNotConfigured": "GitHub OAuth가 구성되지 않았습니다",
       "githubFailed": "GitHub 로그인에 실패했습니다",
@@ -120,6 +148,7 @@
     "title": "댓글",
     "writeComment": "댓글 작성",
     "writeReply": "답글 작성",
+    "beFirstThoughts": "가장 먼저 생각을 공유해 보세요!",
     "reply": "답글",
     "cancel": "취소",
     "submit": "제출",
@@ -140,7 +169,10 @@
     "pageInfo": "{page} 페이지 / {totalPages} 페이지",
     "allCommentsLoaded": "모든 댓글을 불러왔습니다",
     "totalComments": "총 {count}개의 댓글",
-    "loadingComment": "댓글을 불러오는 중..."
+    "loadingComment": "댓글을 불러오는 중...",
+    "commentPending": "댓글이 검토 중입니다...",
+    "commentApproved": "댓글이 성공적으로 게시되었습니다",
+    "commentRejected": "댓글이 커뮤니티 가이드라인을 위반하여 자동으로 제거되었습니다"
   },
   "search": {
     "title": "글 검색",
@@ -151,22 +183,37 @@
     "emptyDescription": "글 제목, 내용 또는 태그 검색",
     "noResults": "검색 결과가 없습니다",
     "noResultsDescription": "다른 키워드로 시도해 보세요",
-    "clear": "검색 지우기",
+    "clear": "지우기",
     "shortcutHint": "Cmd/Ctrl + K를 눌러 검색 열기",
     "viewAllResults": "모든 결과 보기",
     "loadFailed": "검색 실패, 다시 시도해 주세요",
     "showingFirst": "처음 {count}개 결과 표시",
-    "visitFullPage": "더 많은 결과를 보려면 전체 검색 페이지 방문"
+    "visitFullPage": "더 많은 결과를 보려면 전체 검색 페이지 방문",
+    "recent": "최근 검색",
+    "resultCount": "{{count}}개의 결과",
+    "popularTags": "인기 태그",
+    "noRecentSearches": "최근 검색 내역이 없습니다",
+    "empty": {
+      "hint": "2글자 이상 입력하여 모든 글 검색",
+      "noResultsFor": "\"{{query}}\"와(과) 일치하는 글이 없습니다"
+    },
+    "error": {
+      "connection": "연결을 확인하고 다시 시도해 주세요"
+    }
   },
   "bookmarks": {
     "title": "내 북마크",
     "subtitle": "북마크한 모든 글",
     "totalCount": "총 {count}개의 글을 북마크",
     "empty": "아직 북마크한 글이 없습니다",
-    "emptyTitle": "아직 북마크한 글이 없습니다",
+    "emptyTitle": "아직 북마크가 없습니다",
     "emptyDescription": "글을 탐색하고 좋아하는 글을 북마크하세요",
     "browseArticles": "글 둘러보기",
-    "loadFailed": "북마크 로드에 실패했습니다"
+    "loadFailed": "북마크 로드에 실패했습니다",
+    "signInToView": "로그인하여 북마크 보기",
+    "saveDescription": "글의 북마크 아이콘을 탭하여 저장",
+    "signIn": "로그인",
+    "emptyHint": "아무 글이나 북마크 아이콘을 탭하여 저장"
   },
   "about": {
     "title": "Tarsier Labs 소개",
@@ -254,6 +301,7 @@
   },
   "settings": {
     "title": "설정",
+    "appearance": "모양",
     "theme": {
       "name": "테마",
       "dark": "다크 모드",
@@ -269,6 +317,36 @@
       "ko": "한국어",
       "fr": "프랑스어",
       "de": "독일어"
+    },
+    "notifications": "알림",
+    "pushNotifications": "푸시 알림",
+    "data": "데이터",
+    "clearCache": {
+      "name": "캐시 지우기",
+      "confirm": "캐시 지우기",
+      "message": "북마크를 포함한 모든 캐시 데이터가 지워집니다. 언제든지 다시 다운로드할 수 있습니다.",
+      "action": "지우기"
+    },
+    "account": "계정",
+    "signOut": {
+      "name": "로그아웃",
+      "confirm": "로그아웃",
+      "message": "로그아웃하시겠습니까? 북마크는 로컬에 저장됩니다."
+    },
+    "deleteAccount": {
+      "name": "계정 삭제",
+      "confirm": "계정 삭제",
+      "message": "이 작업은 되돌릴 수 없습니다. 모든 데이터가 영구적으로 삭제됩니다.",
+      "action": "삭제"
+    },
+    "info": "정보",
+    "aboutTarsier": "Tarsier 소개",
+    "privacyPolicy": "개인정보 처리방침",
+    "profile": {
+      "signIn": "로그인",
+      "subtitle": "북마크와 환경설정 동기화",
+      "signedInAs": "{{name}}(으)로 로그인됨",
+      "signInBadge": "로그인"
     },
     "logout": {
       "name": "로그아웃",
@@ -304,6 +382,15 @@
       "check": "업데이트 확인",
       "checking": "확인 중...",
       "complete": "업데이트 후 페이지가 자동으로 새로고침됩니다..."
+    }
+  },
+  "archive": {
+    "error": {
+      "loadFailed": "아카이브 로드 실패"
+    },
+    "empty": {
+      "noArchived": "아카이브된 글이 없습니다",
+      "description": "글이 게시되면 여기에 표시됩니다"
     }
   }
 }
