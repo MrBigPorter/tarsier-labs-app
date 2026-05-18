@@ -60,10 +60,30 @@ const techStackGroups: TechGroup[] = [
     title: 'Frontend Frameworks',
     description: 'Core UI building technologies',
     items: [
-      { name: 'Next.js 15', icon: '⚡', description: 'React framework for SSR/SSG', descKey: 'about.techNextjs' },
-      { name: 'React 19', icon: '⚛️', description: 'UI library with concurrent features', descKey: 'about.techReact' },
-      { name: 'TypeScript', icon: '📘', description: 'Type-safe JavaScript', descKey: 'about.techTypescript' },
-      { name: 'Tailwind CSS', icon: '🎨', description: 'Utility-first CSS framework', descKey: 'about.techTailwind' },
+      {
+        name: 'Next.js 15',
+        icon: '⚡',
+        description: 'React framework for SSR/SSG',
+        descKey: 'about.techNextjs',
+      },
+      {
+        name: 'React 19',
+        icon: '⚛️',
+        description: 'UI library with concurrent features',
+        descKey: 'about.techReact',
+      },
+      {
+        name: 'TypeScript',
+        icon: '📘',
+        description: 'Type-safe JavaScript',
+        descKey: 'about.techTypescript',
+      },
+      {
+        name: 'Tailwind CSS',
+        icon: '🎨',
+        description: 'Utility-first CSS framework',
+        descKey: 'about.techTailwind',
+      },
     ],
   },
   {
@@ -71,10 +91,80 @@ const techStackGroups: TechGroup[] = [
     title: 'Mobile Development',
     description: 'Cross-platform mobile development',
     items: [
-      { name: 'Flutter', icon: '📱', description: 'Cross-platform mobile framework', descKey: 'about.techFlutter' },
-      { name: 'Shorebird', icon: '🔄', description: 'Flutter hot update solution', descKey: 'about.techShorebird' },
-      { name: 'Capacitor', icon: '🔋', description: 'Hybrid app framework', descKey: 'about.techCapacitor' },
-      { name: 'sembast', icon: '💾', description: 'Flutter embedded NoSQL database', descKey: 'about.techSembast' },
+      // React Native (this project)
+      {
+        name: 'React Native',
+        icon: '📱',
+        description: 'Cross-platform mobile framework',
+        descKey: 'about.techRn',
+      },
+      {
+        name: 'Redux Toolkit',
+        icon: '🔄',
+        description: 'Predictable state management',
+        descKey: 'about.techRedux',
+      },
+      {
+        name: 'RTK Query',
+        icon: '⚡',
+        description: 'API caching & data fetching',
+        descKey: 'about.techRtkQuery',
+      },
+      {
+        name: 'Reanimated',
+        icon: '🎭',
+        description: 'High-performance animations on UI thread',
+        descKey: 'about.techReanimated',
+      },
+      {
+        name: 'React Navigation',
+        icon: '🧭',
+        description: 'Declarative navigation & routing',
+        descKey: 'about.techReactNavigation',
+      },
+      {
+        name: 'Gesture Handler',
+        icon: '👆',
+        description: 'Native gesture handling',
+        descKey: 'about.techGestureHandler',
+      },
+      {
+        name: 'MMKV',
+        icon: '💾',
+        description: 'Fast key-value local storage',
+        descKey: 'about.techMmkv',
+      },
+      {
+        name: 'i18next',
+        icon: '🌐',
+        description: 'Multi-language i18n library',
+        descKey: 'about.techI18next',
+      },
+      // Flutter (other projects)
+      {
+        name: 'Flutter',
+        icon: '📱',
+        description: 'Cross-platform mobile framework',
+        descKey: 'about.techFlutter',
+      },
+      {
+        name: 'Shorebird',
+        icon: '🔄',
+        description: 'Flutter hot update solution',
+        descKey: 'about.techShorebird',
+      },
+      {
+        name: 'Capacitor',
+        icon: '🔋',
+        description: 'Hybrid app framework',
+        descKey: 'about.techCapacitor',
+      },
+      {
+        name: 'sembast',
+        icon: '💾',
+        description: 'Flutter embedded NoSQL database',
+        descKey: 'about.techSembast',
+      },
     ],
   },
   {
@@ -82,12 +172,42 @@ const techStackGroups: TechGroup[] = [
     title: 'Backend/Database',
     description: 'Server-side and data processing',
     items: [
-      { name: 'NestJS', icon: '🏠', description: 'Enterprise Node.js framework', descKey: 'about.techNestjs' },
-      { name: 'Prisma', icon: '🗄️', description: 'Modern ORM tool', descKey: 'about.techPrisma' },
-      { name: 'PostgreSQL', icon: '🐘', description: 'Relational database', descKey: 'about.techPostgresql' },
-      { name: 'Redis', icon: '🔴', description: 'In-memory cache & data store', descKey: 'about.techRedis' },
-      { name: 'SQLite', icon: '💿', description: 'Lightweight embedded database', descKey: 'about.techSqlite' },
-      { name: 'BullMQ', icon: '📨', description: 'Redis-based message queue', descKey: 'about.techBullmq' },
+      {
+        name: 'NestJS',
+        icon: '🏠',
+        description: 'Enterprise Node.js framework',
+        descKey: 'about.techNestjs',
+      },
+      {
+        name: 'Prisma',
+        icon: '🗄️',
+        description: 'Modern ORM tool',
+        descKey: 'about.techPrisma',
+      },
+      {
+        name: 'PostgreSQL',
+        icon: '🐘',
+        description: 'Relational database',
+        descKey: 'about.techPostgresql',
+      },
+      {
+        name: 'Redis',
+        icon: '🔴',
+        description: 'In-memory cache & data store',
+        descKey: 'about.techRedis',
+      },
+      {
+        name: 'SQLite',
+        icon: '💿',
+        description: 'Lightweight embedded database',
+        descKey: 'about.techSqlite',
+      },
+      {
+        name: 'BullMQ',
+        icon: '📨',
+        description: 'Redis-based message queue',
+        descKey: 'about.techBullmq',
+      },
     ],
   },
   {
@@ -95,9 +215,24 @@ const techStackGroups: TechGroup[] = [
     title: 'AI/ML Services',
     description: 'AI and machine learning capabilities',
     items: [
-      { name: 'AWS Rekognition', icon: '🤖', description: 'Face recognition & liveness detection', descKey: 'about.techAwsRekognition' },
-      { name: 'Google Vertex AI', icon: '🧠', description: 'ML model service for AI features', descKey: 'about.techVertexAi' },
-      { name: 'AI Agent', icon: '🤝', description: 'AI agent system', descKey: 'about.techAiAgent' },
+      {
+        name: 'AWS Rekognition',
+        icon: '🤖',
+        description: 'Face recognition & liveness detection',
+        descKey: 'about.techAwsRekognition',
+      },
+      {
+        name: 'Google Vertex AI',
+        icon: '🧠',
+        description: 'ML model service for AI features',
+        descKey: 'about.techVertexAi',
+      },
+      {
+        name: 'AI Agent',
+        icon: '🤝',
+        description: 'AI agent system',
+        descKey: 'about.techAiAgent',
+      },
     ],
   },
   {
@@ -105,10 +240,30 @@ const techStackGroups: TechGroup[] = [
     title: 'DevOps/Infrastructure',
     description: 'Deployment and infrastructure',
     items: [
-      { name: 'Docker', icon: '🐳', description: 'Containerized deployment', descKey: 'about.techDocker' },
-      { name: 'GitHub Actions', icon: '⚙️', description: 'CI/CD automation pipeline', descKey: 'about.techGithubActions' },
-      { name: 'Cloudflare Workers', icon: '☁️', description: 'Edge platform with CDN & Serverless', descKey: 'about.techCloudflare' },
-      { name: 'Vite', icon: '⚡', description: 'Fast frontend build tool', descKey: 'about.techVite' },
+      {
+        name: 'Docker',
+        icon: '🐳',
+        description: 'Containerized deployment',
+        descKey: 'about.techDocker',
+      },
+      {
+        name: 'GitHub Actions',
+        icon: '⚙️',
+        description: 'CI/CD automation pipeline',
+        descKey: 'about.techGithubActions',
+      },
+      {
+        name: 'Cloudflare Workers',
+        icon: '☁️',
+        description: 'Edge platform with CDN & Serverless',
+        descKey: 'about.techCloudflare',
+      },
+      {
+        name: 'Vite',
+        icon: '⚡',
+        description: 'Fast frontend build tool',
+        descKey: 'about.techVite',
+      },
     ],
   },
   {
@@ -116,9 +271,24 @@ const techStackGroups: TechGroup[] = [
     title: 'Monitoring/Testing',
     description: 'Quality assurance and monitoring',
     items: [
-      { name: 'Sentry', icon: '🚨', description: 'Performance monitoring & error tracking', descKey: 'about.techSentry' },
-      { name: 'Playwright', icon: '🎭', description: 'E2E automation testing framework', descKey: 'about.techPlaywright' },
-      { name: 'Jest/Vitest', icon: '🧪', description: 'Unit testing framework', descKey: 'about.techJestVitest' },
+      {
+        name: 'Sentry',
+        icon: '🚨',
+        description: 'Performance monitoring & error tracking',
+        descKey: 'about.techSentry',
+      },
+      {
+        name: 'Playwright',
+        icon: '🎭',
+        description: 'E2E automation testing framework',
+        descKey: 'about.techPlaywright',
+      },
+      {
+        name: 'Jest/Vitest',
+        icon: '🧪',
+        description: 'Unit testing framework',
+        descKey: 'about.techJestVitest',
+      },
     ],
   },
   {
@@ -126,10 +296,30 @@ const techStackGroups: TechGroup[] = [
     title: 'Instant Messaging/Push',
     description: 'Real-time messaging and notifications',
     items: [
-      { name: 'WebSocket', icon: '💬', description: 'Real-time bidirectional protocol', descKey: 'about.techWebsocket' },
-      { name: 'Socket.IO', icon: '🔌', description: 'Real-time communication library', descKey: 'about.techSocketIo' },
-      { name: 'FCM', icon: '📲', description: 'Cross-platform push notifications', descKey: 'about.techFcm' },
-      { name: 'OAuth2', icon: '🔑', description: 'OAuth2 third-party login', descKey: 'about.techOauth' },
+      {
+        name: 'WebSocket',
+        icon: '💬',
+        description: 'Real-time bidirectional protocol',
+        descKey: 'about.techWebsocket',
+      },
+      {
+        name: 'Socket.IO',
+        icon: '🔌',
+        description: 'Real-time communication library',
+        descKey: 'about.techSocketIo',
+      },
+      {
+        name: 'FCM',
+        icon: '📲',
+        description: 'Cross-platform push notifications',
+        descKey: 'about.techFcm',
+      },
+      {
+        name: 'OAuth2',
+        icon: '🔑',
+        description: 'OAuth2 third-party login',
+        descKey: 'about.techOauth',
+      },
     ],
   },
   {
@@ -137,9 +327,24 @@ const techStackGroups: TechGroup[] = [
     title: 'Design/SEO',
     description: 'UX design and search optimization',
     items: [
-      { name: 'Figma', icon: '🎨', description: 'Collaborative design tool', descKey: 'about.techFigma' },
-      { name: 'Figma Token', icon: '🎯', description: 'Design system tokens', descKey: 'about.techFigmaToken' },
-      { name: 'SEO', icon: '🔍', description: 'SEO optimization', descKey: 'about.techSeo' },
+      {
+        name: 'Figma',
+        icon: '🎨',
+        description: 'Collaborative design tool',
+        descKey: 'about.techFigma',
+      },
+      {
+        name: 'Figma Token',
+        icon: '🎯',
+        description: 'Design system tokens',
+        descKey: 'about.techFigmaToken',
+      },
+      {
+        name: 'SEO',
+        icon: '🔍',
+        description: 'SEO optimization',
+        descKey: 'about.techSeo',
+      },
     ],
   },
   {
@@ -147,7 +352,12 @@ const techStackGroups: TechGroup[] = [
     title: 'Internationalization',
     description: 'Multi-language localization support',
     items: [
-      { name: 'next-intl', icon: '🌐', description: 'Multi-language i18n library', descKey: 'about.techNextIntl' },
+      {
+        name: 'next-intl',
+        icon: '🌐',
+        description: 'Multi-language i18n library',
+        descKey: 'about.techNextIntl',
+      },
     ],
   },
 ];
@@ -160,20 +370,53 @@ interface CoreValue {
 }
 
 const coreValues: CoreValue[] = [
-  { icon: '🚀', key: 'Innovation', title: 'Innovation Driven', desc: 'Explore new tech for better UX' },
-  { icon: '🛡️', key: 'Security', title: 'Safe and Reliable', desc: 'Data security and system stability' },
-  { icon: '⚡', key: 'Performance', title: 'High Performance', desc: 'Optimized code for fast response' },
-  { icon: '✨', key: 'UserExperience', title: 'User Experience', desc: 'Simple and elegant interfaces' },
+  {
+    icon: '🚀',
+    key: 'Innovation',
+    title: 'Innovation Driven',
+    desc: 'Explore new tech for better UX',
+  },
+  {
+    icon: '🛡️',
+    key: 'Security',
+    title: 'Safe and Reliable',
+    desc: 'Data security and system stability',
+  },
+  {
+    icon: '⚡',
+    key: 'Performance',
+    title: 'High Performance',
+    desc: 'Optimized code for fast response',
+  },
+  {
+    icon: '✨',
+    key: 'UserExperience',
+    title: 'User Experience',
+    desc: 'Simple and elegant interfaces',
+  },
 ];
 
 // ─── Sub-Components ─────────────────────────────────────────────────────────
 
 /** Hero Section: logo + title + subtitle */
-function HeroSection({ colors, t }: { colors: Record<string, string>; t: (key: string) => string }) {
+function HeroSection({
+  colors,
+  t,
+}: {
+  colors: Record<string, string>;
+  t: (key: string) => string;
+}) {
   return (
-    <View style={[styles.heroSection, { backgroundColor: colors.primary + '10' }]}>
+    <View
+      style={[styles.heroSection, { backgroundColor: colors.primary + '10' }]}
+    >
       <View style={styles.heroContent}>
-        <View style={[styles.heroIconContainer, { backgroundColor: colors.primary + '18' }]}>
+        <View
+          style={[
+            styles.heroIconContainer,
+            { backgroundColor: colors.primary + '18' },
+          ]}
+        >
           <Image
             source={require('@assets/logo.png')}
             style={styles.heroLogo}
@@ -192,7 +435,13 @@ function HeroSection({ colors, t }: { colors: Record<string, string>; t: (key: s
 }
 
 /** Founder Profile: avatar, stats, name, role, bio, skills, contact */
-function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key: string) => string }) {
+function FounderSection({
+  colors,
+  t,
+}: {
+  colors: Record<string, string>;
+  t: (key: string) => string;
+}) {
   const founder = teamMembers[0];
 
   const handleGithub = useCallback(() => {
@@ -206,18 +455,33 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
   return (
     <View style={styles.sectionContainer}>
       <View style={styles.sectionHeader}>
-        <View style={[styles.sectionIconBox, { backgroundColor: colors.primary + '18' }]}>
+        <View
+          style={[
+            styles.sectionIconBox,
+            { backgroundColor: colors.primary + '18' },
+          ]}
+        >
           <Text style={styles.sectionIcon}>✨</Text>
         </View>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
           {t('about.founderTitle')}
         </Text>
       </View>
-      <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+      <Text
+        style={[styles.sectionDescription, { color: colors.textSecondary }]}
+      >
         {t('about.founderDescription')}
       </Text>
 
-      <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border + '80' }]}>
+      <View
+        style={[
+          styles.profileCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border + '80',
+          },
+        ]}
+      >
         {/* Avatar + Stats */}
         <View style={styles.profileTopRow}>
           <View style={styles.avatarContainer}>
@@ -233,17 +497,35 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
 
           {/* Stats */}
           <View style={styles.statsRow}>
-            <View style={[styles.statItem, { backgroundColor: colors.bgSecondary }]}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>10+</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('about.founderStatYears')}</Text>
+            <View
+              style={[styles.statItem, { backgroundColor: colors.bgSecondary }]}
+            >
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                10+
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('about.founderStatYears')}
+              </Text>
             </View>
-            <View style={[styles.statItem, { backgroundColor: colors.bgSecondary }]}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>50+</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('about.founderStatProjects')}</Text>
+            <View
+              style={[styles.statItem, { backgroundColor: colors.bgSecondary }]}
+            >
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                50+
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('about.founderStatProjects')}
+              </Text>
             </View>
-            <View style={[styles.statItem, { backgroundColor: colors.bgSecondary }]}>
-              <Text style={[styles.statValue, { color: colors.primary }]}>4</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('about.founderStatStacks')}</Text>
+            <View
+              style={[styles.statItem, { backgroundColor: colors.bgSecondary }]}
+            >
+              <Text style={[styles.statValue, { color: colors.primary }]}>
+                4
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('about.founderStatStacks')}
+              </Text>
             </View>
           </View>
         </View>
@@ -253,7 +535,12 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
           <Text style={[styles.profileName, { color: colors.text }]}>
             {founder.name}
           </Text>
-          <View style={[styles.roleBadge, { backgroundColor: colors.primary + '18' }]}>
+          <View
+            style={[
+              styles.roleBadge,
+              { backgroundColor: colors.primary + '18' },
+            ]}
+          >
             <Text style={styles.roleIcon}>🚀</Text>
             <Text style={[styles.roleText, { color: colors.primary }]}>
               {t('about.teamRoleFullStack')}
@@ -289,7 +576,12 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
           </View>
 
           {/* Connect */}
-          <View style={[styles.connectDivider, { borderColor: colors.border + '80' }]} />
+          <View
+            style={[
+              styles.connectDivider,
+              { borderColor: colors.border + '80' },
+            ]}
+          />
           <Text style={[styles.connectTitle, { color: colors.text }]}>
             {t('about.founderConnect')}
           </Text>
@@ -306,7 +598,9 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
               activeOpacity={0.7}
             >
               <Text style={styles.connectEmoji}>🐙</Text>
-              <Text style={[styles.connectButtonText, { color: colors.primary }]}>
+              <Text
+                style={[styles.connectButtonText, { color: colors.primary }]}
+              >
                 {t('about.github')}
               </Text>
             </TouchableOpacity>
@@ -322,7 +616,9 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
               activeOpacity={0.7}
             >
               <Text style={styles.connectEmoji}>✉️</Text>
-              <Text style={[styles.connectButtonText, { color: colors.primary }]}>
+              <Text
+                style={[styles.connectButtonText, { color: colors.primary }]}
+              >
                 {t('about.email')}
               </Text>
             </TouchableOpacity>
@@ -334,35 +630,62 @@ function FounderSection({ colors, t }: { colors: Record<string, string>; t: (key
 }
 
 /** Vision + Core Values */
-function VisionSection({ colors, t }: { colors: Record<string, string>; t: (key: string) => string }) {
+function VisionSection({
+  colors,
+  t,
+}: {
+  colors: Record<string, string>;
+  t: (key: string) => string;
+}) {
   return (
     <View style={styles.sectionContainer}>
       <View style={styles.visionGrid}>
         {/* Vision Text */}
         <View style={styles.visionTextContainer}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconBox, { backgroundColor: colors.primary + '18' }]}>
+            <View
+              style={[
+                styles.sectionIconBox,
+                { backgroundColor: colors.primary + '18' },
+              ]}
+            >
               <Text style={styles.sectionIcon}>🚀</Text>
             </View>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {t('about.visionTitle')}
             </Text>
           </View>
-          <Text style={[styles.visionDescription, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.visionDescription, { color: colors.textSecondary }]}
+          >
             {t('about.visionDescription')}
           </Text>
         </View>
 
         {/* Core Values */}
-        <View style={[styles.valuesCard, { backgroundColor: colors.surface, borderColor: colors.border + '80' }]}>
+        <View
+          style={[
+            styles.valuesCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border + '80',
+            },
+          ]}
+        >
           <Text style={[styles.valuesTitle, { color: colors.text }]}>
             {t('about.coreValuesTitle')}
           </Text>
           <View style={styles.valuesGrid}>
-            {coreValues.map((value) => (
+            {coreValues.map(value => (
               <View
                 key={value.key}
-                style={[styles.valueItem, { backgroundColor: colors.background, borderColor: colors.border }]}
+                style={[
+                  styles.valueItem,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  },
+                ]}
               >
                 <View style={styles.valueHeader}>
                   <Text style={styles.valueIcon}>{value.icon}</Text>
@@ -370,7 +693,9 @@ function VisionSection({ colors, t }: { colors: Record<string, string>; t: (key:
                     {t(`about.coreValue${value.key}Title`)}
                   </Text>
                 </View>
-                <Text style={[styles.valueDesc, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.valueDesc, { color: colors.textSecondary }]}
+                >
                   {t(`about.coreValue${value.key}Desc`)}
                 </Text>
               </View>
@@ -383,36 +708,54 @@ function VisionSection({ colors, t }: { colors: Record<string, string>; t: (key:
 }
 
 /** Tech Stack: categorized grid */
-function TechStackSection({ colors, t }: { colors: Record<string, string>; t: (key: string) => string }) {
+function TechStackSection({
+  colors,
+  t,
+}: {
+  colors: Record<string, string>;
+  t: (key: string) => string;
+}) {
   return (
-    <View style={[styles.techStackSection, { backgroundColor: colors.bgSecondary }]}>
+    <View
+      style={[styles.techStackSection, { backgroundColor: colors.bgSecondary }]}
+    >
       <View style={styles.sectionContainer}>
         <View style={styles.techStackHeader}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconBox, { backgroundColor: colors.primary + '18' }]}>
+            <View
+              style={[
+                styles.sectionIconBox,
+                { backgroundColor: colors.primary + '18' },
+              ]}
+            >
               <Text style={styles.sectionIcon}>💻</Text>
             </View>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {t('about.techStackTitle')}
             </Text>
           </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.sectionDescription, { color: colors.textSecondary }]}
+          >
             {t('about.techStackDescription')}
           </Text>
         </View>
 
-        {techStackGroups.map((group) => {
-          const categoryKey = group.category.charAt(0).toUpperCase() + group.category.slice(1);
+        {techStackGroups.map(group => {
+          const categoryKey =
+            group.category.charAt(0).toUpperCase() + group.category.slice(1);
           return (
             <View key={group.category} style={styles.techGroup}>
               <Text style={[styles.techGroupTitle, { color: colors.text }]}>
                 {t(`about.techCategory${categoryKey}`)}
               </Text>
-              <Text style={[styles.techGroupDesc, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.techGroupDesc, { color: colors.textSecondary }]}
+              >
                 {t(`about.techCategory${categoryKey}Desc`)}
               </Text>
               <View style={styles.techGrid}>
-                {group.items.map((tech) => (
+                {group.items.map(tech => (
                   <View
                     key={tech.name}
                     style={[
@@ -448,7 +791,13 @@ function TechStackSection({ colors, t }: { colors: Record<string, string>; t: (k
 }
 
 /** Footer */
-function FooterSection({ colors, t }: { colors: Record<string, string>; t: (key: string) => string }) {
+function FooterSection({
+  colors,
+  t,
+}: {
+  colors: Record<string, string>;
+  t: (key: string) => string;
+}) {
   return (
     <View style={[styles.footer, { borderTopColor: colors.border }]}>
       <View style={styles.footerLogoRow}>
@@ -457,9 +806,7 @@ function FooterSection({ colors, t }: { colors: Record<string, string>; t: (key:
           style={styles.footerLogo}
           resizeMode="contain"
         />
-        <Text style={[styles.footerBrand, { color: colors.text }]}>
-          Tarsier Labs
-        </Text>
+        <Text style={[styles.footerBrand, { color: colors.text }]}>Porter</Text>
       </View>
       <Text style={[styles.footerLove, { color: colors.textSecondary }]}>
         {t('about.madeWithLove')}

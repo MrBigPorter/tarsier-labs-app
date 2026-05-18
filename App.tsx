@@ -17,7 +17,7 @@
  *   (only in __DEV__, selectively marks components with .whyDidYouRender = true)
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 
 // ─── Dev-only: why-did-you-render ──────────────────────────────────────
 // MUST be initialized before any React component renders.
@@ -52,6 +52,7 @@ import RootNavigator, { linking } from '@/navigation/RootNavigator';
 import { logger } from '@/lib/logger';
 import { initSentry, captureException, addBreadcrumb } from '@/lib/sentry';
 import { PerfProvider, PerfMonitor, usePerfMonitor } from '@/lib/perf';
+import BootSplash from 'react-native-bootsplash';
 
 // Suppress known non-critical warnings in development
 if (__DEV__) {
@@ -67,7 +68,8 @@ if (__DEV__) {
 function AppContent(): React.JSX.Element {
   const { colors, isDark } = useTheme();
   const { recordNav } = usePerfMonitor();
-  const navigationRef = useRef<NavigationContainerRef<ReactNavigation.RootParamList>>(null);
+  const navigationRef =
+    useRef<NavigationContainerRef<ReactNavigation.RootParamList>>(null);
   const prevRouteRef = useRef<string>('unknown');
   const prevTimestampRef = useRef<number>(Date.now());
 
@@ -129,9 +131,7 @@ function AppContentWithPerf(): React.JSX.Element {
 /**
  * Main App component with all providers
  */
-function App(): React.JSX.Element | null {
-  const [isReady, setIsReady] = useState(false);
-
+function App(): React.JSX.Element {
   useEffect(() => {
     // Initialize app-level services
     const init = async () => {
@@ -151,16 +151,12 @@ function App(): React.JSX.Element | null {
           captureException(error, { context: 'App.init' });
         }
       } finally {
-        setIsReady(true);
+        // Hide native splash screen with fade animation
+        BootSplash.hide({ fade: true });
       }
     };
     init();
   }, []);
-
-  if (!isReady) {
-    // Could show a splash screen here
-    return null;
-  }
 
   return (
     <GestureHandlerRootView style={styles.root}>

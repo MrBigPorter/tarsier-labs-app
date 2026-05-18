@@ -100,5 +100,13 @@
     "@react-native-community/cli-platform-ios@20.1.0": {
       "unplugged": true
     }
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   }
 }
