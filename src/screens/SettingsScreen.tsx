@@ -32,6 +32,7 @@ import { useTheme, spacing, borderRadius } from '@/lib/theme';
 import { front, TokensLight } from '@/lib/theme/design_tokens.g';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { logout } from '@/store/slices/authSlice';
+import { useClearUserDataMutation } from '@/api/endpoints/auth';
 import { changeLanguage, getCurrentLanguage } from '@/lib/i18n';
 import { clearAppCache } from '@/lib/cache/clearAppCache';
 import Header from '@/components/layout/Header';
@@ -84,7 +85,8 @@ const ProfileHeaderCard: React.FC = () => {
         styles.profileCard,
         {
           backgroundColor: colors.bgPrimary,
-          borderLeftColor: colors.utilityBrand500 ?? TokensLight.utilityBrand500,
+          borderLeftColor:
+            colors.utilityBrand500 ?? TokensLight.utilityBrand500,
         },
         Platform.select({
           ios: {
@@ -106,14 +108,17 @@ const ProfileHeaderCard: React.FC = () => {
               styles.profileAvatar,
               {
                 backgroundColor: colors.bgBrandPrimary,
-                borderColor: colors.utilityBrand200 ?? TokensLight.utilityBrand200,
+                borderColor:
+                  colors.utilityBrand200 ?? TokensLight.utilityBrand200,
               },
             ]}
           >
             <Text
               style={[
                 styles.profileAvatarText,
-                { color: colors.utilityBrand600 ?? TokensLight.utilityBrand600 },
+                {
+                  color: colors.utilityBrand600 ?? TokensLight.utilityBrand600,
+                },
               ]}
             >
               {initial}
@@ -121,19 +126,13 @@ const ProfileHeaderCard: React.FC = () => {
           </View>
           <View style={styles.profileInfo}>
             <Text
-              style={[
-                styles.profileName,
-                { color: colors.textPrimary },
-              ]}
+              style={[styles.profileName, { color: colors.textPrimary }]}
               numberOfLines={1}
             >
               {user.nickname}
             </Text>
             <Text
-              style={[
-                styles.profileEmail,
-                { color: colors.textSecondary },
-              ]}
+              style={[styles.profileEmail, { color: colors.textSecondary }]}
               numberOfLines={1}
             >
               {user.email}
@@ -156,26 +155,14 @@ const ProfileHeaderCard: React.FC = () => {
               },
             ]}
           >
-            <SvgIcon
-              name="user"
-              size={24}
-              color={colors.textSecondary}
-            />
+            <SvgIcon name="user" size={24} color={colors.textSecondary} />
           </View>
           <View style={styles.profileInfo}>
-            <Text
-              style={[
-                styles.profileName,
-                { color: colors.textPrimary },
-              ]}
-            >
+            <Text style={[styles.profileName, { color: colors.textPrimary }]}>
               {t('settings.profile.signIn')}
             </Text>
             <Text
-              style={[
-                styles.profileEmail,
-                { color: colors.textSecondary },
-              ]}
+              style={[styles.profileEmail, { color: colors.textSecondary }]}
             >
               {t('settings.profile.subtitle')}
             </Text>
@@ -183,10 +170,15 @@ const ProfileHeaderCard: React.FC = () => {
           <View
             style={[
               styles.signInBadge,
-              { backgroundColor: colors.bgBrandSolid ?? TokensLight.bgBrandSolid },
+              {
+                backgroundColor:
+                  colors.bgBrandSolid ?? TokensLight.bgBrandSolid,
+              },
             ]}
           >
-            <Text style={styles.signInBadgeText}>{t('settings.profile.signInBadge')}</Text>
+            <Text style={styles.signInBadgeText}>
+              {t('settings.profile.signInBadge')}
+            </Text>
           </View>
         </>
       )}
@@ -223,21 +215,21 @@ const SettingRow: React.FC<SettingRowProps> = ({
   // Determine icon circle background color
   const iconBgColor =
     resolvedKind === 'destructive'
-      ? colors.bgErrorSecondary ?? '#fee4e2'
+      ? (colors.bgErrorSecondary ?? '#fee4e2')
       : resolvedKind === 'toggle'
-        ? colors.bgBrandPrimary ?? '#fbf7eb'
+        ? (colors.bgBrandPrimary ?? '#fbf7eb')
         : colors.bgSecondary;
 
   // Determine icon color
   const iconColor =
     resolvedKind === 'destructive'
-      ? colors.textErrorPrimary ?? '#d92d20'
-      : colors.utilityBrand500 ?? colors.primary;
+      ? (colors.textErrorPrimary ?? '#d92d20')
+      : (colors.utilityBrand500 ?? colors.primary);
 
   // Determine label color
   const labelColor =
     resolvedKind === 'destructive'
-      ? colors.textErrorPrimary ?? '#d92d20'
+      ? (colors.textErrorPrimary ?? '#d92d20')
       : colors.textPrimary;
 
   const isDisabled = !onPress && !rightElement;
@@ -246,33 +238,18 @@ const SettingRow: React.FC<SettingRowProps> = ({
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      style={[
-        styles.settingRow,
-        { borderBottomColor: colors.borderSecondary },
-      ]}
+      style={[styles.settingRow, { borderBottomColor: colors.borderSecondary }]}
       activeOpacity={onPress ? 0.6 : 1}
     >
       {/* Icon circle */}
-      <View
-        style={[
-          styles.iconCircle,
-          { backgroundColor: iconBgColor },
-        ]}
-      >
-        <SvgIcon
-          name={icon as any}
-          size={18}
-          color={iconColor}
-        />
+      <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
+        <SvgIcon name={icon as any} size={18} color={iconColor} />
       </View>
 
       {/* Label */}
       <View style={styles.settingLabelContainer}>
         <Text
-          style={[
-            styles.settingLabel,
-            { color: labelColor },
-          ]}
+          style={[styles.settingLabel, { color: labelColor }]}
           numberOfLines={1}
         >
           {label}
@@ -320,7 +297,10 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ title }) => {
       <View
         style={[
           styles.sectionHeaderAccent,
-          { backgroundColor: colors.utilityBrand500 ?? TokensLight.utilityBrand500 },
+          {
+            backgroundColor:
+              colors.utilityBrand500 ?? TokensLight.utilityBrand500,
+          },
         ]}
       />
       <Text
@@ -352,7 +332,7 @@ const SectionCard: React.FC<{
         {
           backgroundColor: colors.bgPrimary,
           borderLeftColor: destructive
-            ? colors.textErrorPrimary ?? '#d92d20'
+            ? (colors.textErrorPrimary ?? '#d92d20')
             : 'transparent',
         },
         Platform.select({
@@ -393,6 +373,7 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
   const { colors, isDark, toggleTheme } = useTheme();
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const [clearUserData] = useClearUserDataMutation();
 
   const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
   const user = useAppSelector(state => state.auth.user);
@@ -400,6 +381,7 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
   // Local state
   const [showLanguageSheet, setShowLanguageSheet] = useState(false);
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
+  const [isClearing, setIsClearing] = useState(false);
 
   // Sync language from i18n on mount
   useEffect(() => {
@@ -417,8 +399,36 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
         {
           text: t('settings.clearCache.action'),
           style: 'destructive',
-          onPress: () => {
-            clearAppCache();
+          onPress: async () => {
+            setIsClearing(true);
+            try {
+              const result = await clearAppCache({ clearServerData: true });
+              if (result.serverCleared) {
+                Alert.alert(
+                  t('settings.clearCache.success'),
+                  t('settings.clearCache.successDetail', {
+                    anonymizedComments: result.anonymizedComments,
+                    deletedBookmarks: result.deletedBookmarks,
+                  }),
+                );
+              } else if (result.serverError) {
+                Alert.alert(
+                  t('common.warning'),
+                  t('settings.clearCache.partialSuccess', {
+                    error: result.serverError,
+                  }),
+                );
+              } else {
+                Alert.alert(
+                  t('common.success'),
+                  t('settings.clearCache.success'),
+                );
+              }
+            } catch {
+              Alert.alert(t('common.error'), t('settings.clearCache.error'));
+            } finally {
+              setIsClearing(false);
+            }
           },
         },
       ],
@@ -426,18 +436,14 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
   }, [t]);
 
   const handleSignOut = useCallback(() => {
-    Alert.alert(
-      t('settings.signOut.confirm'),
-      t('settings.signOut.message'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('settings.signOut.name'),
-          style: 'destructive',
-          onPress: () => dispatch(logout()),
-        },
-      ],
-    );
+    Alert.alert(t('settings.signOut.confirm'), t('settings.signOut.message'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('settings.signOut.name'),
+        style: 'destructive',
+        onPress: () => dispatch(logout()),
+      },
+    ]);
   }, [dispatch, t]);
 
   const handleDeleteAccount = useCallback(() => {
@@ -449,23 +455,27 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
         {
           text: t('settings.deleteAccount.action'),
           style: 'destructive',
-          onPress: () => {
-            // TODO: API call to delete account
-            dispatch(logout());
+          onPress: async () => {
+            try {
+              const result = await clearUserData().unwrap();
+              if (result.accountDeleted) {
+                dispatch(logout());
+              }
+            } catch {
+              // If API fails, still log out locally
+              dispatch(logout());
+            }
           },
         },
       ],
     );
-  }, [dispatch, t]);
+  }, [clearUserData, dispatch, t]);
 
-  const handleLanguageSelect = useCallback(
-    (langCode: string) => {
-      setCurrentLang(langCode);
-      setShowLanguageSheet(false);
-      changeLanguage(langCode);
-    },
-    [],
-  );
+  const handleLanguageSelect = useCallback((langCode: string) => {
+    setCurrentLang(langCode);
+    setShowLanguageSheet(false);
+    changeLanguage(langCode);
+  }, []);
 
   const handleNavigateTo = useCallback(
     (screen: string) => {
@@ -477,7 +487,12 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
   // ─── Main render ────────────────────────────────────────────────────
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgMobilePrimary ?? colors.background }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.bgMobilePrimary ?? colors.background },
+      ]}
+    >
       <Header title={t('settings.title')} showBack hideSearch hideSettings />
 
       <ScrollView
@@ -503,9 +518,15 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
                 onValueChange={toggleTheme}
                 trackColor={{
                   false: colors.borderSecondary,
-                  true: (colors.utilityBrand500 ?? TokensLight.utilityBrand500) + 'CC',
+                  true:
+                    (colors.utilityBrand500 ?? TokensLight.utilityBrand500) +
+                    'CC',
                 }}
-                thumbColor={isDark ? (colors.utilityBrand500 ?? TokensLight.utilityBrand500) : '#f4f3f4'}
+                thumbColor={
+                  isDark
+                    ? (colors.utilityBrand500 ?? TokensLight.utilityBrand500)
+                    : '#f4f3f4'
+                }
                 ios_backgroundColor={colors.borderSecondary}
               />
             }
@@ -513,29 +534,10 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
           <SettingRow
             icon="globe"
             label={t('settings.language.name')}
-            value={t(`settings.language.${currentLang}` as any, { defaultValue: 'English' })}
+            value={t(`settings.language.${currentLang}` as any, {
+              defaultValue: 'English',
+            })}
             onPress={() => setShowLanguageSheet(true)}
-          />
-        </SectionCard>
-
-        {/* ─── Notifications ────────────────────────────────────────── */}
-        <SectionHeader title={t('settings.notifications')} />
-        <SectionCard>
-          <SettingRow
-            icon="bell"
-            label={t('settings.pushNotifications')}
-            kind="toggle"
-            rightElement={
-              <Switch
-                value={false}
-                trackColor={{
-                  false: colors.borderSecondary,
-                  true: (colors.utilityBrand500 ?? TokensLight.utilityBrand500) + 'CC',
-                }}
-                thumbColor={colors.utilityBrand500 ?? TokensLight.utilityBrand500}
-                ios_backgroundColor={colors.borderSecondary}
-              />
-            }
           />
         </SectionCard>
 
@@ -544,8 +546,12 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
         <SectionCard>
           <SettingRow
             icon="refresh-cw"
-            label={t('settings.clearCache.name')}
-            onPress={handleClearCache}
+            label={
+              isClearing
+                ? t('settings.clearCache.loading')
+                : t('settings.clearCache.name')
+            }
+            onPress={isClearing ? undefined : handleClearCache}
           />
         </SectionCard>
 
@@ -557,7 +563,9 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
               {user && (
                 <SettingRow
                   icon="user"
-                  label={t('settings.profile.signedInAs', { name: user.nickname })}
+                  label={t('settings.profile.signedInAs', {
+                    name: user.nickname,
+                  })}
                   value={user.email}
                   kind="display"
                 />
@@ -656,11 +664,7 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
                     { backgroundColor: colors.bgBrandSolid ?? '#d68a29' },
                   ]}
                 >
-                  <SvgIcon
-                    name="check"
-                    size={14}
-                    color="#ffffff"
-                  />
+                  <SvgIcon name="check" size={14} color="#ffffff" />
                 </View>
               )}
             </TouchableOpacity>

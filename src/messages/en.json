@@ -29,7 +29,9 @@
     "bookmarks": "Bookmarks",
     "cancel": "Cancel",
     "close": "Close",
-    "pageInfo": "Page {page} of {totalPages}"
+    "pageInfo": "Page {page} of {totalPages}",
+    "warning": "Warning",
+    "success": "Success"
   },
   "categories": {
     "title": "Article Categories",
@@ -330,10 +332,15 @@
     "pushNotifications": "Push Notifications",
     "data": "Data",
     "clearCache": {
-      "name": "Clear Cache",
-      "confirm": "Clear Cache",
-      "message": "This will clear all cached data including bookmarks. You can re-download it anytime.",
-      "action": "Clear"
+      "name": "Clear All Data",
+      "confirm": "Clear All Data",
+      "message": "This will clear local cache AND permanently delete your comments, likes, and bookmarks from the server. This cannot be undone.",
+      "action": "Clear All Data",
+      "loading": "Clearing...",
+      "success": "All data cleared successfully",
+      "successDetail": "Comments anonymised: {{anonymizedComments}} | Bookmarks deleted: {{deletedBookmarks}}",
+      "partialSuccess": "Local cache cleared, but server data failed: {{error}}",
+      "error": "Failed to clear data. Please try again."
     },
     "account": "Account",
     "signOut": {

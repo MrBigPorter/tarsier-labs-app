@@ -20,13 +20,13 @@ import {
   Text,
   SectionList,
   StyleSheet,
-  RefreshControl,
   TouchableOpacity,
 } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetArticlesQuery } from '@/api/endpoints/articles';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { groupArticlesByYearMonth } from '@/lib/utils/date';
 import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
@@ -49,18 +49,26 @@ const ArchiveScreen: React.FC<RootStackScreenProps<'Archive'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
+  const prevLangRef = React.useRef(lang);
 
   const PAGE_SIZE = 200; // Fetch a large batch for archive grouping
 
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  } = useGetArticlesQuery({ page: 1, pageSize: PAGE_SIZE, lang });
+  const { data, isLoading, isError, refetch } = useGetArticlesQuery({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    lang,
+  });
+
+  // Re-fetch when language changes
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      refetch();
+    }
+  }, [lang, refetch]);
 
   // Group articles by year → month using shared utility
   const sections = groupArticlesByYearMonth(data?.items || []);
@@ -102,21 +110,12 @@ const ArchiveScreen: React.FC<RootStackScreenProps<'Archive'>> = ({
     ({ item }: { item: ArchiveSection['data'][0] }) => (
       <View style={styles.monthSection}>
         <View style={styles.monthHeader}>
-          <Text
-            style={[
-              styles.monthText,
-              { color: colors.textSecondary },
-            ]}
-          >
+          <Text style={[styles.monthText, { color: colors.textSecondary }]}>
             {item.month}
           </Text>
-          <Text
-            style={[
-              styles.countText,
-              { color: colors.textSecondary },
-            ]}
-          >
-            {item.articles.length} article{item.articles.length !== 1 ? 's' : ''}
+          <Text style={[styles.countText, { color: colors.textSecondary }]}>
+            {item.articles.length} article
+            {item.articles.length !== 1 ? 's' : ''}
           </Text>
         </View>
         {item.articles.map(article => (
@@ -126,10 +125,7 @@ const ArchiveScreen: React.FC<RootStackScreenProps<'Archive'>> = ({
             style={[styles.articleRow, { borderBottomColor: colors.border }]}
           >
             <Text
-              style={[
-                styles.articleTitle,
-                { color: colors.text },
-              ]}
+              style={[styles.articleTitle, { color: colors.text }]}
               numberOfLines={1}
             >
               {article.title}
@@ -165,40 +161,39 @@ const ArchiveScreen: React.FC<RootStackScreenProps<'Archive'>> = ({
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
       <Header title="Archive" showBack hideSearch hideSettings />
 
-      <SectionList
-        sections={sections}
-        renderSectionHeader={renderSectionHeader}
-        renderItem={renderMonthSection}
-        keyExtractor={(item, index) => `${item.monthIndex}-${index}`}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-          sections.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={false}
-            onRefresh={refetch}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          isError ? (
-            <EmptyState
-              icon="alert-circle"
-              title={t('archive.error.loadFailed')}
-              primaryAction={{ label: t('common.retry'), onPress: refetch }}
-            />
-          ) : (
-            <EmptyLogoContent
-              title={t('archive.empty.noArchived')}
-              description={t('archive.empty.description')}
-            />
-          )
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      <PullToRefreshWrapper
+        refreshing={false}
+        onRefresh={refetch}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+      >
+        <SectionList
+          sections={sections}
+          renderSectionHeader={renderSectionHeader}
+          renderItem={renderMonthSection}
+          keyExtractor={(item, index) => `${item.monthIndex}-${index}`}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+            sections.length === 0 && styles.emptyList,
+          ]}
+          ListEmptyComponent={
+            isError ? (
+              <EmptyState
+                icon="alert-circle"
+                title={t('archive.error.loadFailed')}
+                primaryAction={{ label: t('common.retry'), onPress: refetch }}
+              />
+            ) : (
+              <EmptyLogoContent
+                title={t('archive.empty.noArchived')}
+                description={t('archive.empty.description')}
+              />
+            )
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      </PullToRefreshWrapper>
     </View>
   );
 };

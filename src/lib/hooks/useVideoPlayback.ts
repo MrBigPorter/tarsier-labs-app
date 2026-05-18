@@ -18,6 +18,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { logger } from '@/lib/logger';
 import type { FrontendArticle } from '@/types/frontend-blog';
 import { isVideoUrl } from '@/lib/utils/image';
@@ -44,12 +45,42 @@ export interface VideoPlaybackState {
 export interface VideoPlaybackActions {
   /** Start/pause/resume video playback */
   handlePlayPress: () => void;
+  /** Called when video starts loading */
+  handleVideoLoadStart: () => void;
   /** Called when video loads successfully */
   handleVideoLoad: () => void;
   /** Called on video error — handles HLS → MP4 fallback */
   handleVideoError: (e: any) => void;
   /** Called when video playback ends — resets state */
   handleVideoEnd: () => void;
+}
+
+/**
+ * Extract readable error details from react-native-video error event.
+ * On iOS: error.code, error.localizedDescription, error.domain
+ * On Android: error.errorString, error.errorCode
+ * On Web: error.error, error.code
+ */
+function extractVideoError(e: any): Record<string, unknown> {
+  if (!e) return { raw: 'unknown' };
+
+  // react-native-video wraps error in nativeEvent
+  const nativeEvent = e.nativeEvent ?? e;
+  const err = nativeEvent.error ?? {};
+
+  return {
+    platform: Platform.OS,
+    errorString: err.errorString,
+    errorCode: err.errorCode,
+    errorException: err.errorException,
+    errorStackTrace: err.errorStackTrace,
+    ios_code: err.code,
+    ios_error: err.error,
+    ios_domain: err.domain,
+    ios_localizedDescription: err.localizedDescription,
+    ios_localizedFailureReason: err.localizedFailureReason,
+    target: nativeEvent.target,
+  };
 }
 
 /**
@@ -71,16 +102,15 @@ export function useVideoPlayback(
 
   const hlsUrl = article.meta?.video?.hlsUrl ?? null;
   const mp4Url =
-    typeof article.coverImage === 'string' && article.coverImage.endsWith('.mp4')
+    typeof article.coverImage === 'string' &&
+    article.coverImage.endsWith('.mp4')
       ? article.coverImage
       : null;
 
   const hasVideo = Boolean(hlsUrl) || Boolean(mp4Url);
 
   const posterUrl =
-    article.meta?.video?.posterWebp ||
-    article.meta?.video?.poster ||
-    null;
+    article.meta?.video?.posterWebp || article.meta?.video?.poster || null;
 
   // ─── Mutable state ──────────────────────────────────────────────────
 
@@ -100,7 +130,7 @@ export function useVideoPlayback(
     );
     if (videoPlaying) {
       // Tap on playing video → toggle pause
-      setVideoPaused((p) => !p);
+      setVideoPaused(p => !p);
     } else {
       // Start fresh: reset failure state and use HLS URL (or MP4 from coverImage)
       setVideoFailed(false);
@@ -110,17 +140,25 @@ export function useVideoPlayback(
     }
   }, [article.id, hlsUrl, mp4Url, videoPlaying]);
 
+  const handleVideoLoadStart = useCallback(() => {
+    logger.info(
+      `[useVideoPlayback] video load start id=${article.id?.slice(0, 8)} uri="${videoUri}"`,
+    );
+  }, [article.id, videoUri]);
+
   const handleVideoLoad = useCallback(() => {
     logger.info(
-      `[useVideoPlayback] video loaded id=${article.id?.slice(0, 8)}`,
+      `[useVideoPlayback] video loaded id=${article.id?.slice(0, 8)} uri="${videoUri}"`,
     );
-  }, [article.id]);
+  }, [article.id, videoUri]);
 
   const handleVideoError = useCallback(
     (e: any) => {
+      // Extract structured error details for better diagnostics
+      const errorDetails = extractVideoError(e);
       logger.error(
         `[useVideoPlayback] video error id=${article.id?.slice(0, 8)} uri="${videoUri}"`,
-        e,
+        errorDetails,
       );
 
       const isCurrentlyHLS = videoUri === hlsUrl;
@@ -133,7 +171,8 @@ export function useVideoPlayback(
       } else {
         // MP4 also failed (or no fallback available) — show error indicator
         logger.error(
-          `[useVideoPlayback] video completely failed, no fallback id=${article.id?.slice(0, 8)}`,
+          `[useVideoPlayback] video completely failed, no fallback id=${article.id?.slice(0, 8)} uri="${videoUri}"`,
+          errorDetails,
         );
         setVideoFailed(true);
         setVideoPlaying(false);
@@ -143,9 +182,7 @@ export function useVideoPlayback(
   );
 
   const handleVideoEnd = useCallback(() => {
-    logger.info(
-      `[useVideoPlayback] video ended id=${article.id?.slice(0, 8)}`,
-    );
+    logger.info(`[useVideoPlayback] video ended id=${article.id?.slice(0, 8)}`);
     setVideoPlaying(false);
     setVideoPaused(false);
     setVideoUri(null);
@@ -163,6 +200,7 @@ export function useVideoPlayback(
     posterUrl,
     // Actions
     handlePlayPress,
+    handleVideoLoadStart,
     handleVideoLoad,
     handleVideoError,
     handleVideoEnd,

@@ -17,7 +17,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { useTheme, spacing, typography, borderRadius } from '@/lib/theme';
+import { useModeColors, spacing, typography, borderRadius } from '@/lib/theme';
 
 interface EmptyLogoContentProps {
   /** Main title text */
@@ -36,7 +36,7 @@ export const EmptyLogoContent = React.memo(function EmptyLogoContent({
   actionLabel,
   onAction,
 }: EmptyLogoContentProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <View style={styles.container}>

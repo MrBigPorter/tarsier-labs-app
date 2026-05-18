@@ -16,14 +16,14 @@ import {
   View,
   FlatList,
   StyleSheet,
-  RefreshControl,
   ActivityIndicator,
   Text,
 } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetTagBySlugQuery } from '@/api/endpoints/tags';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
@@ -32,14 +32,16 @@ import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import type { TagsTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
-const TagArticlesScreen: React.FC<
-  TagsTabScreenProps<'TagArticles'>
-> = ({ navigation, route }) => {
+const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
+  navigation,
+  route,
+}) => {
   const { tagSlug, tagName } = route.params;
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
+  const prevLangRef = React.useRef(lang);
 
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
@@ -52,6 +54,15 @@ const TagArticlesScreen: React.FC<
     refetch,
   } = useGetTagBySlugQuery({ slug: tagSlug, page, pageSize: 15, lang });
 
+  // Re-fetch when language changes
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      setPage(1);
+      refetch();
+    }
+  }, [lang, refetch]);
+
   const totalPages = tagData?.articles?.totalPages || 1;
   const hasMore = page < totalPages;
 
@@ -63,7 +74,9 @@ const TagArticlesScreen: React.FC<
       } else {
         setAllArticles(prev => {
           const existingIds = new Set(prev.map(a => a.id));
-          const newItems = tagData.articles.items.filter(a => !existingIds.has(a.id));
+          const newItems = tagData.articles.items.filter(
+            a => !existingIds.has(a.id),
+          );
           if (newItems.length === 0) return prev;
           return [...prev, ...newItems];
         });
@@ -108,11 +121,7 @@ const TagArticlesScreen: React.FC<
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard
-          article={item}
-          onPress={handleArticlePress}
-          showExcerpt
-        />
+        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
       </View>
     ),
     [handleArticlePress],
@@ -131,25 +140,40 @@ const TagArticlesScreen: React.FC<
     <View style={styles.tagHeader}>
       {/* Tag name with # prefix */}
       <View style={styles.titleRow}>
-        <View style={[styles.hashBadge, { backgroundColor: (tag.color || colors.primary) + '20' }]}>
-          <Text style={[styles.hashText, { color: tag.color || colors.primary }]}>
+        <View
+          style={[
+            styles.hashBadge,
+            { backgroundColor: (tag.color || colors.primary) + '20' },
+          ]}
+        >
+          <Text
+            style={[styles.hashText, { color: tag.color || colors.primary }]}
+          >
             #
           </Text>
         </View>
-        <Text style={[styles.tagName, { color: colors.text }]}>
-          {tag.name}
-        </Text>
+        <Text style={[styles.tagName, { color: colors.text }]}>{tag.name}</Text>
       </View>
 
       {/* Article count */}
       <View style={styles.metaRow}>
-        <Text style={[styles.articleCount, { color: colors.textTertiary || colors.textSecondary }]}>
+        <Text
+          style={[
+            styles.articleCount,
+            { color: colors.textTertiary || colors.textSecondary },
+          ]}
+        >
           {tag.articleCount} {tag.articleCount === 1 ? 'article' : 'articles'}
         </Text>
       </View>
 
       {/* Divider */}
-      <View style={[styles.headerDivider, { backgroundColor: colors.borderSecondary }]} />
+      <View
+        style={[
+          styles.headerDivider,
+          { backgroundColor: colors.borderSecondary },
+        ]}
+      />
     </View>
   );
 
@@ -158,7 +182,12 @@ const TagArticlesScreen: React.FC<
   if (isLoading && page === 1) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-        <Header title={tagName ? `#${tagName}` : tagSlug} showBack hideSearch hideSettings />
+        <Header
+          title={tagName ? `#${tagName}` : tagSlug}
+          showBack
+          hideSearch
+          hideSettings
+        />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={5} />
         </View>
@@ -172,44 +201,46 @@ const TagArticlesScreen: React.FC<
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
       <Header title={`#${tag.name}`} showBack hideSearch hideSettings />
 
-      <FlatList
-        data={allArticles}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-          allArticles.length === 0 && styles.emptyList,
-        ]}
-        ListHeaderComponent={allArticles.length > 0 ? renderListHeader : null}
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching && page === 1}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          isError ? (
-            <EmptyState
-              icon="alert-circle"
-              title={t('article.error.loadFailed')}
-              description={t('common.pullDownToRetry')}
-              primaryAction={{ label: t('common.retry'), onPress: handleRefresh }}
-            />
-          ) : (
-            <EmptyLogoContent
-              title={t('tags.emptyArticles')}
-              description={t('common.checkBackLater')}
-            />
-          )
-        }
-        ListFooterComponent={renderFooter}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-      />
+      <PullToRefreshWrapper
+        refreshing={isFetching && page === 1}
+        onRefresh={handleRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+      >
+        <FlatList
+          data={allArticles}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+            allArticles.length === 0 && styles.emptyList,
+          ]}
+          ListHeaderComponent={allArticles.length > 0 ? renderListHeader : null}
+          ListEmptyComponent={
+            isError ? (
+              <EmptyState
+                icon="alert-circle"
+                title={t('article.error.loadFailed')}
+                description={t('common.pullDownToRetry')}
+                primaryAction={{
+                  label: t('common.retry'),
+                  onPress: handleRefresh,
+                }}
+              />
+            ) : (
+              <EmptyLogoContent
+                title={t('tags.emptyArticles')}
+                description={t('common.checkBackLater')}
+              />
+            )
+          }
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+        />
+      </PullToRefreshWrapper>
     </View>
   );
 };

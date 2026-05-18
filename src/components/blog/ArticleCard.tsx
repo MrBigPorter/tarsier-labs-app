@@ -23,14 +23,9 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Video from 'react-native-video';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import type { FrontendArticle } from '@/types/frontend-blog';
 import type { NetworkQuality } from '@/lib/hooks/useNetworkQuality';
 import { useNetworkQuality } from '@/lib/hooks/useNetworkQuality';
@@ -61,7 +56,7 @@ function formatCount(num: number): string {
   return String(num);
 }
 
-export function ArticleCard({
+function ArticleCardComponent({
   article,
   onPress,
   onBookmark,
@@ -72,7 +67,7 @@ export function ArticleCard({
   networkQuality: externalNetworkQuality,
   priority = false,
 }: ArticleCardProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
   // Fallback to internal hook if parent doesn't provide networkQuality
   const internalNetworkQuality = useNetworkQuality();
   const networkQuality = externalNetworkQuality ?? internalNetworkQuality;
@@ -89,6 +84,7 @@ export function ArticleCard({
     mp4Url,
     posterUrl,
     handlePlayPress,
+    handleVideoLoadStart,
     handleVideoLoad,
     handleVideoError,
     handleVideoEnd,
@@ -124,23 +120,30 @@ export function ArticleCard({
     >
       {/* ── Cover Image / Video ── */}
       {showImageContainer && (
-        <View style={[
-          styles.imageContainer,
-          compact && styles.compactImageContainer,
-          featured && styles.featuredImageContainer,
-        ]}>
+        <View
+          style={[
+            styles.imageContainer,
+            compact && styles.compactImageContainer,
+            featured && styles.featuredImageContainer,
+          ]}
+        >
           {hasVideo ? (
             <View style={styles.videoContainer}>
               {videoPlaying && videoUri ? (
                 /* Video (mounted only after play tap) */
                 <Video
                   source={{ uri: videoUri }}
-                  style={[styles.image, compact && styles.compactImage, featured && styles.featuredImage]}
-                  poster={posterUrl || ''}
+                  style={[
+                    styles.image,
+                    compact && styles.compactImage,
+                    featured && styles.featuredImage,
+                  ]}
+                  poster={posterUrl ?? undefined}
                   posterResizeMode="cover"
                   resizeMode="contain"
                   controls={false}
                   paused={videoPaused}
+                  onLoadStart={handleVideoLoadStart}
                   onLoad={handleVideoLoad}
                   onError={handleVideoError}
                   onEnd={handleVideoEnd}
@@ -150,9 +153,17 @@ export function ArticleCard({
                 <AppImage
                   uri={posterUrl}
                   images={article.meta?.images}
-                  coverImage={article.coverImage && isVideoUrl(article.coverImage) ? undefined : article.coverImage}
+                  coverImage={
+                    article.coverImage && isVideoUrl(article.coverImage)
+                      ? undefined
+                      : article.coverImage
+                  }
                   blurhash={article.meta?.blurhash}
-                  style={[styles.image, compact && styles.compactImage, featured && styles.featuredImage]}
+                  style={[
+                    styles.image,
+                    compact && styles.compactImage,
+                    featured && styles.featuredImage,
+                  ]}
                   priority={priority}
                 />
               )}
@@ -163,7 +174,9 @@ export function ArticleCard({
                 activeOpacity={0.7}
                 onPress={handlePlayPress}
                 accessibilityRole="button"
-                accessibilityLabel={videoPlaying && !videoPaused ? 'Pause video' : 'Play video'}
+                accessibilityLabel={
+                  videoPlaying && !videoPaused ? 'Pause video' : 'Play video'
+                }
               >
                 {/* Show ▶ when not started yet, or when paused */}
                 {(!videoPlaying || videoPaused) && !videoFailed && (
@@ -185,7 +198,11 @@ export function ArticleCard({
               images={article.meta?.images}
               coverImage={article.coverImage}
               blurhash={article.meta?.blurhash}
-              style={[styles.image, compact && styles.compactImage, featured && styles.featuredImage]}
+              style={[
+                styles.image,
+                compact && styles.compactImage,
+                featured && styles.featuredImage,
+              ]}
               priority={priority}
             />
           )}
@@ -195,7 +212,10 @@ export function ArticleCard({
             <View
               style={[
                 styles.imageCategoryBadge,
-                { backgroundColor: colors.utilityBrand50 ?? (colors.primary + '20') },
+                {
+                  backgroundColor:
+                    colors.utilityBrand50 ?? colors.primary + '20',
+                },
               ]}
             >
               <Text
@@ -212,17 +232,21 @@ export function ArticleCard({
       )}
 
       {/* ── Content Area ── */}
-      <View style={[
-        styles.content,
-        compact && styles.compactContent,
-        featured && styles.featuredContent,
-      ]}>
+      <View
+        style={[
+          styles.content,
+          compact && styles.compactContent,
+          featured && styles.featuredContent,
+        ]}
+      >
         {/* Category Badge (no image fallback) */}
         {!showImageContainer && article.category && (
           <View
             style={[
               styles.categoryBadge,
-              { backgroundColor: colors.utilityBrand50 ?? (colors.primary + '20') },
+              {
+                backgroundColor: colors.utilityBrand50 ?? colors.primary + '20',
+              },
             ]}
           >
             <Text
@@ -244,7 +268,7 @@ export function ArticleCard({
             compact && styles.compactTitle,
             featured && styles.featuredTitle,
           ]}
-          numberOfLines={compact ? 2 : (featured ? 3 : 3)}
+          numberOfLines={compact ? 2 : featured ? 3 : 3}
         >
           {article.title}
         </Text>
@@ -252,7 +276,10 @@ export function ArticleCard({
         {/* Excerpt */}
         {showExcerpt && !compact && !featured && (
           <Text
-            style={[styles.excerpt, { color: colors.fgTertiary ?? colors.textTertiary }]}
+            style={[
+              styles.excerpt,
+              { color: colors.fgTertiary ?? colors.textTertiary },
+            ]}
             numberOfLines={2}
           >
             {article.excerpt}
@@ -264,23 +291,42 @@ export function ArticleCard({
           <View style={styles.metaLeft}>
             {/* Views count */}
             <View style={styles.metaItem}>
-              <Text style={[styles.metaIcon, { color: colors.fgQuaternary }]}>👁</Text>
-              <Text style={[styles.metaText, { color: colors.fgTertiary ?? colors.textTertiary }]}>
+              <Text style={[styles.metaIcon, { color: colors.fgQuaternary }]}>
+                👁
+              </Text>
+              <Text
+                style={[
+                  styles.metaText,
+                  { color: colors.fgTertiary ?? colors.textTertiary },
+                ]}
+              >
                 {formatCount(article.views)}
               </Text>
             </View>
 
             {/* Comments count */}
             <View style={styles.metaItem}>
-              <Text style={[styles.metaIcon, { color: colors.fgQuaternary }]}>💬</Text>
-              <Text style={[styles.metaText, { color: colors.fgTertiary ?? colors.textTertiary }]}>
+              <Text style={[styles.metaIcon, { color: colors.fgQuaternary }]}>
+                💬
+              </Text>
+              <Text
+                style={[
+                  styles.metaText,
+                  { color: colors.fgTertiary ?? colors.textTertiary },
+                ]}
+              >
                 {formatCount(article.commentsCount)}
               </Text>
             </View>
 
             {/* Author name */}
             {article.author?.name && !compact && (
-              <Text style={[styles.metaText, { color: colors.fgTertiary ?? colors.textTertiary }]}>
+              <Text
+                style={[
+                  styles.metaText,
+                  { color: colors.fgTertiary ?? colors.textTertiary },
+                ]}
+              >
                 {article.author.name}
               </Text>
             )}
@@ -293,7 +339,12 @@ export function ArticleCard({
                 onPress={() => onBookmark(article)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={[styles.bookmarkIcon, { color: colors.fgBrandSecondary ?? colors.primary }]}>
+                <Text
+                  style={[
+                    styles.bookmarkIcon,
+                    { color: colors.fgBrandSecondary ?? colors.primary },
+                  ]}
+                >
                   {isBookmarked ? '★' : '☆'}
                 </Text>
               </TouchableOpacity>
@@ -305,7 +356,10 @@ export function ArticleCard({
   );
 }
 
-ArticleCard.whyDidYouRender = true;
+export const ArticleCard = React.memo(ArticleCardComponent);
+
+// whyDidYouRender dev-only tracking
+(ArticleCard as unknown as Record<string, unknown>).whyDidYouRender = true;
 
 const styles = StyleSheet.create({
   // ── Card Container ──
@@ -323,7 +377,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   compactCard: {
-    width: 280,
     marginBottom: 0,
     borderRadius: 10,
   },

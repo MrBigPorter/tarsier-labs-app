@@ -15,8 +15,8 @@
  * - Scroll handler runs on UI thread via useAnimatedScrollHandler — zero JS bridge overhead.
  *
  * Features:
- * - Pagination: allArticles state accumulates data across pages with dedup
- * - Category filter: server-side via categoryId param, resets pagination
+ * - Pagination: usePaginatedQuery hook accumulates pages with dedup by ID
+ * - Category filter: server-side via categoryId param, hook auto-resets on param change
  * - Language: lang param passed to API for i18n re-fetch
  * - Scroll: absolute positioned overlays + static padding for standard RN scroll-hide
  * - Empty states: loading skeleton, error with retry, empty message
@@ -24,13 +24,10 @@
  * - Priority: first 2 items get priority prop for LCP optimization
  * - Network quality: useNetworkQuality at screen level, passes down to ArticleCard
  */
-import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import { usePaginatedQuery } from '@/lib/hooks/usePaginatedQuery';
+import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useAppSelector, useAppDispatch } from '@/store';
 import Animated, {
   useSharedValue,
@@ -39,10 +36,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing } from '@/lib/theme';
-import {
-  useGetArticlesQuery,
-} from '@/api/endpoints/articles';
+import { useModeColors, spacing } from '@/lib/theme';
+import { useGetArticlesQuery } from '@/api/endpoints/articles';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import { CategoryFilter } from '@/components/blog/CategoryFilter';
 import Header from '@/components/layout/Header';
@@ -51,7 +46,7 @@ import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyContent } from '@/components/core/EmptyContent';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import { useScrollContext } from '@/lib/ScrollContext';
-import { getCurrentLanguage, useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
 import { toggleBookmarkOptimistic } from '@/store/slices/bookmarksSlice';
 import {
@@ -69,13 +64,18 @@ const DEBOUNCE_MS = 300;
 const SCROLL_THRESHOLD = 50;
 
 /** Height of the Header component alone (used for static positioning) */
-const HEADER_HEIGHT = 50;
+const HEADER_HEIGHT = Platform.OS === 'ios' ? 44 : 56;
 /** Height of the CategoryFilter component alone */
 const CAT_FILTER_HEIGHT = 50;
-/** Combined height of Header + CategoryFilter for static content paddingTop */
-const CONTENT_TOP = HEADER_HEIGHT + CAT_FILTER_HEIGHT; // 100px
+/** Gap between Header bottom and CategoryFilter top */
+const HEADER_CAT_GAP = spacing.sm; // 6px
+/** Gap between CategoryFilter bottom and first article card */
+const LIST_TOP_GAP = spacing.xl; // 16px
+/** Combined height of Header + gaps + CategoryFilter + list gap for static content paddingTop */
+const CONTENT_TOP =
+  HEADER_HEIGHT + HEADER_CAT_GAP + CAT_FILTER_HEIGHT + LIST_TOP_GAP; // 116px
 /** Height of the bottom TabBar content (for scroll hide animation) */
-const TAB_BAR_HEIGHT = 60;
+const TAB_BAR_HEIGHT = 80;
 
 /** Number of initial items that should get priority image loading (LCP) */
 const PRIORITY_COUNT = 2;
@@ -87,7 +87,7 @@ const PRIORITY_COUNT = 2;
  */
 function useHomeScreenContext() {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { tabBarTranslateY, lastScrollY } = useScrollContext();
   return { insets, colors, tabBarTranslateY, lastScrollY };
 }
@@ -98,7 +98,9 @@ function useHomeScreenContext() {
  */
 function getPrefetchUrl(article: FrontendArticle): string | null {
   // Skip video files (no need to prefetch video in image cache)
-  if (article.coverImage && isVideoUrl(article.coverImage)) return null;
+  if (article.coverImage && isVideoUrl(article.coverImage)) {
+    return null;
+  }
 
   return getArticleImageUrl({
     images: article.meta?.images,
@@ -109,7 +111,8 @@ function getPrefetchUrl(article: FrontendArticle): string | null {
 
 const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   const { t } = useTranslation();
-  const { insets, colors, tabBarTranslateY, lastScrollY } = useHomeScreenContext();
+  const { insets, colors, tabBarTranslateY, lastScrollY } =
+    useHomeScreenContext();
 
   // ─── Redux ────────────────────────────────────────────────────────────
   const dispatch = useAppDispatch();
@@ -121,21 +124,69 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
 
   // ─── Network quality (screen-level, passes down to ArticleCard) ────
   const networkQuality = useNetworkQuality();
+  // Ref to prevent networkQuality changes from recreating renderArticleItem,
+  // which would cascade all visible ArticleCards to re-render.
+  // The ref always has the latest value, consumed during render via React.memo.
+  const networkQualityRef = useRef(networkQuality);
+  networkQualityRef.current = networkQuality;
 
   // ─── Image prefetch hook ───────────────────────────────────────────
   const { prefetchMany } = useImagePrefetch();
 
   // ─── State ────────────────────────────────────────────────────────────
 
-  const [page, setPage] = useState(1);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [allArticles, setAllArticles] = useState<FrontendArticle[]>(() => {
-    // Initialize from RTK Query cache IMMEDIATELY, not after first render.
-    // This prevents "no data" flash on tab switch when data is cached.
-    return articlesData?.items ?? [];
+
+  // Tracks user-initiated pull-to-refresh so we can show the RefreshControl
+  // spinner only during manual refresh, not during initial load or load-more.
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+
+  const lang = useAppLanguage();
+
+  // ─── Paginated data fetching (replaces manual allArticles + page) ────
+  const queryParams = selectedCategoryId
+    ? { categoryId: selectedCategoryId, lang }
+    : { lang };
+
+  const {
+    items: displayArticles,
+    isLoading,
+    isFetching,
+    isError,
+    hasMore,
+    loadMore,
+    refresh,
+  } = usePaginatedQuery(useGetArticlesQuery, queryParams, {
+    pageSize: PAGE_SIZE,
+    selectItems: data => data.items,
+    selectTotalPages: data => data.totalPages,
   });
+
+  // ─── Track language changes — reset to page 1 ────────────────────────
+  const prevLangRef = useRef(lang);
+
+  useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      setSelectedCategoryId(null);
+      refresh();
+    }
+  }, [lang, refresh]);
+
+  // ─── Auto-clear manual refreshing flag when fetch completes ────────
+  // Only clear when isFetching transitions to false — not on initial mount.
+  // This ensures the RefreshControl spinner stays visible for the full fetch.
+  const prevIsFetchingRef = useRef(isFetching);
+  useEffect(() => {
+    if (prevIsFetchingRef.current && !isFetching) {
+      // isFetching just went true → false: fetch completed
+      setIsManualRefreshing(false);
+    }
+    prevIsFetchingRef.current = isFetching;
+  }, [isFetching]);
 
   // ─── Reanimated shared values ─────────────────────────────────────────
 
@@ -148,71 +199,6 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     transform: [{ translateY: catFilterTranslateY.value }],
   }));
 
-  // ─── Data fetching (server-side filtering) ───────────────────────────
-
-  const lang = useCurrentLanguage();
-  const queryParams = selectedCategoryId
-    ? { page, pageSize: PAGE_SIZE, categoryId: selectedCategoryId, lang }
-    : { page, pageSize: PAGE_SIZE, lang };
-
-  const {
-    data: articlesData,
-    isLoading,
-    isFetching,
-    isError,
-    refetch,
-  } = useGetArticlesQuery(queryParams);
-
-  const totalPages = articlesData?.totalPages || 1;
-  const hasMore = page < totalPages;
-
-  // ─── Derived display data ────────────────────────────────────────────
-  //
-  // For page 1: use articlesData.items directly (synchronous from RTK Query cache).
-  // For page > 1: use accumulated allArticles (state managed by useEffect below).
-  // This avoids the empty-state flash on first render because articlesData
-  // from cache is available synchronously.
-  //
-  // IMPORTANT: Must check `.length > 0` — empty array `[]` is truthy!
-  // Without this check, RTK Query refetch returns a new `[]` reference on
-  // every poll, causing FlatList's `data` prop to change and forcing the
-  // empty state (EmptyLogoContent) to re-render/flash.
-
-  const displayArticles = React.useMemo<FrontendArticle[]>(() => {
-    if (page === 1 && articlesData?.items && articlesData.items.length > 0) {
-      return articlesData.items;
-    }
-    return allArticles;
-  }, [articlesData, page, allArticles]);
-
-  // ─── Pagination accumulation ─────────────────────────────────────────
-  //
-  // Accumulates articles across pages with dedup by ID.
-  // Only active when page > 1 — page 1 data comes directly from articlesData.
-  // Tab switching does NOT trigger refetch — displayArticles derives from cache.
-
-  useEffect(() => {
-    if (articlesData?.items) {
-      if (page === 1) {
-        // Only update state if the data actually changed (identity check)
-        setAllArticles(prev => {
-          if (prev.length === articlesData.items.length &&
-              prev[0]?.id === articlesData.items[0]?.id) {
-            return prev; // Same data, keep reference to avoid re-render
-          }
-          return articlesData.items;
-        });
-      } else {
-        setAllArticles(prev => {
-          const existingIds = new Set(prev.map(a => a.id));
-          const newItems = articlesData.items.filter(a => !existingIds.has(a.id));
-          if (newItems.length === 0) return prev;
-          return [...prev, ...newItems];
-        });
-      }
-    }
-  }, [articlesData, page]);
-
   // ─── Predictive prefetch: when new articles arrive (page load),
   //      prefetch cover images for upcoming items ─────────────────────
   //
@@ -223,7 +209,9 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   // via the AppImage priority prop — the rest are batched here.
 
   useEffect(() => {
-    if (displayArticles.length === 0) return;
+    if (displayArticles.length === 0) {
+      return;
+    }
 
     const urlsToPrefetch = displayArticles
       .slice(PRIORITY_COUNT) // Skip priority items (handled by AppImage)
@@ -254,7 +242,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   // and skip all animation updates during the bounce phase.
 
   const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
+    onScroll: event => {
       const currentY = event.contentOffset.y;
       const contentHeight = event.contentSize.height;
       const viewportHeight = event.layoutMeasurement.height;
@@ -266,9 +254,8 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
       // Still track lastScrollY for direction continuity when scrolling resumes.
       const maxScrollY = Math.max(0, contentHeight - viewportHeight);
       const isBottomOverscroll = maxScrollY > 0 && currentY >= maxScrollY - 1;
-      const isTopOverscroll = currentY < 0;
 
-      if (isBottomOverscroll || isTopOverscroll) {
+      if (isBottomOverscroll) {
         lastScrollY.value = currentY;
         return;
       }
@@ -278,8 +265,10 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
 
       if (diff > 5 && currentY > SCROLL_THRESHOLD) {
         // Scrolling down → hide CategoryFilter and TabBar
-        catFilterTranslateY.value = withTiming(-CAT_FILTER_HEIGHT, { duration: 200 });
-        tabBarTranslateY.value = withTiming(TAB_BAR_HEIGHT, { duration: 200 });
+        catFilterTranslateY.value = withTiming(-CAT_FILTER_HEIGHT, {
+          duration: 200,
+        });
+        tabBarTranslateY.value = withTiming(-TAB_BAR_HEIGHT, { duration: 200 });
       } else if (diff < -5) {
         // Scrolling up → show CategoryFilter and TabBar
         catFilterTranslateY.value = withTiming(0, { duration: 200 });
@@ -298,12 +287,18 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   }).current;
 
   const onViewableItemsChanged = React.useRef(
-    ({ changed }: { changed: Array<{ item: FrontendArticle; isViewable: boolean }> }) => {
+    ({
+      changed,
+    }: {
+      changed: Array<{ item: FrontendArticle; isViewable: boolean }>;
+    }) => {
       const toPrefetch: string[] = [];
       changed.forEach(({ item, isViewable }) => {
         if (isViewable) {
           const url = getPrefetchUrl(item);
-          if (url) toPrefetch.push(url);
+          if (url) {
+            toPrefetch.push(url);
+          }
         }
       });
       if (toPrefetch.length > 0) {
@@ -345,7 +340,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     [dispatch, bookmarkedIds, addBookmark, removeBookmark],
   );
 
-  // ─── Category change: debounce 300ms + reset page ──────────────────
+  // ─── Category change: debounce 300ms — hook auto-resets on params change
 
   const handleCategoryChange = useCallback((categoryId: string | null) => {
     if (debounceRef.current) {
@@ -353,8 +348,6 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     }
     debounceRef.current = setTimeout(() => {
       setSelectedCategoryId(categoryId);
-      setPage(1);
-      setAllArticles([]);
     }, DEBOUNCE_MS);
   }, []);
 
@@ -362,30 +355,21 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
 
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
-      setPage(p => p + 1);
+      loadMore();
     }
-  }, [isFetching, hasMore]);
+  }, [isFetching, hasMore, loadMore]);
 
   // ─── Pull-to-refresh ──────────────────────────────────────────────
   //
-  // Uses requestAnimationFrame to guarantee the RefreshControl spinner
-  // is painted BEFORE the async fetch starts. refetch() forces a real
-  // network request. .finally() stops the spinner when done.
-  // No useEffect(isFetching) — that pattern fails when isFetching is
-  // already true from an auto-refetch (race condition).
+  // Sets isManualRefreshing to show the RefreshControl spinner, then
+  // calls refresh() which resets the hook to page 1 and clears accumulated
+  // items. When the fetch completes, the isFetching effect auto-clears
+  // isManualRefreshing, hiding the spinner.
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setPage(1);
-    // rAF fires AFTER React commits refreshing=true and RN paints the spinner.
-    // Without rAF, the refetch might start before the spinner renders,
-    // causing isFetching to toggle too fast for the UI to catch up.
-    requestAnimationFrame(() => {
-      refetch().finally(() => {
-        setRefreshing(false);
-      });
-    });
-  }, [refetch, refreshing]);
+    setIsManualRefreshing(true);
+    refresh();
+  }, [refresh]);
 
   // ─── Render article item ──────────────────────────────────────────
   //
@@ -399,20 +383,30 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
           article={item}
           onPress={handleArticlePress}
           onBookmark={handleBookmark}
-          isBookmarked={!!bookmarkedIds[item.id]}
+          isBookmarked={bookmarkedIds[item.id]}
           showExcerpt
-          networkQuality={networkQuality}
+          // Use ref to avoid recreating this callback when networkQuality
+          // initializes (defaults → real values). The ref always has the
+          // latest quality without causing dependency changes.
+          networkQuality={networkQualityRef.current}
           priority={index < PRIORITY_COUNT}
         />
       </View>
     ),
-    [handleArticlePress, handleBookmark, bookmarkedIds, networkQuality],
+    // networkQuality intentionally excluded — using ref to prevent
+    // cascade re-renders of all visible ArticleCards when network
+    // quality initializes from defaults to real values.
+    [handleArticlePress, handleBookmark, bookmarkedIds],
   );
 
   // ─── Footer: loading spinner during Load More ─────────────────────
+  // Shows only when fetching BEYOND the first page (i.e., we already
+  // have items and are requesting more).
 
   const renderFooter = () => {
-    if (!isFetching || page <= 1) return null;
+    if (!isFetching || displayArticles.length === 0) {
+      return null;
+    }
     return (
       <View style={styles.footer}>
         <ActivityIndicator size="small" color={colors.primary} />
@@ -423,8 +417,8 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   // ─── Empty / error states ─────────────────────────────────────────
 
   const renderEmpty = useCallback(() => {
-    // Loading state: skeleton
-    if (isLoading && page === 1) {
+    // Loading state: skeleton (only during initial load, no items yet)
+    if (isLoading && displayArticles.length === 0) {
       return (
         <View style={styles.sectionContainer}>
           <ArticleListSkeleton count={5} />
@@ -432,8 +426,8 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
       );
     }
 
-    // Error state
-    if (isError && !allArticles.length) {
+    // Error state (no items loaded yet)
+    if (isError && displayArticles.length === 0) {
       return (
         <View style={styles.sectionContainer}>
           <EmptyContent
@@ -441,19 +435,27 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
             title={t('home.error.unableToLoad')}
             description={t('common.pullDownToRetry')}
             actionLabel={t('common.retry')}
-            onAction={refetch}
+            onAction={refresh}
           />
         </View>
       );
     }
 
-    // Empty state — stays top-aligned (use displayArticles to match visible data)
+    // Empty state — stays top-aligned
     if (!displayArticles.length) {
       return (
         <View style={styles.sectionContainer}>
           <EmptyLogoContent
-            title={selectedCategoryId ? t('categories.emptyArticles') : t('home.empty')}
-            description={selectedCategoryId ? t('article.empty.inCategory') : t('common.checkBackLater')}
+            title={
+              selectedCategoryId
+                ? t('categories.emptyArticles')
+                : t('home.empty')
+            }
+            description={
+              selectedCategoryId
+                ? t('article.empty.inCategory')
+                : t('common.checkBackLater')
+            }
           />
         </View>
       );
@@ -462,12 +464,11 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     return null;
   }, [
     isLoading,
-    page,
-    isError,
-    allArticles.length,
     displayArticles.length,
+    isError,
+    t,
+    refresh,
     selectedCategoryId,
-    refetch,
   ]);
 
   // ─── Main render ─────────────────────────────────────────────────
@@ -480,36 +481,38 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
        * Content behind the CategoryFilter overlay is naturally revealed when
        * it slides up (catFilterTranslateY = -CAT_FILTER_HEIGHT).
        */}
-      <Animated.FlatList
-        data={displayArticles}
-        keyExtractor={(item) => item.id}
-        renderItem={renderArticleItem}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + CONTENT_TOP,
-            paddingBottom: insets.bottom + spacing.xl,
-          },
-          displayArticles.length === 0 && styles.emptyList,
-        ]}
-      />
+      <PullToRefreshWrapper
+        refreshing={isManualRefreshing}
+        onRefresh={onRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+        scrollOffset={lastScrollY}
+        spinnerOffset={insets.top + CONTENT_TOP}
+      >
+        <Animated.FlatList
+          data={displayArticles}
+          keyExtractor={item => `${item.id}-${lang}`}
+          renderItem={renderArticleItem}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          showsVerticalScrollIndicator={false}
+          overScrollMode="always"
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + CONTENT_TOP,
+              paddingBottom: insets.bottom + spacing.xl,
+            },
+            displayArticles.length === 0 && styles.emptyList,
+          ]}
+        />
+      </PullToRefreshWrapper>
 
       {/*
        * Header overlay — absolutely positioned at the top.
@@ -518,11 +521,12 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
        * No paddingTop needed — Header component handles safe area internally.
        */}
       <View style={styles.headerOverlay}>
-        <Header title="Tarsier" hideSettings />
+        <Header title="Tarsier" hideSettings showBack={false} />
       </View>
 
       {/*
        * CategoryFilter overlay — absolutely positioned below Header.
+       * HEADER_CAT_GAP creates visible spacing from the Header.
        * Slides up to hide (catFilterTranslateY: 0 → -CAT_FILTER_HEIGHT)
        * and down to show, independent from Header.
        */}
@@ -530,7 +534,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
         style={[
           styles.categoryFilterOverlay,
           {
-            top: HEADER_HEIGHT + insets.top,
+            top: HEADER_HEIGHT + insets.top + HEADER_CAT_GAP,
           },
           catFilterAnimatedStyle,
         ]}
@@ -540,14 +544,13 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
           onSelect={handleCategoryChange}
         />
       </Animated.View>
-{/* Network status bar */}
-<NetworkStatusBar />
-</View>
-);
+      {/* Network status bar */}
+      <NetworkStatusBar />
+    </View>
+  );
 };
 
 HomeScreen.whyDidYouRender = true;
-
 
 const styles = StyleSheet.create({
   container: {
@@ -570,6 +573,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    gap: spacing.sm,
   },
   emptyList: {
     // Intentionally no justifyContent: 'center' — stays top-aligned
@@ -580,7 +584,6 @@ const styles = StyleSheet.create({
   },
   articleItem: {
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
   },
   footer: {
     paddingVertical: spacing.lg,

@@ -1,4 +1,4 @@
-import { blogApi, ApiPaginatedResponse, ApiResponseWrapper } from '@/api/baseApi';
+import { blogApi, ApiResponseWrapper } from '@/api/baseApi';
 import type {
   FrontendArticle,
   FrontendPaginatedResponse,
@@ -30,22 +30,31 @@ function unwrapData<T>(response: ApiResponseWrapper<T>): T {
 }
 
 export const articleApi = blogApi.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     /**
      * Get paginated article list
      * GET /api/v1/frontend/blog/articles
      */
-    getArticles: builder.query<FrontendPaginatedResponse<FrontendArticle>, ArticleListParams | void>({
-      query: (params) => ({
+    getArticles: builder.query<
+      FrontendPaginatedResponse<FrontendArticle>,
+      ArticleListParams | void
+    >({
+      query: params => ({
         url: '/api/v1/frontend/blog/articles',
         params: params || {},
       }),
-      transformResponse: (response: ApiResponseWrapper<FrontendPaginatedResponse<FrontendArticle>>) =>
-        unwrapData(response),
-      providesTags: (result) =>
+      transformResponse: (
+        response: ApiResponseWrapper<
+          FrontendPaginatedResponse<FrontendArticle>
+        >,
+      ) => unwrapData(response),
+      providesTags: result =>
         result
           ? [
-              ...result.items.map(({ id }) => ({ type: 'Article' as const, id })),
+              ...result.items.map(({ id }) => ({
+                type: 'Article' as const,
+                id,
+              })),
               { type: 'Article', id: 'LIST' },
             ]
           : [{ type: 'Article', id: 'LIST' }],
@@ -56,7 +65,7 @@ export const articleApi = blogApi.injectEndpoints({
      * GET /api/v1/frontend/blog/featured
      */
     getFeaturedArticles: builder.query<FrontendArticle[], string | void>({
-      query: (lang) => ({
+      query: lang => ({
         url: '/api/v1/frontend/blog/featured',
         params: lang ? { lang } : {},
       }),
@@ -69,7 +78,10 @@ export const articleApi = blogApi.injectEndpoints({
      * Get article detail by slug
      * GET /api/v1/frontend/blog/articles/:slug
      */
-    getArticleBySlug: builder.query<FrontendArticle, { slug: string; lang?: string }>({
+    getArticleBySlug: builder.query<
+      FrontendArticle,
+      { slug: string; lang?: string }
+    >({
       query: ({ slug, lang }) => ({
         url: `/api/v1/frontend/blog/articles/${slug}`,
         params: lang ? { lang } : {},
@@ -90,7 +102,7 @@ export const articleApi = blogApi.injectEndpoints({
       FrontendArticle[],
       { limit?: number; lang?: string } | void
     >({
-      query: (params) => {
+      query: params => {
         const { limit = 10, lang } = params || {};
         return {
           url: '/api/v1/frontend/blog/articles/popular',
@@ -125,17 +137,26 @@ export const articleApi = blogApi.injectEndpoints({
      * Search articles
      * GET /api/v1/frontend/blog/search
      */
-    searchArticles: builder.query<FrontendPaginatedResponse<FrontendArticle>, SearchParams>({
-      query: ({ q, page, pageSize }) => ({
+    searchArticles: builder.query<
+      FrontendPaginatedResponse<FrontendArticle>,
+      SearchParams
+    >({
+      query: ({ q, page, pageSize, lang }) => ({
         url: '/api/v1/frontend/blog/search',
-        params: { q, page, pageSize },
+        params: { q, page, pageSize, lang },
       }),
-      transformResponse: (response: ApiResponseWrapper<FrontendPaginatedResponse<FrontendArticle>>) =>
-        unwrapData(response),
-      providesTags: (result) =>
+      transformResponse: (
+        response: ApiResponseWrapper<
+          FrontendPaginatedResponse<FrontendArticle>
+        >,
+      ) => unwrapData(response),
+      providesTags: result =>
         result
           ? [
-              ...result.items.map(({ id }) => ({ type: 'Article' as const, id })),
+              ...result.items.map(({ id }) => ({
+                type: 'Article' as const,
+                id,
+              })),
               { type: 'Article', id: 'SEARCH' },
             ]
           : [{ type: 'Article', id: 'SEARCH' }],

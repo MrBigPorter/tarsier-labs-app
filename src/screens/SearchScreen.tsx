@@ -25,9 +25,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useSearchArticlesQuery } from '@/api/endpoints/articles';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
 import { useRecentSearches } from '@/lib/hooks/useRecentSearches';
 import { ArticleCard } from '@/components/blog/ArticleCard';
@@ -43,9 +43,9 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
 
   // ─── State ──────────────────────────────────────────────────────────
   const [query, setQuery] = useState('');
@@ -80,6 +80,15 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
     { skip: debouncedQuery.length < 2 },
   );
 
+  // Re-fetch when language changes
+  const prevLangRef = React.useRef(lang);
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      refetch();
+    }
+  }, [lang, refetch]);
+
   const results = searchData?.items || [];
   const totalPages = searchData?.totalPages || 1;
   const hasMore = page < totalPages;
@@ -98,11 +107,14 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
     [saveRecentSearch],
   );
 
-  const handleRecentSearchPress = useCallback((search: string) => {
-    setQuery(search);
-    setDebouncedQuery(search);
-    saveRecentSearch(search);
-  }, [saveRecentSearch]);
+  const handleRecentSearchPress = useCallback(
+    (search: string) => {
+      setQuery(search);
+      setDebouncedQuery(search);
+      saveRecentSearch(search);
+    },
+    [saveRecentSearch],
+  );
 
   const handleArticlePress = useCallback(
     (article: FrontendArticle) => {
@@ -124,11 +136,7 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
   const renderArticleItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard
-          article={item}
-          onPress={handleArticlePress}
-          showExcerpt
-        />
+        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
       </View>
     ),
     [handleArticlePress],
@@ -150,20 +158,12 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
             ]}
           >
             <View style={styles.recentHeader}>
-              <Text
-                style={[
-                  styles.recentTitle,
-                  { color: colors.text },
-                ]}
-              >
+              <Text style={[styles.recentTitle, { color: colors.text }]}>
                 {t('search.recent')}
               </Text>
               <TouchableOpacity onPress={clearRecentSearches}>
                 <Text
-                  style={[
-                    styles.clearText,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.clearText, { color: colors.textSecondary }]}
                 >
                   {t('search.clear')}
                 </Text>
@@ -175,16 +175,9 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
                 onPress={() => handleRecentSearchPress(search)}
                 style={styles.recentItem}
               >
-                <SvgIcon
-                  name="clock"
-                  size={16}
-                  color={colors.textSecondary}
-                />
+                <SvgIcon name="clock" size={16} color={colors.textSecondary} />
                 <Text
-                  style={[
-                    styles.recentItemText,
-                    { color: colors.text },
-                  ]}
+                  style={[styles.recentItemText, { color: colors.text }]}
                   numberOfLines={1}
                 >
                   {search}
@@ -193,11 +186,7 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
                   onPress={() => removeRecentSearch(search)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <SvgIcon
-                    name="x"
-                    size={14}
-                    color={colors.textSecondary}
-                  />
+                  <SvgIcon name="x" size={14} color={colors.textSecondary} />
                 </TouchableOpacity>
               </TouchableOpacity>
             ))}
@@ -212,12 +201,7 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
             size={48}
             color={colors.textSecondary + '60'}
           />
-          <Text
-            style={[
-              styles.emptyPromptTitle,
-              { color: colors.text },
-            ]}
-          >
+          <Text style={[styles.emptyPromptTitle, { color: colors.text }]}>
             {t('search.title')}
           </Text>
           <Text
@@ -237,40 +221,35 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
               },
             ]}
           >
-            <Text
-              style={[
-                styles.popularTagsTitle,
-                { color: colors.text },
-              ]}
-            >
+            <Text style={[styles.popularTagsTitle, { color: colors.text }]}>
               {t('search.popularTags')}
             </Text>
             <View style={styles.tagChipsRow}>
-              {['TypeScript', 'React', 'Node.js', 'Animation', 'iOS', 'Design'].map(
-                tag => (
-                  <TouchableOpacity
-                    key={tag}
-                    style={[
-                      styles.tagChip,
-                      { backgroundColor: colors.primary + '15' },
-                    ]}
-                    onPress={() => {
-                      setQuery(tag);
-                      setDebouncedQuery(tag);
-                      saveRecentSearch(tag);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.tagChipText,
-                        { color: colors.primary },
-                      ]}
-                    >
-                      #{tag}
-                    </Text>
-                  </TouchableOpacity>
-                ),
-              )}
+              {[
+                'TypeScript',
+                'React',
+                'Node.js',
+                'Animation',
+                'iOS',
+                'Design',
+              ].map(tag => (
+                <TouchableOpacity
+                  key={tag}
+                  style={[
+                    styles.tagChip,
+                    { backgroundColor: colors.primary + '15' },
+                  ]}
+                  onPress={() => {
+                    setQuery(tag);
+                    setDebouncedQuery(tag);
+                    saveRecentSearch(tag);
+                  }}
+                >
+                  <Text style={[styles.tagChipText, { color: colors.primary }]}>
+                    #{tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -299,7 +278,9 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
       return (
         <EmptyLogoContent
           title={t('common.noResults')}
-          description={t('search.empty.noResultsFor', { query: debouncedQuery })}
+          description={t('search.empty.noResultsFor', {
+            query: debouncedQuery,
+          })}
         />
       );
     }
@@ -324,16 +305,15 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
         autoFocus
         debounceMs={300}
         showCancel
-        onCancel={() => navigation.goBack()}
+        onCancel={() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          }
+        }}
       />
 
       {debouncedQuery.length >= 2 && results.length > 0 && (
-        <Text
-          style={[
-            styles.resultCount,
-            { color: colors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.resultCount, { color: colors.textSecondary }]}>
           {t('search.resultCount', { count: results.length })}
         </Text>
       )}
@@ -341,7 +321,7 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
       <FlatList
         data={results}
         renderItem={renderArticleItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + spacing.xl },

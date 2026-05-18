@@ -1,4 +1,4 @@
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
 /**
  * ArticleDetailScreen — Full article view
@@ -34,9 +34,13 @@ import {
   TextInput,
   Animated,
 } from 'react-native';
-import { KeyboardAwareScrollView, KeyboardAwareScrollViewRef, KeyboardStickyView } from 'react-native-keyboard-controller';
+import {
+  KeyboardAwareScrollView,
+  KeyboardAwareScrollViewRef,
+  KeyboardStickyView,
+} from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import {
   useGetArticleBySlugQuery,
   useGetRelatedArticlesQuery,
@@ -55,7 +59,6 @@ import {
   useLikeArticleMutation,
   useUnlikeArticleMutation,
 } from '@/api/endpoints/likes';
-import { env } from '@/lib/env';
 import { shareArticle } from '@/lib/utils/share';
 import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer';
 import { CommentItem } from '@/components/blog/CommentItem';
@@ -70,15 +73,16 @@ import type { RootStackScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 import type { Comment } from '@/types/blog';
 
-const ArticleDetailScreen: React.FC<
-  RootStackScreenProps<'ArticleDetail'>
-> = ({ navigation, route }) => {
+const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
+  navigation,
+  route,
+}) => {
   const { slug } = route.params;
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
-  const lang = route.params?.locale ?? useCurrentLanguage();
+  const lang = route.params?.locale ?? useAppLanguage();
 
   // ─── Redux ──────────────────────────────────────────────────────────
   const dispatch = useAppDispatch();
@@ -95,13 +99,11 @@ const ArticleDetailScreen: React.FC<
     refetch,
   } = useGetArticleBySlugQuery({ slug, lang });
 
-  const {
-    data: relatedArticles,
-    isLoading: relatedLoading,
-  } = useGetRelatedArticlesQuery(
-    { articleId: article?.id || '', limit: 5, lang },
-    { skip: !article?.id },
-  );
+  const { data: relatedArticles, isLoading: relatedLoading } =
+    useGetRelatedArticlesQuery(
+      { articleId: article?.id || '', limit: 5, lang },
+      { skip: !article?.id },
+    );
 
   // ─── Comments (infinite scroll + SSE) ────────────────────────────────
   // Note: comments API expects a slug, not a database ID
@@ -215,13 +217,16 @@ const ArticleDetailScreen: React.FC<
     await shareArticle(article, lang);
   }, [article, lang]);
 
-  const handleReply = useCallback((comment: Comment) => {
-    if (!user) {
-      navigation.navigate('Auth');
-      return;
-    }
-    setReplyTo({ commentId: comment.id, author: comment.author });
-  }, [user, navigation]);
+  const handleReply = useCallback(
+    (comment: Comment) => {
+      if (!user) {
+        navigation.navigate('Auth');
+        return;
+      }
+      setReplyTo({ commentId: comment.id, author: comment.author });
+    },
+    [user, navigation],
+  );
 
   const handleCancelReply = useCallback(() => {
     setReplyTo(null);
@@ -299,17 +304,22 @@ const ArticleDetailScreen: React.FC<
         <EmptyState
           icon="alert-circle"
           title={t('article.error.loadFailedSingle')}
-          description={(error as any)?.data?.message || t('article.error.generic')}
+          description={
+            (error as any)?.data?.message || t('article.error.generic')
+          }
           primaryAction={{ label: t('common.retry'), onPress: refetch }}
           secondaryAction={{
             label: t('common.goBack'),
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              }
+            },
           }}
         />
       </View>
     );
   }
-
 
   // ─── Main render ────────────────────────────────────────────────────
 
@@ -328,391 +338,330 @@ const ArticleDetailScreen: React.FC<
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-          {/* ─── Article Header ──────────────────────────────────────── */}
-          <View style={styles.articleHeader}>
-            {/* Category badge */}
-            {article.category && (
-              <TouchableOpacity
-                style={[
-                  styles.categoryBadge,
-                  { backgroundColor: colors.primary + '15' },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.categoryBadgeText,
-                    { color: colors.primary },
-                  ]}
-                >
-                  {article.category.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Title */}
-            <Text
+        {/* ─── Article Header ──────────────────────────────────────── */}
+        <View style={styles.articleHeader}>
+          {/* Category badge */}
+          {article.category && (
+            <TouchableOpacity
               style={[
-                styles.title,
-                {
-                  color: colors.text,
-                  fontFamily: typography.h2.fontFamily,
-                  fontSize: typography.h2.fontSize,
-                  fontWeight: typography.h2.fontWeight,
-                },
+                styles.categoryBadge,
+                { backgroundColor: colors.primary + '15' },
               ]}
             >
-              {article.title}
-            </Text>
+              <Text
+                style={[styles.categoryBadgeText, { color: colors.primary }]}
+              >
+                {article.category.name}
+              </Text>
+            </TouchableOpacity>
+          )}
 
-            {/* Author */}
-            <View style={styles.metaRow}>
-              {article.author?.name && (
-                  <View style={styles.authorContainer}>
-                    <View
-                      style={[
-                        styles.authorAvatar,
-                        { backgroundColor: colors.primary + '30' },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.authorInitial, { color: colors.primary }]}
-                      >
-                        {article.author.name?.charAt(0)?.toUpperCase() ?? ''}
-                      </Text>
-                    </View>
-                  <Text
-                    style={[
-                      styles.authorName,
-                      { color: colors.text },
-                    ]}
-                  >
-                    {article.author.name}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Stats row */}
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <SvgIcon name="eye" size={16} color={colors.textSecondary} />
-                <Text
-                  style={[styles.statText, { color: colors.textSecondary }]}
-                >
-                  {article.views.toLocaleString()}
-                </Text>
-              </View>
-              <View style={styles.stat}>
-                <SvgIcon name="heart" size={16} color={colors.textSecondary} />
-                <Text
-                  style={[styles.statText, { color: colors.textSecondary }]}
-                >
-                  {article.likes}
-                </Text>
-              </View>
-              <View style={styles.stat}>
-                <SvgIcon name="message-circle" size={16} color={colors.textSecondary} />
-                <Text
-                  style={[styles.statText, { color: colors.textSecondary }]}
-                >
-                  {article.commentsCount}
-                </Text>
-              </View>
-            </View>
-
-            {/* Tags */}
-            {article.tags && article.tags.length > 0 && (
-              <View style={styles.tagsRow}>
-                {article.tags.map(tag => (
-                  <TouchableOpacity
-                    key={tag.id}
-                    style={[
-                      styles.tag,
-                      { backgroundColor: colors.surface },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.tagText,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      #{tag.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {/* ─── Action Bar ──────────────────────────────────────────── */}
-          <View
+          {/* Title */}
+          <Text
             style={[
-              styles.actionBar,
+              styles.title,
               {
-                borderTopColor: colors.border,
-                borderBottomColor: colors.border,
+                color: colors.text,
+                fontFamily: typography.h2.fontFamily,
+                fontSize: typography.h2.fontSize,
+                fontWeight: typography.h2.fontWeight,
               },
             ]}
           >
-            <TouchableOpacity
-              onPress={handleLike}
-              style={styles.actionButton}
-            >
-              <Animated.View style={{ transform: [{ scale: likeScale }] }}>
-                <SvgIcon
-                  name="heart"
-                  size={22}
-                  color={isLiked ? colors.primary : colors.textSecondary}
-                />
-              </Animated.View>
-            </TouchableOpacity>
+            {article.title}
+          </Text>
 
-            <TouchableOpacity
-              onPress={handleBookmark}
-              style={styles.actionButton}
-            >
-              <SvgIcon
-                name="bookmark"
-                size={22}
-                color={isBookmarked ? colors.primary : colors.textSecondary}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
-              style={styles.actionButton}
-            >
-              <SvgIcon
-                name="message-circle"
-                size={22}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleShare}
-              style={styles.actionButton}
-            >
-              <SvgIcon
-                name="share"
-                size={22}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* ─── Article Content (Markdown) ──────────────────────────── */}
-          <View style={styles.contentContainer}>
-            <MarkdownRenderer content={article.contentMd || article.content || ''} />
-          </View>
-
-          {/* ─── Related Articles ────────────────────────────────────── */}
-          {relatedArticles && relatedArticles.length > 0 && (
-            <View style={styles.relatedSection}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: colors.text },
-                ]}
-              >
-                Related Articles
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.relatedList}
-              >
-                {relatedArticles.map(related => (
-                  <View
-                    key={related.id}
-                    style={{ width: screenWidth * 0.7, marginRight: spacing.sm }}
+          {/* Author */}
+          <View style={styles.metaRow}>
+            {article.author?.name && (
+              <View style={styles.authorContainer}>
+                <View
+                  style={[
+                    styles.authorAvatar,
+                    { backgroundColor: colors.primary + '30' },
+                  ]}
+                >
+                  <Text
+                    style={[styles.authorInitial, { color: colors.primary }]}
                   >
-                    <ArticleCard
-                      article={related}
-                      onPress={handleRelatedArticlePress}
-                      compact
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ─── Comments Section ─────────────────────────────────────── */}
-          <View style={styles.commentsSection}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: colors.text },
-              ]}
-            >
-              Comments ({article.commentsCount})
-            </Text>
-
-            {commentsQuery.error ? (
-              <View style={styles.commentsError}>
-                <Text style={[styles.commentsErrorText, { color: colors.error }]}>
-                  {t('common.loadFailed')}
-                </Text>
-                <TouchableOpacity onPress={commentsQuery.reload}>
-                  <Text style={[styles.retryText, { color: colors.primary }]}>
-                    {t('common.retry')}
+                    {article.author.name?.charAt(0)?.toUpperCase() ?? ''}
                   </Text>
-                </TouchableOpacity>
+                </View>
+                <Text style={[styles.authorName, { color: colors.text }]}>
+                  {article.author.name}
+                </Text>
               </View>
-            ) : commentsQuery.items.length > 0 ? (
-              <>
-                {commentsQuery.items.map(comment => (
-                  <CommentItem
-                    key={comment.id}
-                    comment={comment}
-                    onReply={handleReply}
-                    isAuthenticated={!!user}
-                    articleId={slug}
-                    onNavigateToAuth={() => navigation.navigate('Auth')}
-                  />
-                ))}
-                {commentsQuery.hasMore && (
-                  <TouchableOpacity
-                    onPress={commentsQuery.loadMore}
-                    style={styles.loadMoreButton}
-                    disabled={commentsQuery.isLoadingMore}
-                  >
-                    {commentsQuery.isLoadingMore ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.loadMoreText,
-                          { color: colors.primary },
-                        ]}
-                      >
-                        {t('common.loadMore')}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </>
-            ) : (
-              <EmptyLogoContent
-                title={t('comment.noComments')}
-                description={t('comment.beFirst')}
-              />
             )}
           </View>
 
+          {/* Stats row */}
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <SvgIcon name="eye" size={16} color={colors.textSecondary} />
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {article.views.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.stat}>
+              <SvgIcon name="heart" size={16} color={colors.textSecondary} />
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {article.likes}
+              </Text>
+            </View>
+            <View style={styles.stat}>
+              <SvgIcon
+                name="message-circle"
+                size={16}
+                color={colors.textSecondary}
+              />
+              <Text style={[styles.statText, { color: colors.textSecondary }]}>
+                {article.commentsCount}
+              </Text>
+            </View>
+          </View>
+
+          {/* Tags */}
+          {article.tags && article.tags.length > 0 && (
+            <View style={styles.tagsRow}>
+              {article.tags.map(tag => (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[styles.tag, { backgroundColor: colors.surface }]}
+                >
+                  <Text
+                    style={[styles.tagText, { color: colors.textSecondary }]}
+                  >
+                    #{tag.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* ─── Action Bar ──────────────────────────────────────────── */}
+        <View
+          style={[
+            styles.actionBar,
+            {
+              borderTopColor: colors.border,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <TouchableOpacity onPress={handleLike} style={styles.actionButton}>
+            <Animated.View style={{ transform: [{ scale: likeScale }] }}>
+              <SvgIcon
+                name="heart"
+                size={22}
+                color={isLiked ? colors.primary : colors.textSecondary}
+              />
+            </Animated.View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleBookmark}
+            style={styles.actionButton}
+          >
+            <SvgIcon
+              name="bookmark"
+              size={22}
+              color={isBookmarked ? colors.primary : colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
+            style={styles.actionButton}
+          >
+            <SvgIcon
+              name="message-circle"
+              size={22}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
+            <SvgIcon name="share" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ─── Article Content (Markdown) ──────────────────────────── */}
+        <View style={styles.contentContainer}>
+          <MarkdownRenderer
+            content={article.contentMd || article.content || ''}
+          />
+        </View>
+
+        {/* ─── Related Articles ────────────────────────────────────── */}
+        {relatedArticles && relatedArticles.length > 0 && (
+          <View style={styles.relatedSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Related Articles
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.relatedList}
+            >
+              {relatedArticles.map(related => (
+                <View key={related.id} style={{ width: screenWidth * 0.7 }}>
+                  <ArticleCard
+                    article={related}
+                    onPress={handleRelatedArticlePress}
+                    compact
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ─── Comments Section ─────────────────────────────────────── */}
+        <View style={styles.commentsSection}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Comments ({article.commentsCount})
+          </Text>
+
+          {commentsQuery.error ? (
+            <View style={styles.commentsError}>
+              <Text style={[styles.commentsErrorText, { color: colors.error }]}>
+                {t('common.loadFailed')}
+              </Text>
+              <TouchableOpacity onPress={commentsQuery.reload}>
+                <Text style={[styles.retryText, { color: colors.primary }]}>
+                  {t('common.retry')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : commentsQuery.items.length > 0 ? (
+            <>
+              {commentsQuery.items.map(comment => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  onReply={handleReply}
+                  isAuthenticated={!!user}
+                  articleId={slug}
+                  onNavigateToAuth={() => navigation.navigate('Auth')}
+                />
+              ))}
+              {commentsQuery.hasMore && (
+                <TouchableOpacity
+                  onPress={commentsQuery.loadMore}
+                  style={styles.loadMoreButton}
+                  disabled={commentsQuery.isLoadingMore}
+                >
+                  {commentsQuery.isLoadingMore ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text
+                      style={[styles.loadMoreText, { color: colors.primary }]}
+                    >
+                      {t('common.loadMore')}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <EmptyLogoContent
+              title={t('comment.noComments')}
+              description={t('comment.beFirst')}
+            />
+          )}
+        </View>
       </KeyboardAwareScrollView>
 
       {/* ─── Floating Comment Input ────────────────────────────────── */}
       <KeyboardStickyView
-          offset={{ closed: 0, opened: 0 }}
-          style={[
-            styles.commentInputContainer,
-            {
-              backgroundColor: colors.background,
-              borderTopColor: colors.border,
-              paddingBottom: Math.max(insets.bottom, spacing.sm),
-            },
-          ]}
-        >
-          {replyTo && (
-            <View style={styles.replyIndicator}>
-              <Text
-                style={[
-                  styles.replyText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Replying to {replyTo.author}
-              </Text>
-              <TouchableOpacity onPress={handleCancelReply}>
-                <SvgIcon
-                  name="x"
-                  size={16}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!user && (
-            <View style={styles.loginPrompt}>
-              <Text
-                style={[
-                  styles.loginPromptText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {t('comment.loginToComment')}
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Auth')}
-                style={[
-                  styles.loginPromptButton,
-                  { backgroundColor: colors.primary },
-                ]}
-              >
-                <Text style={styles.loginPromptButtonText}>
-                  {t('auth.login.title')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={styles.commentInputRow}>
-            <TextInput
-              style={[
-                styles.commentInput,
-                {
-                  color: colors.text,
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  fontFamily: typography.base.fontFamily,
-                  fontSize: typography.base.fontSize,
-                },
-              ]}
-              placeholder={
-                replyTo
-                  ? `Reply to ${replyTo.author}...`
-                  : 'Write a comment...'
-              }
-              placeholderTextColor={colors.textSecondary}
-              value={commentText}
-              onChangeText={setCommentText}
-              multiline
-              maxLength={2000}
-            />
-            <TouchableOpacity
-              onPress={handleSubmitComment}
-              disabled={
-                !commentText.trim() || isSubmittingComment
-              }
-              style={[
-                styles.sendButton,
-                {
-                  backgroundColor:
-                    commentText.trim() && !isSubmittingComment
-                      ? colors.primary
-                      : colors.surface,
-                },
-              ]}
-            >
-              {isSubmittingComment ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <SvgIcon
-                  name="arrow-right"
-                  size={20}
-                  color={
-                    commentText.trim()
-                      ? '#FFFFFF'
-                      : colors.textSecondary
-                  }
-                />
-              )}
+        offset={{ closed: 0, opened: 0 }}
+        style={[
+          styles.commentInputContainer,
+          {
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+            paddingBottom: Math.max(insets.bottom, spacing.sm),
+          },
+        ]}
+      >
+        {replyTo && (
+          <View style={styles.replyIndicator}>
+            <Text style={[styles.replyText, { color: colors.textSecondary }]}>
+              Replying to {replyTo.author}
+            </Text>
+            <TouchableOpacity onPress={handleCancelReply}>
+              <SvgIcon name="x" size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+        )}
+
+        {!user && (
+          <View style={styles.loginPrompt}>
+            <Text
+              style={[styles.loginPromptText, { color: colors.textSecondary }]}
+            >
+              {t('comment.loginToComment')}
+            </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Auth')}
+              style={[
+                styles.loginPromptButton,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Text style={styles.loginPromptButtonText}>
+                {t('auth.login.title')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.commentInputRow}>
+          <TextInput
+            style={[
+              styles.commentInput,
+              {
+                color: colors.text,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                fontFamily: typography.base.fontFamily,
+                fontSize: typography.base.fontSize,
+              },
+            ]}
+            placeholder={
+              replyTo ? `Reply to ${replyTo.author}...` : 'Write a comment...'
+            }
+            placeholderTextColor={colors.textSecondary}
+            value={commentText}
+            onChangeText={setCommentText}
+            multiline
+            maxLength={2000}
+          />
+          <TouchableOpacity
+            onPress={handleSubmitComment}
+            disabled={!commentText.trim() || isSubmittingComment}
+            style={[
+              styles.sendButton,
+              {
+                backgroundColor:
+                  commentText.trim() && !isSubmittingComment
+                    ? colors.primary
+                    : colors.surface,
+              },
+            ]}
+          >
+            {isSubmittingComment ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <SvgIcon
+                name="arrow-right"
+                size={20}
+                color={commentText.trim() ? '#FFFFFF' : colors.textSecondary}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardStickyView>
     </View>
   );
@@ -839,7 +788,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   relatedList: {
-    paddingRight: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
   commentsSection: {
     marginTop: spacing.xl,

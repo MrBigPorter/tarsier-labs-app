@@ -18,22 +18,13 @@
  * - Error: retry
  */
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetArticlesQuery } from '@/api/endpoints/articles';
 import { useGetCategoriesQuery } from '@/api/endpoints/categories';
 import { useGetTagsQuery } from '@/api/endpoints/tags';
 import Header from '@/components/layout/Header';
-import { EmptyState } from '@/components/core/EmptyState';
 import SvgIcon from '@/components/core/SvgIcon';
 import type { RootStackScreenProps } from '@/navigation/types';
 
@@ -53,11 +44,9 @@ const STAT_CARD_COLORS = [
   '#EC4899', // pink - likes
 ];
 
-const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
-  navigation,
-}) => {
+const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = () => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   // Fetch all data in parallel
   const { data: articlesData, isLoading: articlesLoading } =
@@ -96,28 +85,28 @@ const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
       {
         icon: 'message-circle',
         label: 'Comments',
-        value: articlesData?.items?.reduce(
-          (sum, a) => sum + (a.commentsCount || 0),
-          0,
-        ).toLocaleString() || '0',
+        value:
+          articlesData?.items
+            ?.reduce((sum, a) => sum + (a.commentsCount || 0), 0)
+            .toLocaleString() || '0',
         color: STAT_CARD_COLORS[3],
       },
       {
         icon: 'eye',
         label: 'Total Views',
-        value: articlesData?.items?.reduce(
-          (sum, a) => sum + (a.views || 0),
-          0,
-        ).toLocaleString() || '0',
+        value:
+          articlesData?.items
+            ?.reduce((sum, a) => sum + (a.views || 0), 0)
+            .toLocaleString() || '0',
         color: STAT_CARD_COLORS[4],
       },
       {
         icon: 'heart',
         label: 'Total Likes',
-        value: articlesData?.items?.reduce(
-          (sum, a) => sum + (a.likes || 0),
-          0,
-        ).toLocaleString() || '0',
+        value:
+          articlesData?.items
+            ?.reduce((sum, a) => sum + (a.likes || 0), 0)
+            .toLocaleString() || '0',
         color: STAT_CARD_COLORS[5],
       },
     ];
@@ -133,10 +122,7 @@ const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
           {[1, 2, 3, 4, 5, 6].map(i => (
             <View
               key={i}
-              style={[
-                styles.skeletonCard,
-                { backgroundColor: colors.surface },
-              ]}
+              style={[styles.skeletonCard, { backgroundColor: colors.surface }]}
             />
           ))}
         </View>
@@ -159,13 +145,10 @@ const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
       >
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
-          {stats.map((stat, index) => (
+          {stats.map(stat => (
             <View
               key={stat.label}
-              style={[
-                styles.statCard,
-                { backgroundColor: colors.surface },
-              ]}
+              style={[styles.statCard, { backgroundColor: colors.surface }]}
             >
               <View
                 style={[
@@ -173,26 +156,12 @@ const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
                   { backgroundColor: stat.color + '15' },
                 ]}
               >
-                <SvgIcon
-                  name={stat.icon as any}
-                  size={24}
-                  color={stat.color}
-                />
+                <SvgIcon name={stat.icon as any} size={24} color={stat.color} />
               </View>
-              <Text
-                style={[
-                  styles.statValue,
-                  { color: colors.text },
-                ]}
-              >
+              <Text style={[styles.statValue, { color: colors.text }]}>
                 {stat.value}
               </Text>
-              <Text
-                style={[
-                  styles.statLabel,
-                  { color: colors.textSecondary },
-                ]}
-              >
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
                 {stat.label}
               </Text>
             </View>
@@ -200,12 +169,7 @@ const StatsScreen: React.FC<RootStackScreenProps<'Stats'>> = ({
         </View>
 
         {/* Last updated info */}
-        <Text
-          style={[
-            styles.footerText,
-            { color: colors.textSecondary },
-          ]}
-        >
+        <Text style={[styles.footerText, { color: colors.textSecondary }]}>
           Statistics are updated in real-time as you browse
         </Text>
       </ScrollView>

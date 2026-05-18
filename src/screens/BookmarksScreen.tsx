@@ -2,104 +2,79 @@
  * BookmarksScreen — User's bookmarked articles
  *
  * Features:
- * - Paginated list of bookmarked articles
+ * - Paginated list of bookmarked articles fetched via RTK Query (auto auth)
  * - Pull-to-refresh
  * - Optimistic toggle (bookmark/unbookmark via Redux)
- * - Offline support (cached bookmarks in MMKV)
  * - Empty state when no bookmarks
  * - Login prompt when user is not authenticated
  *
  * Data:
- * - Redux bookmarksSlice (fetchBookmarks, removeBookmark)
- * - MMKV cache for offline access
+ * - RTK Query: useGetBookmarksQuery for fetching, useRemoveBookmarkMutation for removing
+ * - Redux bookmarksSlice: only for optimistic bookmarkedIds state
  *
  * Edge cases:
  * - Not logged in: show login prompt with logo + sign-in button
  * - No bookmarks: friendly empty state
- * - Network error: show cached bookmarks from MMKV
+ * - Network error: show cached bookmarks from RTK Query cache
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   FlatList,
   StyleSheet,
-  RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
   Text,
   Image,
 } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography, borderRadius } from '@/lib/theme';
-import { useAppSelector, useAppDispatch } from '@/store';
+import { TAB_BAR_HEIGHT } from '@/navigation/RootNavigator';
+import { useModeColors, spacing, typography, borderRadius } from '@/lib/theme';
+import { useAppSelector } from '@/store';
 import {
-  fetchBookmarks,
-  removeBookmark,
-} from '@/store/slices/bookmarksSlice';
+  useGetBookmarksQuery,
+  useRemoveBookmarkMutation,
+} from '@/api/endpoints/bookmarks';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import { useTranslation } from 'react-i18next';
+import { useAppLanguage } from '@/lib/i18n';
 import type { BookmarksTabScreenProps } from '@/navigation/types';
-import type { FrontendArticle } from '@/types/frontend-blog';
+import type { FrontendArticle, BookmarkedArticle } from '@/types/frontend-blog';
 
 const PAGE_SIZE = 20;
 
-const BookmarksScreen: React.FC<
-  BookmarksTabScreenProps<'Bookmarks'>
-> = ({ navigation }) => {
+const BookmarksScreen: React.FC<BookmarksTabScreenProps<'Bookmarks'>> = ({
+  navigation,
+}) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const dispatch = useAppDispatch();
+  const lang = useAppLanguage();
 
-  // ─── Redux state ────────────────────────────────────────────────────
-  const {
-    articles: bookmarkedArticles,
-    isLoading,
-    error,
-    total,
-    page,
-    totalPages,
-  } = useAppSelector(state => state.bookmarks);
-
+  // ─── Auth state ─────────────────────────────────────────────────────
   const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
-  const user = useAppSelector(state => state.auth.user);
 
-  // ─── Local pagination ───────────────────────────────────────────────
+  // ─── Pagination ─────────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
-  const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
 
-  // Fetch bookmarks on mount
-  useEffect(() => {
-    if (isAuthenticated) {
-      dispatch(fetchBookmarks({ page: currentPage, pageSize: PAGE_SIZE }));
-    }
-  }, [dispatch, isAuthenticated, currentPage]);
+  // ─── RTK Query ──────────────────────────────────────────────────────
+  const { data, isLoading, isFetching, error, refetch } = useGetBookmarksQuery({
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    locale: lang,
+  });
 
-  // Accumulate articles
-  useEffect(() => {
-    if (bookmarkedArticles.length > 0) {
-      if (currentPage === 1) {
-        setAllArticles(bookmarkedArticles as unknown as FrontendArticle[]);
-      } else {
-        // For pagination, replace on page 1, append on subsequent pages
-        setAllArticles(prev => {
-          if (currentPage === 1) return bookmarkedArticles as unknown as FrontendArticle[];
-          const existingIds = new Set(prev.map(a => a.id));
-          const newArticles = (bookmarkedArticles as unknown as FrontendArticle[]).filter(
-            a => !existingIds.has(a.id),
-          );
-          return [...prev, ...newArticles];
-        });
-      }
-    } else if (currentPage === 1) {
-      setAllArticles([]);
-    }
-  }, [bookmarkedArticles, currentPage]);
+  const [removeBookmark] = useRemoveBookmarkMutation();
 
+  const bookmarkedArticles = (data?.items ??
+    []) as unknown as FrontendArticle[];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
   const hasMore = currentPage < totalPages;
 
   // ─── Handlers ───────────────────────────────────────────────────────
@@ -116,20 +91,20 @@ const BookmarksScreen: React.FC<
 
   const handleRefresh = useCallback(() => {
     setCurrentPage(1);
-    dispatch(fetchBookmarks({ page: 1, pageSize: PAGE_SIZE }));
-  }, [dispatch]);
+    refetch();
+  }, [refetch]);
 
   const handleLoadMore = useCallback(() => {
-    if (!isLoading && hasMore) {
+    if (!isFetching && hasMore) {
       setCurrentPage(prev => prev + 1);
     }
-  }, [isLoading, hasMore]);
+  }, [isFetching, hasMore]);
 
   const handleRemoveBookmark = useCallback(
     (articleId: string) => {
-      dispatch(removeBookmark(articleId));
+      removeBookmark({ articleId });
     },
-    [dispatch],
+    [removeBookmark],
   );
 
   const handleSignIn = useCallback(() => {
@@ -141,18 +116,14 @@ const BookmarksScreen: React.FC<
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard
-          article={item}
-          onPress={handleArticlePress}
-          showExcerpt
-        />
+        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
       </View>
     ),
     [handleArticlePress],
   );
 
   const renderFooter = () => {
-    if (!isLoading || !hasMore) return null;
+    if (!isFetching || !hasMore) return null;
     return (
       <View style={styles.footer}>
         <ActivityIndicator size="small" color={colors.primary} />
@@ -165,7 +136,7 @@ const BookmarksScreen: React.FC<
   if (!isAuthenticated) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-        <Header title="Bookmarks" hideSearch hideSettings />
+        <Header title="Bookmarks" hideSearch hideSettings showBack={false} />
         <View style={styles.centerContainer}>
           {/* Logo */}
           <Image
@@ -199,10 +170,15 @@ const BookmarksScreen: React.FC<
 
   // ─── Loading state ──────────────────────────────────────────────────
 
-  if (isLoading && currentPage === 1 && allArticles.length === 0) {
+  if (isLoading && currentPage === 1 && bookmarkedArticles.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-        <Header title={`Bookmarks (${total})`} hideSearch hideSettings />
+        <Header
+          title={`Bookmarks (${total})`}
+          hideSearch
+          hideSettings
+          showBack={false}
+        />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={5} />
         </View>
@@ -214,36 +190,40 @@ const BookmarksScreen: React.FC<
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-      <Header title={`Bookmarks${total > 0 ? ` (${total})` : ''}`} hideSearch hideSettings />
-
-      <FlatList
-        data={allArticles}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-          allArticles.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading && currentPage === 1}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          <EmptyLogoContent
-            title={t('bookmarks.emptyTitle')}
-            description={t('bookmarks.emptyHint')}
-          />
-        }
-        ListFooterComponent={renderFooter}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
+      <Header
+        title={`Bookmarks${total > 0 ? ` (${total})` : ''}`}
+        hideSearch
+        hideSettings
+        showBack={false}
       />
+
+      <PullToRefreshWrapper
+        refreshing={isFetching && currentPage === 1}
+        onRefresh={handleRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+      >
+        <FlatList
+          data={bookmarkedArticles}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+            bookmarkedArticles.length === 0 && styles.emptyList,
+          ]}
+          ListEmptyComponent={
+            <EmptyLogoContent
+              title={t('bookmarks.emptyTitle')}
+              description={t('bookmarks.emptyHint')}
+            />
+          }
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+        />
+      </PullToRefreshWrapper>
     </View>
   );
 };

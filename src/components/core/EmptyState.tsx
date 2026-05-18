@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 
@@ -52,16 +52,13 @@ export function EmptyState({
   primaryAction,
   secondaryAction,
 }: EmptyStateProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {icon && (
         <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: colors.surface },
-          ]}
+          style={[styles.iconContainer, { backgroundColor: colors.surface }]}
         >
           <Text style={styles.icon}>{icon}</Text>
         </View>
@@ -75,11 +72,19 @@ export function EmptyState({
         </Text>
       )}
 
-      {(actionLabel || onAction || primaryAction || secondaryLabel || onSecondaryAction || secondaryAction) && (
+      {(actionLabel ||
+        onAction ||
+        primaryAction ||
+        secondaryLabel ||
+        onSecondaryAction ||
+        secondaryAction) && (
         <View style={styles.actions}>
           {(actionLabel && onAction) || primaryAction ? (
             <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.primaryButton,
+                { backgroundColor: colors.primary },
+              ]}
               onPress={primaryAction?.onPress ?? onAction!}
               activeOpacity={0.8}
             >
@@ -101,7 +106,9 @@ export function EmptyState({
               onPress={secondaryAction?.onPress ?? onSecondaryAction!}
               activeOpacity={0.8}
             >
-              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+              <Text
+                style={[styles.secondaryButtonText, { color: colors.primary }]}
+              >
                 {secondaryAction?.label ?? secondaryLabel}
               </Text>
             </TouchableOpacity>

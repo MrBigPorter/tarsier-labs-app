@@ -29,7 +29,9 @@
     "bookmarks": "ブックマーク",
     "cancel": "キャンセル",
     "close": "閉じる",
-    "pageInfo": "{page} ページ / {totalPages} ページ"
+    "pageInfo": "{page} ページ / {totalPages} ページ",
+    "warning": "警告",
+    "success": "成功"
   },
   "categories": {
     "title": "記事カテゴリー",
@@ -330,10 +332,15 @@
     "pushNotifications": "プッシュ通知",
     "data": "データ",
     "clearCache": {
-      "name": "キャッシュを消去",
-      "confirm": "キャッシュを消去",
-      "message": "ブックマークを含むすべてのキャッシュデータが消去されます。いつでも再ダウンロードできます。",
-      "action": "消去"
+      "name": "すべてのデータを消去",
+      "confirm": "すべてのデータを消去",
+      "message": "ローカルキャッシュを消去し、サーバー上のコメント・いいね・ブックマークを完全に削除します。この操作は元に戻せません。",
+      "action": "すべてのデータを消去",
+      "loading": "消去中...",
+      "success": "すべてのデータを消去しました",
+      "successDetail": "コメントを匿名化：{{anonymizedComments}} | ブックマークを削除：{{deletedBookmarks}}",
+      "partialSuccess": "ローカルキャッシュは消去しましたが、サーバーデータの消去に失敗しました：{{error}}",
+      "error": "データの消去に失敗しました。もう一度お試しください。"
     },
     "account": "アカウント",
     "signOut": {

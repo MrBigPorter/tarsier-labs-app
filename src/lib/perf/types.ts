@@ -25,10 +25,11 @@ export interface FpsSnapshot {
 export interface ApiCallRecord {
   endpoint: string;
   method: string;
-  /** Duration in ms */
+  /** Duration in ms — wall-clock time measured from JS thread (includes JS thread queueing) */
   duration: number;
   /** HTTP status code (0 = error) */
   status: number;
+  /** Unix timestamp (ms) when the request was initiated */
   timestamp: number;
 }
 

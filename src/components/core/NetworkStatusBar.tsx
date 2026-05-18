@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setOnlineStatus } from '@/store/slices/uiSlice';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import { logger } from '@/lib/logger';
@@ -30,8 +30,8 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
  */
 export function NetworkStatusBar() {
   const dispatch = useAppDispatch();
-  const isOnline = useAppSelector((state) => state.ui.isOnline);
-  const { colors } = useTheme();
+  const isOnline = useAppSelector(state => state.ui.isOnline);
+  const colors = useModeColors();
   const slideAnim = useRef(new Animated.Value(isOnline ? -60 : 0)).current;
   const wasOffline = useRef(false);
 
@@ -63,7 +63,7 @@ export function NetworkStatusBar() {
 
   const handleRefresh = () => {
     // Re-check network state manually
-    NetInfo.fetch().then((state) => {
+    NetInfo.fetch().then(state => {
       dispatch(setOnlineStatus(state.isConnected ?? true));
     });
   };

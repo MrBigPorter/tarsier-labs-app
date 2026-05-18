@@ -29,7 +29,9 @@
     "bookmarks": "收藏",
     "cancel": "取消",
     "close": "关闭",
-    "pageInfo": "第 {page} 页，共 {totalPages} 页"
+    "pageInfo": "第 {page} 页，共 {totalPages} 页",
+    "warning": "警告",
+    "success": "成功"
   },
   "categories": {
     "title": "文章分类",
@@ -330,10 +332,15 @@
     "pushNotifications": "推送通知",
     "data": "数据",
     "clearCache": {
-      "name": "清除缓存",
-      "confirm": "清除缓存",
-      "message": "这将清除所有缓存数据，包括收藏。您可以随时重新下载。",
-      "action": "清除"
+      "name": "清除所有数据",
+      "confirm": "清除所有数据",
+      "message": "将清除本地缓存，同时永久删除服务器上的评论、点赞和书签。此操作不可撤销。",
+      "action": "清除所有数据",
+      "loading": "清除中...",
+      "success": "所有数据已清除成功",
+      "successDetail": "评论已匿名化：{{anonymizedComments}} 篇 | 书签已删除：{{deletedBookmarks}} 个",
+      "partialSuccess": "本地缓存已清除，但服务器数据清除失败：{{error}}",
+      "error": "清除数据失败，请重试"
     },
     "account": "账户",
     "signOut": {

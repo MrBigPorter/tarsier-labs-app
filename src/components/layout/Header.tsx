@@ -72,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({
   const handleBack = () => {
     if (onBackPress) {
       onBackPress();
-    } else {
+    } else if (navigation.canGoBack()) {
       navigation.goBack();
     }
   };
@@ -111,11 +111,7 @@ const Header: React.FC<HeaderProps> = ({
               accessibilityLabel="Go back"
               accessibilityRole="button"
             >
-              <SvgIcon
-                name="chevron-left"
-                size={24}
-                color={colors.text}
-              />
+              <SvgIcon name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -181,11 +177,7 @@ const Header: React.FC<HeaderProps> = ({
               accessibilityLabel="Settings"
               accessibilityRole="button"
             >
-              <SvgIcon
-                name="settings"
-                size={20}
-                color={colors.text}
-              />
+              <SvgIcon name="settings" size={20} color={colors.text} />
             </TouchableOpacity>
           )}
 
@@ -197,11 +189,7 @@ const Header: React.FC<HeaderProps> = ({
               accessibilityLabel="Search articles"
               accessibilityRole="button"
             >
-              <SvgIcon
-                name="search"
-                size={20}
-                color={colors.text}
-              />
+              <SvgIcon name="search" size={20} color={colors.text} />
             </TouchableOpacity>
           )}
         </View>

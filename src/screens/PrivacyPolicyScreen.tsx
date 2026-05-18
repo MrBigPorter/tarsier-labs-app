@@ -8,10 +8,16 @@
  * Accessible from Settings → Privacy Policy.
  */
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTheme, spacing } from '@/lib/theme';
+import { useModeColors, spacing } from '@/lib/theme';
 import { front, TokensLight } from '@/lib/theme/design_tokens.g';
 import { MarkdownRenderer } from '@/components/blog/MarkdownRenderer';
 import SvgIcon from '@/components/core/SvgIcon';
@@ -22,7 +28,7 @@ const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>> = ({
   navigation,
 }) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t, i18n } = useTranslation();
   const content = React.useMemo(
     () => getPrivacyPolicyContent(i18n.language),
@@ -30,7 +36,12 @@ const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>> = ({
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgMobilePrimary ?? colors.background }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.bgMobilePrimary ?? colors.background },
+      ]}
+    >
       {/* Custom header with back button */}
       <View
         style={[
@@ -43,22 +54,17 @@ const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>> = ({
         ]}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}
           style={styles.backButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <SvgIcon
-            name="arrow-left"
-            size={24}
-            color={colors.textPrimary}
-          />
+          <SvgIcon name="arrow-left" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text
-          style={[
-            styles.headerTitle,
-            { color: colors.textPrimary },
-          ]}
-        >
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
           {t('settings.privacyPolicy')}
         </Text>
         <View style={styles.headerSpacer} />
@@ -75,7 +81,10 @@ const PrivacyPolicyScreen: React.FC<RootStackScreenProps<'PrivacyPolicy'>> = ({
         <View
           style={[
             styles.dateBadge,
-            { backgroundColor: (colors.utilityBrand500 ?? TokensLight.utilityBrand500) + '12' },
+            {
+              backgroundColor:
+                (colors.utilityBrand500 ?? TokensLight.utilityBrand500) + '12',
+            },
           ]}
         >
           <SvgIcon

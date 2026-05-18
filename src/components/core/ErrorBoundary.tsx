@@ -7,7 +7,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import { logger } from '@/lib/logger';
@@ -82,7 +82,7 @@ interface ErrorFallbackProps {
 }
 
 export function DefaultErrorFallback({ error, onRetry }: ErrorFallbackProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -170,20 +170,18 @@ export function ScreenErrorBoundary({ children }: ErrorBoundaryWrapperProps) {
 }
 
 /** Component-level error boundary with compact fallback UI */
-export function ComponentErrorBoundary({ children }: ErrorBoundaryWrapperProps) {
+export function ComponentErrorBoundary({
+  children,
+}: ErrorBoundaryWrapperProps) {
   return (
-    <ErrorBoundary
-      fallback={
-        <CompactErrorFallback />
-      }
-    >
+    <ErrorBoundary fallback={<CompactErrorFallback />}>
       {children}
     </ErrorBoundary>
   );
 }
 
 function CompactErrorFallback() {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <View

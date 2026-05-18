@@ -13,44 +13,53 @@ import {
   View,
   ScrollView,
   StyleSheet,
-  RefreshControl,
   TouchableOpacity,
   Text,
   Dimensions,
 } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetTagsQuery } from '@/api/endpoints/tags';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
 import Header from '@/components/layout/Header';
 import { EmptyContent } from '@/components/core/EmptyContent';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
-import SvgIcon from '@/components/core/SvgIcon';
 import type { TagsTabScreenProps } from '@/navigation/types';
 import type { FrontendTag } from '@/types/frontend-blog';
 
 const TAG_COLORS = [
-  '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
-  '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16',
-  '#F97316', '#6366F1',
+  '#3B82F6',
+  '#EF4444',
+  '#10B981',
+  '#F59E0B',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#84CC16',
+  '#F97316',
+  '#6366F1',
 ];
 
-const TagListScreen: React.FC<
-  TagsTabScreenProps<'TagList'>
-> = ({ navigation }) => {
+const TagListScreen: React.FC<TagsTabScreenProps<'TagList'>> = ({
+  navigation,
+}) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
+  const prevLangRef = React.useRef(lang);
 
-  const {
-    data: tags,
-    isLoading,
-    isFetching,
-    isError,
-    refetch,
-  } = useGetTagsQuery(lang);
+  const { data: tags, isLoading, isError, refetch } = useGetTagsQuery(lang);
+
+  // Re-fetch when language changes
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      refetch();
+    }
+  }, [lang, refetch]);
 
   // ─── Identity guard & pull-to-refresh ──────────────────────────────
   //
@@ -86,8 +95,7 @@ const TagListScreen: React.FC<
     [navigation],
   );
 
-  const getTagColor = (index: number) =>
-    TAG_COLORS[index % TAG_COLORS.length];
+  const getTagColor = (index: number) => TAG_COLORS[index % TAG_COLORS.length];
 
   // ─── Loading state ──────────────────────────────────────────────────
   //
@@ -102,14 +110,17 @@ const TagListScreen: React.FC<
   const PILL_HEIGHT = 36;
   const GAP = spacing.sm;
   const availableHeight = screenHeight - HEADER_ESTIMATE - PADDING_ESTIMATE;
-  const rowsNeeded = Math.max(6, Math.ceil(availableHeight / (PILL_HEIGHT + GAP)));
+  const rowsNeeded = Math.max(
+    6,
+    Math.ceil(availableHeight / (PILL_HEIGHT + GAP)),
+  );
   const pillsPerRow = 4;
   const LOADING_PILL_COUNT = rowsNeeded * pillsPerRow;
 
   if (isLoading && !tags) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-        <Header title="Tags" hideSearch hideSettings />
+        <Header title="Tags" hideSearch hideSettings showBack={false} />
         <View style={styles.loadingContainer}>
           <View style={styles.tagFlow}>
             {Array.from({ length: LOADING_PILL_COUNT }).map((_, i) => (
@@ -135,94 +146,79 @@ const TagListScreen: React.FC<
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-      <Header title="Tags" hideSearch hideSettings />
+      <Header title="Tags" hideSearch hideSettings showBack={false} />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
+      <PullToRefreshWrapper
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
       >
-        {/* Section: All Tags */}
-        <Text
-          style={[
-            styles.sectionTitle,
-            { color: colors.text },
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + spacing.xl },
           ]}
+          showsVerticalScrollIndicator={false}
         >
-          All Tags
-        </Text>
+          {/* Section: All Tags */}
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            All Tags
+          </Text>
 
-        {tags && tags.length > 0 ? (
-          <View style={styles.tagFlow}>
-            {tags.map((tag, index) => {
-              const tagColor = getTagColor(index);
-              return (
-                <TouchableOpacity
-                  key={tag.id}
-                  onPress={() => handleTagPress(tag)}
-                  style={[
-                    styles.tagPill,
-                    {
-                      backgroundColor: tagColor + '12',
-                      borderColor: tagColor + '30',
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                  accessibilityLabel={`Tag: ${tag.name}`}
-                  accessibilityRole="button"
-                >
-                  <Text
+          {tags && tags.length > 0 ? (
+            <View style={styles.tagFlow}>
+              {tags.map((tag, index) => {
+                const tagColor = getTagColor(index);
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    onPress={() => handleTagPress(tag)}
                     style={[
-                      styles.tagName,
-                      { color: tagColor },
+                      styles.tagPill,
+                      {
+                        backgroundColor: tagColor + '12',
+                        borderColor: tagColor + '30',
+                      },
                     ]}
+                    activeOpacity={0.7}
+                    accessibilityLabel={`Tag: ${tag.name}`}
+                    accessibilityRole="button"
                   >
-                    #{tag.name}
-                  </Text>
-                  {tag.articleCount > 0 && (
-                    <View
-                      style={[
-                        styles.countBadge,
-                        { backgroundColor: tagColor + '20' },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.countText, { color: tagColor }]}
+                    <Text style={[styles.tagName, { color: tagColor }]}>
+                      #{tag.name}
+                    </Text>
+                    {tag.articleCount > 0 && (
+                      <View
+                        style={[
+                          styles.countBadge,
+                          { backgroundColor: tagColor + '20' },
+                        ]}
                       >
-                        {tag.articleCount}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : isError && !tags ? (
-          <EmptyContent
-            icon="⚠️"
-            title={t('tags.error.loadFailed')}
-            actionLabel={t('common.retry')}
-            onAction={refetch}
-          />
-        ) : (
-          !tags || tags.length === 0 ? (
+                        <Text style={[styles.countText, { color: tagColor }]}>
+                          {tag.articleCount}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : isError && !tags ? (
+            <EmptyContent
+              icon="⚠️"
+              title={t('tags.error.loadFailed')}
+              actionLabel={t('common.retry')}
+              onAction={refetch}
+            />
+          ) : !tags || tags.length === 0 ? (
             <EmptyLogoContent
               title={t('tags.empty')}
               description={t('tags.emptyState.description')}
             />
-          ) : null
-        )}
-      </ScrollView>
+          ) : null}
+        </ScrollView>
+      </PullToRefreshWrapper>
     </View>
   );
 };

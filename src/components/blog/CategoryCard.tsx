@@ -12,7 +12,7 @@ interface CategoryCardProps {
 }
 
 export function CategoryCard({ category, onPress }: CategoryCardProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <TouchableOpacity
@@ -36,7 +36,12 @@ export function CategoryCard({ category, onPress }: CategoryCardProps) {
             { backgroundColor: (category.color || colors.primary) + '18' },
           ]}
         >
-          <Text style={[styles.iconText, { color: category.color || colors.primary }]}>
+          <Text
+            style={[
+              styles.iconText,
+              { color: category.color || colors.primary },
+            ]}
+          >
             {category.icon || category.name.charAt(0).toUpperCase()}
           </Text>
         </View>
@@ -57,7 +62,8 @@ export function CategoryCard({ category, onPress }: CategoryCardProps) {
           {/* Article count inline */}
           {category.articleCount !== undefined && category.articleCount > 0 && (
             <Text style={[styles.articleCount, { color: colors.textTertiary }]}>
-              {category.articleCount} {category.articleCount === 1 ? 'article' : 'articles'}
+              {category.articleCount}{' '}
+              {category.articleCount === 1 ? 'article' : 'articles'}
             </Text>
           )}
         </View>

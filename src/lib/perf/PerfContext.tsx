@@ -72,7 +72,9 @@ interface PerfProviderProps {
   children: ReactNode;
 }
 
-export function PerfProvider({ children }: PerfProviderProps): React.JSX.Element | null {
+export function PerfProvider({
+  children,
+}: PerfProviderProps): React.JSX.Element | null {
   // Only mount in dev mode
   if (!__DEV__) {
     return <>{children}</>;
@@ -131,7 +133,8 @@ function PerfProviderInner({ children }: PerfProviderProps): React.JSX.Element {
       if (samples.length > 0 && samples.length % 15 === 0) {
         const totalDuration = samples.reduce((sum, s) => sum + s.duration, 0);
         const avgDuration = totalDuration / samples.length;
-        const currentFps = avgDuration > 0 ? Math.round(1000 / avgDuration) : 60;
+        const currentFps =
+          avgDuration > 0 ? Math.round(1000 / avgDuration) : 60;
         const durations = samples.map(s => s.duration);
         const minDuration = Math.max(...durations); // Max duration = worst frame
         const minFps = minDuration > 0 ? Math.round(1000 / minDuration) : 60;
@@ -139,7 +142,7 @@ function PerfProviderInner({ children }: PerfProviderProps): React.JSX.Element {
         setFps(prev => ({
           current: Math.min(currentFps, 60),
           min: Math.min(minFps, prev.min),
-          avg: Math.round((prev.avg * 0.7 + currentFps * 0.3)),
+          avg: Math.round(prev.avg * 0.7 + currentFps * 0.3),
           droppedFrames: droppedRef.current,
         }));
 
@@ -194,6 +197,41 @@ function PerfProviderInner({ children }: PerfProviderProps): React.JSX.Element {
       return next.slice(0, MAX_NAV_RECORDS);
     });
   }, []);
+
+  // ── Slow API → render correlation ─────────────────────────────────
+  // When an API call exceeds the slow threshold, check recent render
+  // records for any component that took more than SLOW_RENDER_THRESHOLD_MS.
+  // This helps pinpoint rendering bottlenecks that inflate API wall-clock
+  // measurements (e.g., MarkdownRenderer blocking the JS thread).
+  const SLOW_API_MS = 1_000;
+  const SLOW_RENDER_MS = 500;
+  const lastWarnedCallRef = useRef<number>(0);
+
+  useEffect(() => {
+    const slowCall = recentApiCalls[0];
+    if (!slowCall || slowCall.duration <= SLOW_API_MS) return;
+
+    // Dedup: only warn once per API call (compare by timestamp).
+    // Prevents spamming when recentRenders keeps updating after the same call.
+    if (slowCall.timestamp === lastWarnedCallRef.current) return;
+    lastWarnedCallRef.current = slowCall.timestamp;
+
+    const suspects = recentRenders
+      .filter(r => r.duration > SLOW_RENDER_MS)
+      .sort((a, b) => b.duration - a.duration)
+      .slice(0, 3);
+
+    if (suspects.length > 0) {
+      const suspectLines = suspects
+        .map(r => `   🔍 Suspect: ${r.name} — ${r.duration}ms (${r.phase})`)
+        .join('\n');
+
+      console.warn(
+        `[PerfMonitor] 🧩 Render correlation for slow API:\n` +
+          `${suspectLines}`,
+      );
+    }
+  }, [recentApiCalls, recentRenders]);
 
   // ── Actions ──────────────────────────────────────────────────────────
 

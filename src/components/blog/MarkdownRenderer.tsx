@@ -1,14 +1,20 @@
-import React from 'react';
-import { View, StyleSheet, useWindowDimensions, Text } from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import React, { Profiler, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  useWindowDimensions,
+  Text,
+  Platform,
+} from 'react-native';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import Video from 'react-native-video';
+import { logger } from '@/lib/logger';
+import { useRenderTiming } from '@/lib/perf/useRenderTiming';
 
 // react-native-markdown-display provides native Markdown rendering
-import Markdown, {
-  MarkdownProps,
-} from 'react-native-markdown-display';
+import Markdown, { MarkdownProps } from 'react-native-markdown-display';
 
 interface MarkdownRendererProps {
   /** Markdown content to render */
@@ -49,15 +55,16 @@ type ContentSegment =
  *
  * Styles are automatically adapted to the current theme.
  */
-export function MarkdownRenderer({
+const MarkdownRenderer = React.memo(function MarkdownRenderer({
   content,
   maxWidth,
   enableCodeHighlight = false,
   contentVideo,
 }: MarkdownRendererProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { width: windowWidth } = useWindowDimensions();
   const containerWidth = maxWidth ?? windowWidth - spacing.xxl * 2;
+  const mdRenderRef = useRenderTiming('MarkdownRenderer');
 
   // ── Build content video lookup map ──────────────────────────────
   const contentVideoMap = React.useMemo(() => {
@@ -112,204 +119,226 @@ export function MarkdownRenderer({
     // If nothing was parsed, return the original content as markdown
     return parts.length > 0 ? parts : [{ type: 'markdown', content }];
   }, [content, contentVideo, contentVideoMap]);
-// ── Shared markdown styles ──────────────────────────────────────
-const markdownStyles: MarkdownProps['style'] = {
-  heading1: {
-    fontSize: typography.h2.fontSize!,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: spacing.xxl,
-    marginBottom: spacing.md,
-    lineHeight: typography.h2.lineHeight,
-  },
-  heading2: {
-    fontSize: typography.h3.fontSize!,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
-    lineHeight: typography.h3.lineHeight,
-  },
-  heading3: {
-    fontSize: typography.h4.fontSize!,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    lineHeight: typography.h4.lineHeight,
-  },
-  heading4: {
-    fontSize: typography.h5.fontSize!,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    lineHeight: typography.h5.lineHeight,
-  },
-  heading5: {
-    fontSize: typography.body.fontSize!,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  heading6: {
-    fontSize: typography.small.fontSize!,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  body: {
-    fontSize: typography.body.fontSize!,
-    lineHeight: typography.body.lineHeight!,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  paragraph: {
-    marginBottom: spacing.md,
-  },
-  strong: {
-    fontWeight: '700',
-  },
-  em: {
-    fontStyle: 'italic',
-  },
-  s: {
-    textDecorationLine: 'line-through',
-  },
-  bullet_list: {
-    marginBottom: spacing.md,
-  },
-  ordered_list: {
-    marginBottom: spacing.md,
-  },
-  list_item: {
-    marginBottom: spacing.xs,
-    flexDirection: 'row',
-  },
-  bullet_list_icon: {
-    fontSize: typography.body.fontSize!,
-    lineHeight: typography.body.lineHeight!,
-    color: colors.primary,
-    marginRight: spacing.sm,
-  },
-  ordered_list_icon: {
-    fontSize: typography.body.fontSize!,
-    lineHeight: typography.body.lineHeight!,
-    color: colors.primary,
-    marginRight: spacing.sm,
-  },
-  code_inline: {
-    backgroundColor: colors.surface,
-    color: colors.primary,
-    fontSize: typography.small.fontSize!,
-    fontFamily: 'monospace',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  code_block: {
-    backgroundColor: colors.surface,
-    color: colors.text,
-    fontSize: typography.small.fontSize!,
-    fontFamily: 'monospace',
-    padding: spacing.md,
-    borderRadius: 8,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  fence: {
-    backgroundColor: colors.surface,
-    color: colors.text,
-    fontSize: typography.small.fontSize!,
-    fontFamily: 'monospace',
-    padding: spacing.md,
-    borderRadius: 8,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  blockquote: {
-    backgroundColor: colors.primary + '08',
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderRadius: 4,
-  },
-  link: {
-    color: colors.primary,
-    textDecorationLine: 'underline',
-  },
-  image: {
-    width: containerWidth,
-    height: containerWidth * 0.6,
-    borderRadius: 8,
-    marginBottom: spacing.md,
-    resizeMode: 'cover',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    marginBottom: spacing.md,
-  },
-  thead: {
-    backgroundColor: colors.surface,
-  },
-  th: {
-    padding: spacing.sm,
-    fontWeight: '600',
-    color: colors.text,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  td: {
-    padding: spacing.sm,
-    color: colors.textSecondary,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  tr: {
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-  },
-  hr: {
-    backgroundColor: colors.border,
-    height: 1,
-    marginVertical: spacing.lg,
-  },
-};
 
+  // ── Inline video error handler ─────────────────────────────────
+  const handleInlineVideoError = useCallback((e: any) => {
+    const nativeEvent = e?.nativeEvent ?? e;
+    const err = nativeEvent?.error ?? {};
+    logger.error(`[MarkdownRenderer] inline video error`, {
+      platform: Platform.OS,
+      errorString: err.errorString,
+      errorCode: err.errorCode,
+      ios_code: err.code,
+      ios_domain: err.domain,
+      ios_localizedDescription: err.localizedDescription,
+    });
+  }, []);
+
+  // ── Shared markdown styles ──────────────────────────────────────
+  const markdownStyles: MarkdownProps['style'] = React.useMemo(
+    () => ({
+      heading1: {
+        fontSize: typography.h2.fontSize!,
+        fontWeight: '700',
+        color: colors.text,
+        marginTop: spacing.xxl,
+        marginBottom: spacing.md,
+        lineHeight: typography.h2.lineHeight,
+      },
+      heading2: {
+        fontSize: typography.h3.fontSize!,
+        fontWeight: '700',
+        color: colors.text,
+        marginTop: spacing.xl,
+        marginBottom: spacing.sm,
+        lineHeight: typography.h3.lineHeight,
+      },
+      heading3: {
+        fontSize: typography.h4.fontSize!,
+        fontWeight: '600',
+        color: colors.text,
+        marginTop: spacing.lg,
+        marginBottom: spacing.sm,
+        lineHeight: typography.h4.lineHeight,
+      },
+      heading4: {
+        fontSize: typography.h5.fontSize!,
+        fontWeight: '600',
+        color: colors.text,
+        marginTop: spacing.md,
+        marginBottom: spacing.xs,
+        lineHeight: typography.h5.lineHeight,
+      },
+      heading5: {
+        fontSize: typography.body.fontSize!,
+        fontWeight: '600',
+        color: colors.text,
+        marginTop: spacing.md,
+        marginBottom: spacing.xs,
+      },
+      heading6: {
+        fontSize: typography.small.fontSize!,
+        fontWeight: '600',
+        color: colors.textSecondary,
+        marginTop: spacing.sm,
+        marginBottom: spacing.xs,
+      },
+      body: {
+        fontSize: typography.body.fontSize!,
+        lineHeight: typography.body.lineHeight!,
+        color: colors.textSecondary,
+        marginBottom: spacing.md,
+      },
+      paragraph: {
+        marginBottom: spacing.md,
+      },
+      strong: {
+        fontWeight: '700',
+      },
+      em: {
+        fontStyle: 'italic',
+      },
+      s: {
+        textDecorationLine: 'line-through',
+      },
+      bullet_list: {
+        marginBottom: spacing.md,
+      },
+      ordered_list: {
+        marginBottom: spacing.md,
+      },
+      list_item: {
+        marginBottom: spacing.xs,
+        flexDirection: 'row',
+      },
+      bullet_list_icon: {
+        fontSize: typography.body.fontSize!,
+        lineHeight: typography.body.lineHeight!,
+        color: colors.primary,
+        marginRight: spacing.sm,
+      },
+      ordered_list_icon: {
+        fontSize: typography.body.fontSize!,
+        lineHeight: typography.body.lineHeight!,
+        color: colors.primary,
+        marginRight: spacing.sm,
+      },
+      code_inline: {
+        backgroundColor: colors.surface,
+        color: colors.primary,
+        fontSize: typography.small.fontSize!,
+        fontFamily: 'monospace',
+        paddingHorizontal: spacing.xs,
+        paddingVertical: 1,
+        borderRadius: 4,
+      },
+      code_block: {
+        backgroundColor: colors.surface,
+        color: colors.text,
+        fontSize: typography.small.fontSize!,
+        fontFamily: 'monospace',
+        padding: spacing.md,
+        borderRadius: 8,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+      },
+      fence: {
+        backgroundColor: colors.surface,
+        color: colors.text,
+        fontSize: typography.small.fontSize!,
+        fontFamily: 'monospace',
+        padding: spacing.md,
+        borderRadius: 8,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+      },
+      blockquote: {
+        backgroundColor: colors.primary + '08',
+        borderLeftWidth: 3,
+        borderLeftColor: colors.primary,
+        padding: spacing.md,
+        marginBottom: spacing.md,
+        borderRadius: 4,
+      },
+      link: {
+        color: colors.primary,
+        textDecorationLine: 'underline',
+      },
+      image: {
+        width: containerWidth,
+        height: containerWidth * 0.6,
+        borderRadius: 8,
+        marginBottom: spacing.md,
+        resizeMode: 'cover',
+      },
+      table: {
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 8,
+        marginBottom: spacing.md,
+      },
+      thead: {
+        backgroundColor: colors.surface,
+      },
+      th: {
+        padding: spacing.sm,
+        fontWeight: '600',
+        color: colors.text,
+        borderWidth: 0.5,
+        borderColor: colors.border,
+      },
+      td: {
+        padding: spacing.sm,
+        color: colors.textSecondary,
+        borderWidth: 0.5,
+        borderColor: colors.border,
+      },
+      tr: {
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.border,
+      },
+      hr: {
+        backgroundColor: colors.border,
+        height: 1,
+        marginVertical: spacing.lg,
+      },
+    }),
+    [colors, containerWidth],
+  );
 
   return (
-    <View style={{ maxWidth: containerWidth }}>
-      {segments.map((seg, i) => {
-        if (seg.type === 'video') {
+    <Profiler id="MarkdownRenderer" onRender={mdRenderRef.current!}>
+      <View style={{ maxWidth: containerWidth }}>
+        {segments.map((seg, i) => {
+          if (seg.type === 'video') {
+            return (
+              <View key={`v-${i}`} style={styles.inlineVideoContainer}>
+                <Video
+                  source={{ uri: seg.hlsUrl }}
+                  style={styles.inlineVideo}
+                  poster={seg.poster ?? undefined}
+                  posterResizeMode="cover"
+                  controls
+                  resizeMode="contain"
+                  onError={handleInlineVideoError}
+                />
+              </View>
+            );
+          }
           return (
-            <View key={`v-${i}`} style={styles.inlineVideoContainer}>
-              <Video
-                source={{ uri: seg.hlsUrl }}
-                style={styles.inlineVideo}
-                poster={seg.poster}
-                posterResizeMode="cover"
-                controls
-                resizeMode="contain"
-              />
-            </View>
+            <Markdown key={`m-${i}`} style={markdownStyles}>
+              {seg.content}
+            </Markdown>
           );
-        }
-        return (
-          <Markdown key={`m-${i}`} style={markdownStyles}>
-            {seg.content}
-          </Markdown>
-        );
-      })}
-    </View>
+        })}
+      </View>
+    </Profiler>
   );
-}
+});
+
+export { MarkdownRenderer };
 
 const styles = StyleSheet.create({
   inlineVideoContainer: {

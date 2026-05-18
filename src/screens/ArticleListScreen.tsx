@@ -22,20 +22,21 @@ import {
   View,
   FlatList,
   StyleSheet,
-  RefreshControl,
   ActivityIndicator,
   Text,
 } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetArticlesQuery } from '@/api/endpoints/articles';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import { TAB_BAR_HEIGHT } from '@/navigation/RootNavigator';
 import type { HomeTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
@@ -43,13 +44,14 @@ type SortOption = 'newest' | 'popular' | 'trending';
 
 const PAGE_SIZE = 15;
 
-const ArticleListScreen: React.FC<
-  HomeTabScreenProps<'ArticleList'>
-> = ({ navigation, route }) => {
+const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
+  navigation,
+  route,
+}) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
 
   // Extract route params
   const categorySlug = route.params?.categorySlug;
@@ -61,20 +63,14 @@ const ArticleListScreen: React.FC<
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
 
   // Data fetching
-  const {
-    data,
-    isLoading,
-    isFetching,
-    isError,
-    error,
-    refetch,
-  } = useGetArticlesQuery({
-    page,
-    pageSize: PAGE_SIZE,
-    categoryId: categorySlug,
-    tagId: tagSlug,
-    lang,
-  });
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useGetArticlesQuery({
+      page,
+      pageSize: PAGE_SIZE,
+      categoryId: categorySlug,
+      tagId: tagSlug,
+      lang,
+    });
 
   // Accumulate articles across pages for infinite scroll
   React.useEffect(() => {
@@ -87,11 +83,12 @@ const ArticleListScreen: React.FC<
     }
   }, [data, page]);
 
-  // Reset when params change
+  // Reset when params or language change
   React.useEffect(() => {
     setPage(1);
     setAllArticles([]);
-  }, [categorySlug, tagSlug]);
+    refetch();
+  }, [categorySlug, tagSlug, lang]);
 
   // Determine if there are more pages
   const totalPages = data?.totalPages || 1;
@@ -134,11 +131,7 @@ const ArticleListScreen: React.FC<
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard
-          article={item}
-          onPress={handleArticlePress}
-          showExcerpt
-        />
+        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
       </View>
     ),
     [handleArticlePress],
@@ -216,32 +209,31 @@ const ArticleListScreen: React.FC<
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
       <Header title={title} hideSearch hideSettings />
 
-      <FlatList
-        data={allArticles}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-          allArticles.length === 0 && styles.emptyList,
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching && page === 1}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-        initialNumToRender={8}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-      />
+      <PullToRefreshWrapper
+        refreshing={isFetching && page === 1}
+        onRefresh={handleRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+      >
+        <FlatList
+          data={allArticles}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+            allArticles.length === 0 && styles.emptyList,
+          ]}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+        />
+      </PullToRefreshWrapper>
     </View>
   );
 };

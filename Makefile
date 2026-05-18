@@ -160,7 +160,12 @@ logs-ios: ## Attach iOS simulator log stream to running app
 logs-android: ## Attach Android device/emulator log stream to running app
 	@echo "📱 Starting Android log stream (Ctrl+C to stop)..."
 	@echo "   Make sure your app is running on a device or emulator."
-	npx react-native log-android
+	@if [ -n "$(DEVICE_ID)" ]; then \
+		echo "   Targeting device: $(DEVICE_ID)"; \
+		ANDROID_SERIAL="$(DEVICE_ID)" npx react-native log-android; \
+	else \
+		npx react-native log-android; \
+	fi
 
 check-bundle-size: ## Check production JS bundle size against budget
 	@echo "📦 Checking production JS bundle size..."

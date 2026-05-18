@@ -14,11 +14,28 @@
  *
  * Store middleware registration is in store/index.ts via blogApi.middleware.
  */
-import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
+import {
+  createApi,
+  fetchBaseQuery,
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react';
 import { getApiBaseUrl } from '@/lib/env';
 import { storage } from '@/lib/storage';
 import { getCurrentLanguage } from '@/lib/i18n';
 import { recordApiCall } from '@/lib/perf/apiTiming';
+
+/**
+ * Performance.now() is available at runtime in React Native (Hermes provides
+ * it on globalThis), but TypeScript's React Native config excludes the DOM lib.
+ * This local declaration avoids adding a global .d.ts for one API.
+ *
+ * Note: Wall-clock time measured from JS includes JS thread queueing delay.
+ * For true network timing, use DevTools Network tab. This measurement tells
+ * you how long the user actually waited (UX perception), not server latency.
+ */
+declare const performance: { now(): number };
 
 /** Token storage keys (must match authSlice.ts) */
 const AUTH_TOKEN_KEY = 'auth_access_token';
@@ -45,20 +62,30 @@ const RETRY_BASE_DELAY_MS = 1000;
 function isRetryableError(error: FetchBaseQueryError | undefined): boolean {
   if (!error) return false;
   // Only retry on 5xx HTTP status codes (server errors)
-  return typeof error.status === 'number' && error.status >= 500 && error.status < 600;
+  return (
+    typeof error.status === 'number' &&
+    error.status >= 500 &&
+    error.status < 600
+  );
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
-  args,
-  api,
-  extraOptions,
-) => {
-  // Start timing for performance monitoring
-  const startTime = Date.now();
+const baseQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  // Start timing for performance monitoring (uses performance.now() for
+  // monotonic, sub-millisecond precision).
+  //
+  // IMPORTANT: Wall-clock time measured from React Native's JS thread
+  // includes JS thread queueing delay (e.g. rendering blocks). This is
+  // NOT pure network latency — it's the total time the user waited for
+  // the UI to update. For true server timing, check DevTools Network tab.
+  const tWallStart = performance.now();
   const endpoint = typeof args === 'string' ? args : (args.url as string);
   const method = typeof args === 'string' ? 'GET' : (args.method ?? 'GET');
 
@@ -69,7 +96,7 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
   // Build the raw base query
   const rawBaseQuery = fetchBaseQuery({
     baseUrl: getApiBaseUrl(),
-    prepareHeaders: (headers) => {
+    prepareHeaders: headers => {
       // Inject auth token if available
       const token = storage.getString(AUTH_TOKEN_KEY);
       if (token) {
@@ -81,25 +108,39 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
 
       return headers;
     },
-    credentials: 'include',
+    credentials: 'omit',
   });
 
-  // Execute request with retry logic for 5xx server errors
+  // ── Phased timing instrumentation ─────────────────────────────────
+  // Measures wall-clock duration of the first attempt and each retry.
+  // Uses performance.now() (monotonic, sub-ms) instead of Date.now().
+  //
+  // Caveat: In React Native's single-threaded architecture, the measured
+  // duration includes time the JS thread spent on other work (rendering)
+  // before processing the network response. The value accurately reflects
+  // user-perceived wait time, not server/network latency.
   let result = await rawBaseQuery(args, api, extraOptions);
+  const tWallAfterFirst = performance.now();
   let attempt = 1;
   while (isRetryableError(result.error) && attempt <= RETRY_MAX) {
     const backoffMs = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
     console.warn(
-      `[API] 🔁 Retry ${attempt}/${RETRY_MAX} for ${method} ${endpoint} after ${backoffMs}ms (status: ${result.error?.status})`,
+      `[API] ⏱️ Retry ${attempt}/${RETRY_MAX}: first attempt took ${Math.round(tWallAfterFirst - tWallStart)}ms, waiting ${backoffMs}ms for ${method} ${endpoint}`,
     );
     await delay(backoffMs);
+    const tRetryStart = performance.now();
     result = await rawBaseQuery(args, api, extraOptions);
+    const tRetryEnd = performance.now();
+    console.warn(
+      `[API] ⏱️ Retry ${attempt} completed in ${Math.round(tRetryEnd - tRetryStart)}ms, status: ${result.error?.status ?? 200}`,
+    );
     attempt++;
   }
 
   // Record API call timing for the perf monitor
   {
-    const duration = Date.now() - startTime;
+    const timestamp = Date.now(); // wall-clock timestamp for record-keeping
+    const wallClockMs = performance.now() - tWallStart;
     const status = result.error
       ? typeof result.error.status === 'number'
         ? result.error.status
@@ -108,15 +149,20 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
     recordApiCall({
       endpoint,
       method,
-      duration,
+      duration: Math.round(wallClockMs),
       status,
-      timestamp: startTime,
+      timestamp,
     });
 
-    // ── Slow API warning (threshold: 1000ms) ─────────────────────
-    if (__DEV__ && duration > 1000) {
+    // ── Slow API warning (threshold: 1000ms wall-clock) ──────────
+    // This measures user-perceived wait time (includes JS thread queueing).
+    // High values may indicate rendering bottlenecks, not network issues.
+    // Compare with DevTools Network tab to distinguish the two.
+    if (__DEV__ && wallClockMs > 1000) {
       console.warn(
-        `[PerfMonitor] ⚠️ Slow API: ${method} ${endpoint} — ${duration}ms (threshold: 1000ms)`,
+        `[PerfMonitor] ⚠️ Slow API: ${method} ${endpoint} — ` +
+          `${Math.round(wallClockMs)}ms wall ` +
+          `(threshold: 1000ms)`,
       );
     }
   }
@@ -128,9 +174,7 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
       typeof result.error.data === 'object' && result.error.data !== null
         ? JSON.stringify(result.error.data)
         : String(result.error.data ?? 'No error details');
-    console.warn(
-      `[API] ❌ ${method} ${endpoint} — ${status}: ${errorMsg}`,
-    );
+    console.warn(`[API] ❌ ${method} ${endpoint} — ${status}: ${errorMsg}`);
   }
 
   // Handle 401 Unauthorized — attempt token refresh
@@ -155,7 +199,8 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
           const response = refreshResult.data as any;
           const tokenData = response.data?.tokens || response.data;
           const newToken = tokenData?.accessToken || response.accessToken;
-          const newRefreshToken = tokenData?.refreshToken || response.refreshToken;
+          const newRefreshToken =
+            tokenData?.refreshToken || response.refreshToken;
 
           if (newToken) {
             // Store new tokens
@@ -167,18 +212,20 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
             // Retry the original request with the new token
             const retryQuery = fetchBaseQuery({
               baseUrl: getApiBaseUrl(),
-              prepareHeaders: (headers) => {
+              prepareHeaders: headers => {
                 headers.set('Authorization', `Bearer ${newToken}`);
                 headers.set('Accept-Language', 'en');
                 return headers;
               },
-              credentials: 'include',
+              credentials: 'omit',
             });
 
             result = await retryQuery(args, api, extraOptions);
           } else {
             // Refresh succeeded but no tokens in response — corrupted/invalid state
-            console.warn('[API] Token refresh response missing tokens — clearing stored tokens');
+            console.warn(
+              '[API] Token refresh response missing tokens — clearing stored tokens',
+            );
             storage.delete(AUTH_TOKEN_KEY);
             storage.delete(REFRESH_TOKEN_KEY);
           }
@@ -191,7 +238,10 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
         }
       } catch (error) {
         // Network error during refresh — clear tokens to avoid infinite retry loop
-        console.warn('[API] Token refresh network error — clearing stored tokens', error);
+        console.warn(
+          '[API] Token refresh network error — clearing stored tokens',
+          error,
+        );
         storage.delete(AUTH_TOKEN_KEY);
         storage.delete(REFRESH_TOKEN_KEY);
       }
@@ -229,11 +279,24 @@ export interface ApiResponseWrapper<T> {
 /**
  * Blog API tag types for cache invalidation
  */
-export type BlogTagTypes = 'Article' | 'Category' | 'Tag' | 'Comment' | 'Bookmark' | 'Like';
+export type BlogTagTypes =
+  | 'Article'
+  | 'Category'
+  | 'Tag'
+  | 'Comment'
+  | 'Bookmark'
+  | 'Like';
 
 export const blogApi = createApi({
   reducerPath: 'blogApi',
   baseQuery,
-  tagTypes: ['Article', 'Category', 'Tag', 'Comment', 'Bookmark', 'Like'] as BlogTagTypes[],
+  tagTypes: [
+    'Article',
+    'Category',
+    'Tag',
+    'Comment',
+    'Bookmark',
+    'Like',
+  ] as BlogTagTypes[],
   endpoints: () => ({}),
 });

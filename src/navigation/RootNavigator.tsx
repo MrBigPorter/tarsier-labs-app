@@ -56,9 +56,10 @@ import {
   type BookmarksStackParamList,
   type AboutStackParamList,
 } from './types';
-import { useTheme } from '@/lib/theme';
+import { useModeColors } from '@/lib/theme';
 import { env } from '@/lib/env';
 import { ScrollProvider, useScrollContext } from '@/lib/ScrollContext';
+import { useTranslation } from 'react-i18next';
 
 // Screens
 import HomeScreen from '@/screens/HomeScreen';
@@ -92,160 +93,181 @@ const BookmarksStack = createNativeStackNavigator<BookmarksStackParamList>();
 const AboutStack = createNativeStackNavigator<AboutStackParamList>();
 
 /** Home Tab Stack */
-function HomeStackNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
+const HomeStackNavigator = React.memo(
+  function HomeStackNavigator(): React.JSX.Element {
+    const colors = useModeColors();
 
-  return (
-    <HomeStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <HomeStack.Screen name="Home" component={HomeScreen} />
-      <HomeStack.Screen name="ArticleList" component={ArticleListScreen} />
-    </HomeStack.Navigator>
-  );
-}
+    return (
+      <HomeStack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <HomeStack.Screen name="Home" component={HomeScreen} />
+        <HomeStack.Screen name="ArticleList" component={ArticleListScreen} />
+      </HomeStack.Navigator>
+    );
+  },
+);
 
 /** Tags Tab Stack */
-function TagsStackNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
+const TagsStackNavigator = React.memo(
+  function TagsStackNavigator(): React.JSX.Element {
+    const colors = useModeColors();
 
-  return (
-    <TagsStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <TagsStack.Screen name="TagList" component={TagListScreen} />
-      <TagsStack.Screen name="TagArticles" component={TagArticlesScreen} />
-    </TagsStack.Navigator>
-  );
-}
+    return (
+      <TagsStack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <TagsStack.Screen name="TagList" component={TagListScreen} />
+        <TagsStack.Screen name="TagArticles" component={TagArticlesScreen} />
+      </TagsStack.Navigator>
+    );
+  },
+);
 
 /** Categories Tab Stack */
-function CategoriesStackNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
+const CategoriesStackNavigator = React.memo(
+  function CategoriesStackNavigator(): React.JSX.Element {
+    const colors = useModeColors();
 
-  return (
-    <CategoriesStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <CategoriesStack.Screen name="CategoryList" component={CategoryListScreen} />
-      <CategoriesStack.Screen name="CategoryArticles" component={CategoryArticlesScreen} />
-    </CategoriesStack.Navigator>
-  );
-}
+    return (
+      <CategoriesStack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <CategoriesStack.Screen
+          name="CategoryList"
+          component={CategoryListScreen}
+        />
+        <CategoriesStack.Screen
+          name="CategoryArticles"
+          component={CategoryArticlesScreen}
+        />
+      </CategoriesStack.Navigator>
+    );
+  },
+);
 
 /** Bookmarks Tab Stack */
-function BookmarksStackNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
+const BookmarksStackNavigator = React.memo(
+  function BookmarksStackNavigator(): React.JSX.Element {
+    const colors = useModeColors();
 
-  return (
-    <BookmarksStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <BookmarksStack.Screen name="Bookmarks" component={BookmarksScreen} />
-    </BookmarksStack.Navigator>
-  );
-}
+    return (
+      <BookmarksStack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <BookmarksStack.Screen name="Bookmarks" component={BookmarksScreen} />
+      </BookmarksStack.Navigator>
+    );
+  },
+);
 
 /** About Tab Stack */
-function AboutStackNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
+const AboutStackNavigator = React.memo(
+  function AboutStackNavigator(): React.JSX.Element {
+    const colors = useModeColors();
 
-  return (
-    <AboutStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <AboutStack.Screen name="About" component={AboutScreen} />
-    </AboutStack.Navigator>
-  );
-}
+    return (
+      <AboutStack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <AboutStack.Screen name="About" component={AboutScreen} />
+      </AboutStack.Navigator>
+    );
+  },
+);
 
 /** Main Bottom Tab Navigator */
-function MainTabNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
-  const { tabBarTranslateY } = useScrollContext();
+const MainTabNavigator = React.memo(
+  function MainTabNavigator(): React.JSX.Element {
+    const colors = useModeColors();
+    const { tabBarTranslateY } = useScrollContext();
+    const { t } = useTranslation();
 
-  const tabBarAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: tabBarTranslateY.value }],
-  }));
+    const tabBarAnimatedStyle = useAnimatedStyle(() => ({
+      maxHeight: Math.max(0, TAB_BAR_HEIGHT + tabBarTranslateY.value),
+    }));
 
-  return (
-    <MainTab.Navigator
-      tabBar={({ state, descriptors, navigation }) => {
-        const tabs: TabItem[] = state.routes.map(route => ({
-          key: route.key,
-          icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,
-          activeIcon: tabIcons[route.name]?.activeIcon as IconName | undefined,
-          label: descriptors[route.key]?.options?.tabBarLabel as string ?? route.name,
-        }));
-        return (
-          <Animated.View
-            style={[
-              styles.tabBarWrapper,
-              { backgroundColor: colors.background },
-              tabBarAnimatedStyle,
-            ]}
-          >
-            <TabBar
-              tabs={tabs}
-              activeTab={state.routes[state.index].key}
-              onTabPress={(key: string) => {
-                const route = state.routes.find(r => r.key === key);
-                if (route) {
-                  navigation.navigate(route.name);
-                }
-              }}
-            />
-          </Animated.View>
-        );
-      }}
-      screenOptions={{
-        headerShown: false,
-      }}
-      initialRouteName="HomeTab"
-    >
-      <MainTab.Screen
-        name="HomeTab"
-        component={HomeStackNavigator}
-        options={{ tabBarLabel: 'Home' }}
-      />
-      <MainTab.Screen
-        name="TagsTab"
-        component={TagsStackNavigator}
-        options={{ tabBarLabel: 'Tags' }}
-      />
-      <MainTab.Screen
-        name="CategoriesTab"
-        component={CategoriesStackNavigator}
-        options={{ tabBarLabel: 'Categories' }}
-      />
-      <MainTab.Screen
-        name="BookmarksTab"
-        component={BookmarksStackNavigator}
-        options={{ tabBarLabel: 'Bookmarks' }}
-      />
-      <MainTab.Screen
-        name="AboutTab"
-        component={AboutStackNavigator}
-        options={{ tabBarLabel: 'About' }}
-      />
-    </MainTab.Navigator>
-  );
-}
+    return (
+      <MainTab.Navigator
+        tabBar={({ state, descriptors, navigation }) => {
+          const tabs: TabItem[] = state.routes.map(route => ({
+            key: route.key,
+            icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,
+            activeIcon: tabIcons[route.name]?.activeIcon as
+              | IconName
+              | undefined,
+            label: t(TAB_LABEL_KEYS[route.name] ?? route.name),
+          }));
+          return (
+            <Animated.View
+              style={[
+                styles.tabBarWrapper,
+                { backgroundColor: colors.background },
+                tabBarAnimatedStyle,
+              ]}
+            >
+              <TabBar
+                tabs={tabs}
+                activeTab={state.routes[state.index].key}
+                onTabPress={(key: string) => {
+                  const route = state.routes.find(r => r.key === key);
+                  if (route) {
+                    navigation.navigate(route.name);
+                  }
+                }}
+              />
+            </Animated.View>
+          );
+        }}
+        screenOptions={{
+          headerShown: false,
+        }}
+        initialRouteName="HomeTab"
+      >
+        <MainTab.Screen
+          name="HomeTab"
+          component={HomeStackNavigator}
+          options={{ tabBarLabel: 'Home' }}
+        />
+        <MainTab.Screen
+          name="TagsTab"
+          component={TagsStackNavigator}
+          options={{ tabBarLabel: 'Tags' }}
+        />
+        <MainTab.Screen
+          name="CategoriesTab"
+          component={CategoriesStackNavigator}
+          options={{ tabBarLabel: 'Categories' }}
+        />
+        <MainTab.Screen
+          name="BookmarksTab"
+          component={BookmarksStackNavigator}
+          options={{ tabBarLabel: 'Bookmarks' }}
+        />
+        <MainTab.Screen
+          name="AboutTab"
+          component={AboutStackNavigator}
+          options={{ tabBarLabel: 'About' }}
+        />
+      </MainTab.Navigator>
+    );
+  },
+);
 
 /** Linking configuration for deep linking */
 export const linking = {
@@ -301,7 +323,7 @@ export const linking = {
  * Root navigator — wraps tab navigator and overlay screens
  */
 function RootNavigator(): React.JSX.Element {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <RootStack.Navigator
@@ -347,16 +369,20 @@ const tabIcons: Record<string, { icon: string; activeIcon?: string }> = {
   AboutTab: { icon: 'user' },
 };
 
-/** Height of the TabBar content (icon row — used for absolute positioning) */
-const TAB_BAR_VISIBLE_HEIGHT = 60;
+/** Maps tab route names to i18n translation keys for TabBar labels */
+const TAB_LABEL_KEYS: Record<string, string> = {
+  HomeTab: 'common.home',
+  TagsTab: 'common.tags',
+  CategoriesTab: 'common.categories',
+  BookmarksTab: 'common.bookmarks',
+  AboutTab: 'common.about',
+};
+
+/** Height of the TabBar content (icon row — used for absolute positioning and screen padding) */
+export const TAB_BAR_HEIGHT = 80;
 
 const styles = StyleSheet.create({
   tabBarWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: TAB_BAR_VISIBLE_HEIGHT,
     overflow: 'hidden',
     zIndex: 100,
   },

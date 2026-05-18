@@ -29,7 +29,9 @@
     "pageInfo": "Page {page} sur {totalPages}",
     "goBack": "Retour",
     "pullDownToRetry": "Tirez vers le bas pour réessayer",
-    "checkBackLater": "Revenez plus tard pour du nouveau contenu"
+    "checkBackLater": "Revenez plus tard pour du nouveau contenu",
+    "warning": "Attention",
+    "success": "Succès"
   },
   "categories": {
     "title": "Catégories d'articles",
@@ -331,10 +333,15 @@
     "pushNotifications": "Notifications push",
     "data": "Données",
     "clearCache": {
-      "name": "Vider le cache",
-      "confirm": "Vider le cache",
-      "message": "Cela effacera toutes les données en cache, y compris les favoris. Vous pouvez les télécharger à nouveau à tout moment.",
-      "action": "Vider"
+      "name": "Effacer toutes les données",
+      "confirm": "Effacer toutes les données",
+      "message": "Cela effacera le cache local ET supprimera définitivement vos commentaires, likes et favoris du serveur. Cette action est irréversible.",
+      "action": "Effacer toutes les données",
+      "loading": "Effacement...",
+      "success": "Toutes les données ont été effacées avec succès",
+      "successDetail": "Commentaires anonymisés : {{anonymizedComments}} | Favoris supprimés : {{deletedBookmarks}}",
+      "partialSuccess": "Cache local effacé, mais les données serveur n'ont pas pu être supprimées : {{error}}",
+      "error": "Échec de l'effacement des données. Veuillez réessayer."
     },
     "account": "Compte",
     "signOut": {

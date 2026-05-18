@@ -50,7 +50,21 @@ We **do not sell** your personal information to third parties. We may share data
 
 ## 4. Data Retention
 
-We retain your data for as long as your account is active. If you delete your account:
+We retain your data for as long as your account is active.
+
+### 4.1 Clearing Your Activity Data
+
+You can clear your activity data at any time from the app's Settings > Data > Clear All Data. This will:
+- Delete your comments from articles (anonymised as "[deleted]" to preserve thread context)
+- Remove all your bookmarks
+- Remove all your likes
+- Clear all cached data on your device (including authentication tokens, requiring re-login)
+
+Your account itself will **not** be deleted — you can continue using the app after re-authenticating.
+
+### 4.2 Account Deletion
+
+If you delete your account:
 - Your profile and personal data are permanently deleted within 30 days
 - Anonymised content (e.g., public comments) may be retained
 - Backup copies are purged within 90 days
@@ -154,7 +168,21 @@ If you have questions about this Privacy Policy, please contact us:
 
 ## 4. 数据保留
 
-我们会在您的账户有效期间保留您的数据。如果您删除账户：
+我们会在您的账户有效期间保留您的数据。
+
+### 4.1 清除活动数据
+
+您可以随时通过应用的 设置 > 数据 > 清除所有数据 来清除您的活动数据。此操作将：
+- 删除您在文章中的评论（匿名化为"[已删除]"以保留对话上下文）
+- 移除您的所有书签
+- 移除您的所有点赞
+- 清除设备上的所有缓存数据（包括身份验证令牌，需要重新登录）
+
+您的账号**不会**被删除 — 重新认证后您可以继续使用应用。
+
+### 4.2 账号删除
+
+如果您删除账号：
 - 您的个人资料和个人数据将在30天内永久删除
 - 匿名化内容（如公开评论）可能会被保留
 - 备份副本将在90天内清除

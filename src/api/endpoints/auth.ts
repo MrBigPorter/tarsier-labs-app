@@ -63,14 +63,21 @@ interface EmailCodeLoginResponse {
   avatar?: string | null;
 }
 
+/** Response from clearing all user activity data on the server */
+interface ClearUserDataResponse {
+  accountDeleted: boolean;
+  anonymizedComments: number;
+  deletedBookmarks: number;
+}
+
 export const authApi = blogApi.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     /**
      * Login with email + password
      * POST /api/v1/frontend/auth/login
      */
     login: builder.mutation<AuthTokens, LoginParams>({
-      query: (credentials) => ({
+      query: credentials => ({
         url: '/api/v1/frontend/auth/login',
         method: 'POST',
         body: credentials,
@@ -96,7 +103,7 @@ export const authApi = blogApi.injectEndpoints({
      * POST /api/v1/frontend/auth/register
      */
     register: builder.mutation<AuthTokens, RegisterParams>({
-      query: (userData) => ({
+      query: userData => ({
         url: '/api/v1/frontend/auth/register',
         method: 'POST',
         body: userData,
@@ -120,7 +127,7 @@ export const authApi = blogApi.injectEndpoints({
      * POST /v1/auth/email/send-code
      */
     sendEmailCode: builder.mutation<void, SendEmailCodeParams>({
-      query: (params) => ({
+      query: params => ({
         url: '/api/v1/auth/email/send-code',
         method: 'POST',
         body: params,
@@ -131,26 +138,33 @@ export const authApi = blogApi.injectEndpoints({
      * Login with email verification code (passwordless)
      * POST /v1/auth/email/login
      */
-    loginWithEmailCode: builder.mutation<EmailCodeLoginResponse, { email: string; code: string }>({
+    loginWithEmailCode: builder.mutation<
+      EmailCodeLoginResponse,
+      { email: string; code: string }
+    >({
       query: ({ email, code }) => ({
         url: '/api/v1/auth/email/login',
         method: 'POST',
         body: { email, code },
       }),
-      transformResponse: (response: ApiResponseWrapper<EmailCodeLoginResponse>) =>
-        unwrapData(response),
+      transformResponse: (
+        response: ApiResponseWrapper<EmailCodeLoginResponse>,
+      ) => unwrapData(response),
       onQueryStarted: async (_arg, { queryFulfilled }) => {
         try {
           const { data } = await queryFulfilled;
           // Tokens are nested under `tokens.*` matching Web backend format
           storage.set('auth_access_token', data.tokens.accessToken);
           storage.set('auth_refresh_token', data.tokens.refreshToken);
-          storage.set('auth_user', JSON.stringify({
-            id: data.id,
-            email: data.email,
-            nickname: data.nickname,
-            avatar: data.avatar ?? undefined,
-          }));
+          storage.set(
+            'auth_user',
+            JSON.stringify({
+              id: data.id,
+              email: data.email,
+              nickname: data.nickname,
+              avatar: data.avatar ?? undefined,
+            }),
+          );
         } catch {
           // Login failed — don't persist
         }
@@ -224,6 +238,25 @@ export const authApi = blogApi.injectEndpoints({
         unwrapData(response),
       providesTags: ['Bookmark'],
     }),
+
+    /**
+     * Clear all user activity data on the server
+     * DELETE /api/v1/auth/account/data
+     *
+     * Deletes user's comments (anonymized), bookmarks, and likes.
+     * The account itself is NOT deleted — only activity data.
+     * Invalidates Comment, Like, and Bookmark tags so RTK Query refetches.
+     */
+    clearUserData: builder.mutation<ClearUserDataResponse, void>({
+      query: () => ({
+        url: '/api/v1/auth/account/data',
+        method: 'DELETE',
+      }),
+      transformResponse: (
+        response: ApiResponseWrapper<ClearUserDataResponse>,
+      ) => unwrapData(response),
+      invalidatesTags: ['Comment', 'Like', 'Bookmark'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -237,4 +270,5 @@ export const {
   useLogoutMutation,
   useGetProfileQuery,
   useLazyGetProfileQuery,
+  useClearUserDataMutation,
 } = authApi;

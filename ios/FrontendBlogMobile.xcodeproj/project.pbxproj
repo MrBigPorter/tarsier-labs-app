@@ -31,7 +31,7 @@
 		AABBCCDD2CA45674006654EE /* ASAuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASAuthSession.swift; sourceTree = "<group>"; };
 		AABBCCDD4CA45674006654EE /* ASAuthSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ASAuthSession.m; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		E6E1E7A8E46C4B65B0CDC49D /* BootSplash.storyboard */ = {isa = PBXFileReference; name = "BootSplash.storyboard"; path = "FrontendBlogMobile/BootSplash.storyboard"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		E6E1E7A8E46C4B65B0CDC49D /* BootSplash.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = "BootSplash.storyboard"; path = "FrontendBlogMobile/BootSplash.storyboard"; sourceTree = "<group>"; };
 		A003EFB99E794B79A6943147 /* Colors.xcassets */ = {isa = PBXFileReference; name = "Colors.xcassets"; path = "FrontendBlogMobile/Colors.xcassets"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = folder.assetcatalog; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 

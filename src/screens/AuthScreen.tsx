@@ -54,9 +54,7 @@ const CODE_REGEX = /^\d{6}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COUNTDOWN_SECONDS = 60;
 
-const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
-  navigation,
-}) => {
+const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
@@ -113,7 +111,9 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
   // ─── Handlers ───────────────────────────────────────────────────────
 
   const handleGoBack = useCallback(() => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
   }, [navigation]);
 
   const validateEmail = useCallback((): string | null => {
@@ -183,10 +183,13 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
         code: trimmedCode,
       }).unwrap();
 
-      console.log('[Auth] ✅ Email code login success, dispatching setCredentials', {
-        userId: result.id,
-        email: result.email,
-      });
+      console.log(
+        '[Auth] ✅ Email code login success, dispatching setCredentials',
+        {
+          userId: result.id,
+          email: result.email,
+        },
+      );
 
       // Update Redux auth state with the response (nested tokens.* format)
       dispatch(
@@ -204,7 +207,9 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
 
       // Navigate back to main screen after successful login
       console.log('[Auth] 🔙 Navigating back to MainTabs');
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       const status = err?.status ?? err?.originalStatus ?? '';
       const serverMsg = err?.data?.message || err?.error || '';
@@ -213,7 +218,15 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
         `${statusPrefix}${serverMsg}`.trim() || t('auth.loginFailed');
       setError(message);
     }
-  }, [email, code, validateEmail, loginWithEmailCodeMutation, dispatch, t]);
+  }, [
+    email,
+    code,
+    validateEmail,
+    loginWithEmailCodeMutation,
+    dispatch,
+    t,
+    navigation,
+  ]);
 
   const handleGoogleLogin = useCallback(async () => {
     try {
@@ -221,7 +234,9 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
       setError(null);
       await loginGoogle();
       console.log('[Auth] ✅ Google login success, navigating back');
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       if (err?.code !== 'CANCELLED') {
         setError(err?.message || t('auth.oauth.googleFailed'));
@@ -237,7 +252,9 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
       setError(null);
       await loginFacebook();
       console.log('[Auth] ✅ Facebook login success, navigating back');
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       if (err?.code !== 'CANCELLED') {
         setError(err?.message || t('auth.oauth.facebookNotReady'));
@@ -253,7 +270,9 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
       setError(null);
       await loginApple();
       console.log('[Auth] ✅ Apple login success, navigating back');
-      navigation.goBack();
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (err: any) {
       if (err?.code !== 'CANCELLED') {
         setError(err?.message || t('auth.oauth.googleFailed'));
@@ -266,11 +285,12 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
   // ─── Derived state for send-code button ─────────────────────────────
 
   const canSendCode = !isSendingCode && !isSendLoading && countdown === 0;
-  const sendButtonLabel = isSendingCode || isSendLoading
-    ? t('auth.sending')
-    : countdown > 0
-      ? `${t('auth.resendIn')} ${countdown}s`
-      : t('auth.sendCode');
+  const sendButtonLabel =
+    isSendingCode || isSendLoading
+      ? t('auth.sending')
+      : countdown > 0
+        ? `${t('auth.resendIn')} ${countdown}s`
+        : t('auth.sendCode');
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -293,297 +313,246 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-          {/* ─── Title Section ─────────────────────────────────────── */}
-          <View style={styles.titleSection}>
-            <Image
-              source={require('@assets/logo.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
+        {/* ─── Title Section ─────────────────────────────────────── */}
+        <View style={styles.titleSection}>
+          <Image
+            source={require('@assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text
+            style={[
+              styles.title,
+              {
+                color: colors.text,
+                fontFamily: typography.h3.fontFamily,
+                fontSize: typography.h3.fontSize,
+                fontWeight: typography.h3.fontWeight,
+              },
+            ]}
+          >
+            {t('auth.login.title')}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {t('auth.login.subtitle')}
+          </Text>
+        </View>
+
+        {/* ─── Tip Box ──────────────────────────────────────────── */}
+        <View
+          style={[
+            styles.tipBox,
+            {
+              backgroundColor: colors.utilityBlue50,
+              borderColor: colors.utilityBlue200,
+            },
+          ]}
+        >
+          <Text style={[styles.tipText, { color: colors.utilityBlue700 }]}>
+            {t('auth.login.tip')}
+          </Text>
+        </View>
+
+        {/* Email Input */}
+        <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
+          {t('auth.email')}
+        </Text>
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.background,
+              borderColor: error ? colors.borderError : colors.border,
+            },
+          ]}
+        >
+          <View style={styles.inputIcon}>
+            <SvgIcon name="mail" size={18} color={colors.textSecondary} />
+          </View>
+          <TextInput
+            ref={emailRef}
+            style={[styles.input, { color: colors.text }]}
+            placeholder={t('auth.emailPlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => codeRef.current?.focus()}
+          />
+        </View>
+
+        {/* Verification Code + Send Code Button */}
+        <View style={styles.codeHeaderRow}>
+          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>
+            {t('auth.verificationCode')}
+          </Text>
+          <TouchableOpacity
+            onPress={handleSendCode}
+            disabled={!canSendCode}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.sendCodeText,
+                {
+                  color: canSendCode ? colors.primary : colors.textSecondary,
+                },
+              ]}
+            >
+              {sendButtonLabel}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.background,
+              borderColor: error ? colors.borderError : colors.border,
+            },
+          ]}
+        >
+          <View style={styles.inputIcon}>
+            <SvgIcon name="lock" size={18} color={colors.textSecondary} />
+          </View>
+          <TextInput
+            ref={codeRef}
+            style={[styles.input, { color: colors.text }]}
+            placeholder={t('auth.codePlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            value={code}
+            onChangeText={text => {
+              // Only allow digits, max 6
+              const filtered = text.replace(/[^0-9]/g, '').slice(0, 6);
+              setCode(filtered);
+            }}
+            keyboardType="number-pad"
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={6}
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+          />
+        </View>
+
+        {/* Error Message */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <SvgIcon
+              name="alert-circle"
+              size={16}
+              color={colors.textErrorPrimary}
             />
             <Text
-              style={[
-                styles.title,
-                {
-                  color: colors.text,
-                  fontFamily: typography.h3.fontFamily,
-                  fontSize: typography.h3.fontSize,
-                  fontWeight: typography.h3.fontWeight,
-                },
-              ]}
+              style={[styles.errorText, { color: colors.textErrorPrimary }]}
             >
-              {t('auth.login.title')}
-            </Text>
-            <Text
-              style={[
-                styles.subtitle,
-                { color: colors.textSecondary },
-              ]}
-            >
-              {t('auth.login.subtitle')}
+              {error}
             </Text>
           </View>
+        )}
 
-          {/* ─── Tip Box ──────────────────────────────────────────── */}
-          <View style={[styles.tipBox, { backgroundColor: colors.utilityBlue50, borderColor: colors.utilityBlue200 }]}>
-            <Text style={[styles.tipText, { color: colors.utilityBlue700 }]}>{t('auth.login.tip')}</Text>
-          </View>
+        {/* Submit Button */}
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+          style={[
+            styles.submitButton,
+            {
+              backgroundColor: isSubmitting
+                ? colors.primary + '60'
+                : colors.primary,
+            },
+          ]}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <View style={styles.submitContent}>
+              <Text style={styles.submitButtonText}>
+                {t('auth.login.button')}
+              </Text>
+              <SvgIcon name="arrow-right" size={18} color="#FFFFFF" />
+            </View>
+          )}
+        </TouchableOpacity>
 
-            {/* Email Input */}
-            <Text
-              style={[
-                styles.inputLabel,
-                { color: colors.textSecondary },
-              ]}
-            >
-              {t('auth.email')}
+        {/* ─── Divider ────────────────────────────────────────────── */}
+        <View style={styles.divider}>
+          <View
+            style={[styles.dividerLine, { backgroundColor: colors.border }]}
+          />
+          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
+            {t('auth.orContinueWith')}
+          </Text>
+          <View
+            style={[styles.dividerLine, { backgroundColor: colors.border }]}
+          />
+        </View>
+
+        {/* ─── OAuth Buttons ──────────────────────────────────────── */}
+
+        {/* Google */}
+        <TouchableOpacity
+          onPress={handleGoogleLogin}
+          disabled={isOAuthLoading}
+          style={[
+            styles.oauthButton,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
+          ]}
+          activeOpacity={0.7}
+        >
+          <SvgIcon name="google" size={20} />
+          <Text style={[styles.oauthButtonText, { color: colors.text }]}>
+            {t('auth.login.google')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Facebook */}
+        <TouchableOpacity
+          onPress={handleFacebookLogin}
+          disabled={isOAuthLoading}
+          style={[
+            styles.oauthButton,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
+          ]}
+          activeOpacity={0.7}
+        >
+          <SvgIcon name="facebook" size={20} />
+          <Text style={[styles.oauthButtonText, { color: colors.text }]}>
+            {t('auth.login.facebook')}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Apple (iOS only) */}
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            onPress={handleAppleLogin}
+            disabled={isOAuthLoading}
+            style={[
+              styles.oauthButton,
+              {
+                backgroundColor: isDark ? '#1C1C1E' : '#000000',
+                borderColor: isDark ? '#333333' : '#000000',
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <SvgIcon name="apple" size={20} color="#FFFFFF" />
+            <Text style={[styles.oauthButtonText, { color: '#FFFFFF' }]}>
+              Apple
             </Text>
-            <View
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: error
-                    ? colors.borderError
-                    : colors.border,
-                },
-              ]}
-            >
-              <View style={styles.inputIcon}>
-                <SvgIcon
-                  name="mail"
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </View>
-              <TextInput
-                ref={emailRef}
-                style={[
-                  styles.input,
-                  { color: colors.text },
-                ]}
-                placeholder={t('auth.emailPlaceholder')}
-                placeholderTextColor={colors.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-                onSubmitEditing={() => codeRef.current?.focus()}
-              />
-            </View>
-
-            {/* Verification Code + Send Code Button */}
-            <View style={styles.codeHeaderRow}>
-              <Text
-                style={[
-                  styles.inputLabel,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {t('auth.verificationCode')}
-              </Text>
-              <TouchableOpacity
-                onPress={handleSendCode}
-                disabled={!canSendCode}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.sendCodeText,
-                    {
-                      color: canSendCode
-                        ? colors.primary
-                        : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {sendButtonLabel}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: error
-                    ? colors.borderError
-                    : colors.border,
-                },
-              ]}
-            >
-              <View style={styles.inputIcon}>
-                <SvgIcon
-                  name="lock"
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </View>
-              <TextInput
-                ref={codeRef}
-                style={[
-                  styles.input,
-                  { color: colors.text },
-                ]}
-                placeholder={t('auth.codePlaceholder')}
-                placeholderTextColor={colors.textSecondary}
-                value={code}
-                onChangeText={text => {
-                  // Only allow digits, max 6
-                  const filtered = text.replace(/[^0-9]/g, '').slice(0, 6);
-                  setCode(filtered);
-                }}
-                keyboardType="number-pad"
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={6}
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-              />
-            </View>
-
-            {/* Error Message */}
-            {error && (
-              <View style={styles.errorContainer}>
-                <SvgIcon
-                  name="alert-circle"
-                  size={16}
-                  color={colors.textErrorPrimary}
-                />
-                <Text style={[styles.errorText, { color: colors.textErrorPrimary }]}>{error}</Text>
-              </View>
-            )}
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              style={[
-                styles.submitButton,
-                {
-                  backgroundColor: isSubmitting
-                    ? colors.primary + '60'
-                    : colors.primary,
-                },
-              ]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <View style={styles.submitContent}>
-                  <Text style={styles.submitButtonText}>
-                    {t('auth.login.button')}
-                  </Text>
-                  <SvgIcon
-                    name="arrow-right"
-                    size={18}
-                    color="#FFFFFF"
-                  />
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* ─── Divider ────────────────────────────────────────────── */}
-            <View style={styles.divider}>
-              <View
-                style={[
-                  styles.dividerLine,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.dividerText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {t('auth.orContinueWith')}
-              </Text>
-              <View
-                style={[
-                  styles.dividerLine,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-            </View>
-
-            {/* ─── OAuth Buttons ──────────────────────────────────────── */}
-
-            {/* Google */}
-            <TouchableOpacity
-              onPress={handleGoogleLogin}
-              disabled={isOAuthLoading}
-              style={[
-                styles.oauthButton,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                },
-              ]}
-              activeOpacity={0.7}
-            >
-              <SvgIcon name="google" size={20} />
-              <Text
-                style={[
-                  styles.oauthButtonText,
-                  { color: colors.text },
-                ]}
-              >
-                {t('auth.login.google')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Facebook */}
-            <TouchableOpacity
-              onPress={handleFacebookLogin}
-              disabled={isOAuthLoading}
-              style={[
-                styles.oauthButton,
-                {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                },
-              ]}
-              activeOpacity={0.7}
-            >
-              <SvgIcon name="facebook" size={20} />
-              <Text
-                style={[
-                  styles.oauthButtonText,
-                  { color: colors.text },
-                ]}
-              >
-                {t('auth.login.facebook')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Apple (iOS only) */}
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                onPress={handleAppleLogin}
-                disabled={isOAuthLoading}
-                style={[
-                  styles.oauthButton,
-                  {
-                    backgroundColor: isDark ? '#1C1C1E' : '#000000',
-                    borderColor: isDark ? '#333333' : '#000000',
-                  },
-                ]}
-                activeOpacity={0.7}
-              >
-                <SvgIcon
-                  name="apple"
-                  size={20}
-                  color="#FFFFFF"
-                />
-                <Text style={[styles.oauthButtonText, { color: '#FFFFFF' }]}>
-                  Apple
-                </Text>
-              </TouchableOpacity>
-            )}
-        </KeyboardAwareScrollView>
-
+          </TouchableOpacity>
+        )}
+      </KeyboardAwareScrollView>
     </View>
   );
 };
@@ -739,7 +708,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
-
 });
 
 export default AuthScreen;

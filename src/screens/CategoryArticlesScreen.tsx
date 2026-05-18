@@ -16,17 +16,21 @@ import {
   View,
   FlatList,
   StyleSheet,
-  RefreshControl,
   ActivityIndicator,
   Text,
 } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { TAB_BAR_HEIGHT } from '@/navigation/RootNavigator';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetCategoryBySlugQuery } from '@/api/endpoints/categories';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
-import { ArticleListSkeleton, ArticleCardSkeleton } from '@/components/core/Skeleton';
+import {
+  ArticleListSkeleton,
+  ArticleCardSkeleton,
+} from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import type { CategoriesTabScreenProps } from '@/navigation/types';
@@ -37,9 +41,19 @@ const CategoryArticlesScreen: React.FC<
 > = ({ navigation, route }) => {
   const { categorySlug, categoryName } = route.params;
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
+
+  const prevLangRef = React.useRef(lang);
+
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      setPage(1);
+      refetch();
+    }
+  }, [lang]);
 
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
@@ -68,7 +82,9 @@ const CategoryArticlesScreen: React.FC<
       } else {
         setAllArticles(prev => {
           const existingIds = new Set(prev.map(a => a.id));
-          const newItems = categoryData.articles.items.filter(a => !existingIds.has(a.id));
+          const newItems = categoryData.articles.items.filter(
+            a => !existingIds.has(a.id),
+          );
           if (newItems.length === 0) return prev;
           return [...prev, ...newItems];
         });
@@ -117,11 +133,7 @@ const CategoryArticlesScreen: React.FC<
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard
-          article={item}
-          onPress={handleArticlePress}
-          showExcerpt
-        />
+        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
       </View>
     ),
     [handleArticlePress],
@@ -147,7 +159,12 @@ const CategoryArticlesScreen: React.FC<
               { backgroundColor: (category.color || colors.primary) + '20' },
             ]}
           >
-            <Text style={[styles.iconText, { color: category.color || colors.primary }]}>
+            <Text
+              style={[
+                styles.iconText,
+                { color: category.color || colors.primary },
+              ]}
+            >
               {category.icon}
             </Text>
           </View>
@@ -161,20 +178,33 @@ const CategoryArticlesScreen: React.FC<
 
       {/* Description */}
       {category.description ? (
-        <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+        <Text
+          style={[styles.categoryDescription, { color: colors.textSecondary }]}
+        >
           {category.description}
         </Text>
       ) : null}
 
       {/* Article count */}
       <View style={styles.metaRow}>
-        <Text style={[styles.articleCount, { color: colors.textTertiary || colors.textSecondary }]}>
-          {category.articleCount} {category.articleCount === 1 ? 'article' : 'articles'}
+        <Text
+          style={[
+            styles.articleCount,
+            { color: colors.textTertiary || colors.textSecondary },
+          ]}
+        >
+          {category.articleCount}{' '}
+          {category.articleCount === 1 ? 'article' : 'articles'}
         </Text>
       </View>
 
       {/* Divider */}
-      <View style={[styles.headerDivider, { backgroundColor: colors.borderSecondary }]} />
+      <View
+        style={[
+          styles.headerDivider,
+          { backgroundColor: colors.borderSecondary },
+        ]}
+      />
     </View>
   );
 
@@ -183,7 +213,12 @@ const CategoryArticlesScreen: React.FC<
   if (isLoading && page === 1) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-        <Header title={categoryName || categorySlug} showBack hideSearch hideSettings />
+        <Header
+          title={categoryName || categorySlug}
+          showBack
+          hideSearch
+          hideSettings
+        />
         <View style={styles.loadingContainer}>
           <ArticleListSkeleton count={5} />
         </View>
@@ -197,44 +232,46 @@ const CategoryArticlesScreen: React.FC<
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
       <Header title={category.name} showBack hideSearch hideSettings />
 
-      <FlatList
-        data={allArticles}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-          allArticles.length === 0 && styles.emptyList,
-        ]}
-        ListHeaderComponent={allArticles.length > 0 ? renderListHeader : null}
-        refreshControl={
-          <RefreshControl
-            refreshing={isFetching && page === 1}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          isError ? (
-            <EmptyState
-              icon="alert-circle"
-              title={t('article.error.loadFailed')}
-              description={t('common.pullDownToRetry')}
-              primaryAction={{ label: t('common.retry'), onPress: handleRefresh }}
-            />
-          ) : (
-            <EmptyLogoContent
-              title={t('categories.emptyArticles')}
-              description={t('common.checkBackLater')}
-            />
-          )
-        }
-        ListFooterComponent={renderFooter}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        showsVerticalScrollIndicator={false}
-      />
+      <PullToRefreshWrapper
+        refreshing={isFetching && page === 1}
+        onRefresh={handleRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+      >
+        <FlatList
+          data={allArticles}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+            allArticles.length === 0 && styles.emptyList,
+          ]}
+          ListHeaderComponent={allArticles.length > 0 ? renderListHeader : null}
+          ListEmptyComponent={
+            isError ? (
+              <EmptyState
+                icon="alert-circle"
+                title={t('article.error.loadFailed')}
+                description={t('common.pullDownToRetry')}
+                primaryAction={{
+                  label: t('common.retry'),
+                  onPress: handleRefresh,
+                }}
+              />
+            ) : (
+              <EmptyLogoContent
+                title={t('categories.emptyArticles')}
+                description={t('common.checkBackLater')}
+              />
+            )
+          }
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+        />
+      </PullToRefreshWrapper>
     </View>
   );
 };

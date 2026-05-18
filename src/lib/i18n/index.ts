@@ -1,3 +1,4 @@
+import { Platform, NativeModules } from 'react-native';
 import i18n from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
 import { Locale, getEnabledLocales, getLocaleToFileMap } from './config';
@@ -44,7 +45,60 @@ function getPersistedLanguage(): string | null {
   return null;
 }
 
-const initialLanguage = getPersistedLanguage() || defaultLocale;
+/**
+ * Read the system language/locale from the device.
+ * iOS: SettingsManager.settings.AppleLocale (or AppleLanguages[0])
+ * Android: I18nManager.localeIdentifier
+ *
+ * Returns the two-letter language code (e.g. 'zh', 'en', 'ja'),
+ * or null if it can't be determined.
+ */
+function getSystemLanguage(): string | null {
+  try {
+    let locale: string | undefined;
+
+    if (Platform.OS === 'ios') {
+      // iOS exposes the locale via SettingsManager
+      const settings = NativeModules.SettingsManager?.settings;
+      locale = settings?.AppleLocale ?? settings?.AppleLanguages?.[0];
+    } else {
+      // Android exposes via I18nManager
+      const I18nManager = require('react-native').I18nManager;
+      locale = I18nManager.localeIdentifier;
+    }
+
+    if (!locale) return null;
+
+    // Extract the language code from locale strings like 'zh-Hans', 'en-US', 'ja-JP'
+    const langCode = locale.split('-')[0].toLowerCase();
+    return langCode;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Determine the initial language:
+ * 1. Persisted user choice (MMKV) — highest priority
+ * 2. System language — if it matches a supported locale
+ * 3. Default 'en' — fallback
+ */
+function getInitialLanguage(): string {
+  // 1. Check persisted preference
+  const persisted = getPersistedLanguage();
+  if (persisted) return persisted;
+
+  // 2. Try system language
+  const systemLang = getSystemLanguage();
+  if (systemLang && enabledLocales.includes(systemLang as Locale)) {
+    return systemLang;
+  }
+
+  // 3. Fallback to English
+  return defaultLocale;
+}
+
+const initialLanguage = getInitialLanguage();
 
 i18n.use(initReactI18next).init({
   resources,
@@ -69,16 +123,26 @@ export const getCurrentLanguage = (): string => {
 
 /**
  * Reactive language hook — triggers re-render when i18n language changes.
- * Use this instead of getCurrentLanguage() in React components to ensure
- * components re-render and API queries re-fetch with the new language.
+ *
+ * Delegates to `useTranslation()` from react-i18next, which uses React 18's
+ * `useSyncExternalStore` for reliable external store subscriptions.
+ * This is more robust than the custom `useState` + `i18n.on` subscription
+ * pattern, as confirmed by TabBar labels that correctly update via
+ * `useTranslation()` on both iOS and Android.
  *
  * @example
- * const lang = useCurrentLanguage();
+ * const lang = useAppLanguage();
  * const { data } = useGetArticlesQuery({ lang, page: 1, pageSize: 10 });
  */
-export function useCurrentLanguage(): string {
+export function useAppLanguage(): string {
   const { i18n: i18nInstance } = useTranslation();
   return i18nInstance.language;
 }
+
+/**
+ * @deprecated Use `useAppLanguage()` instead — it's more reliable on Android.
+ * Kept as a backward-compatible alias.
+ */
+export const useCurrentLanguage = useAppLanguage;
 
 export default i18n;

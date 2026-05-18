@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import type { FrontendTag } from '@/types/frontend-blog';
@@ -20,7 +20,7 @@ export function TagChip({
   showCount = false,
   size = 'medium',
 }: TagChipProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <TouchableOpacity
@@ -54,7 +54,9 @@ export function TagChip({
         <View
           style={[
             styles.countBadge,
-            { backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.border },
+            {
+              backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.border,
+            },
           ]}
         >
           <Text

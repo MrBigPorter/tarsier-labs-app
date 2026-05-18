@@ -14,7 +14,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useTheme } from '@/lib/theme';
+import { useModeColors } from '@/lib/theme';
 
 interface EmptyContentProps {
   /** Emoji icon string, e.g. "📚", "🏷️", "⚠️", "📭" */
@@ -36,12 +36,14 @@ export function EmptyContent({
   actionLabel,
   onAction,
 }: EmptyContentProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <View style={styles.container}>
       {icon && <Text style={styles.icon}>{icon}</Text>}
-      <Text style={[styles.title, { color: colors.textPrimary ?? colors.text }]}>
+      <Text
+        style={[styles.title, { color: colors.textPrimary ?? colors.text }]}
+      >
         {title}
       </Text>
       {description && (

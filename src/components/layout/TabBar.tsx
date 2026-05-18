@@ -29,7 +29,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import SvgIcon, { type IconName } from '../core/SvgIcon';
@@ -65,7 +65,7 @@ const SPRING_CONFIG: Animated.SpringAnimationConfig = {
 
 const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   // Animation values for each tab (opacity + scale for background circle)
   const animations = useRef<Record<string, Animated.Value>>({});

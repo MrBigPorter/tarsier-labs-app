@@ -9,16 +9,12 @@
  * States: Loading → skeleton grid | Error → retry
  */
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  FlatList,
-  StyleSheet,
-  RefreshControl,
-} from 'react-native';
+import { View, FlatList, StyleSheet } from 'react-native';
+import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing } from '@/lib/theme';
+import { useModeColors, spacing } from '@/lib/theme';
 import { useGetCategoriesQuery } from '@/api/endpoints/categories';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
 import { CategoryCard } from '@/components/blog/CategoryCard';
 import Header from '@/components/layout/Header';
@@ -34,9 +30,10 @@ const CategoryListScreen: React.FC<
   CategoriesTabScreenProps<'CategoryList'>
 > = ({ navigation }) => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
-  const lang = useCurrentLanguage();
+  const lang = useAppLanguage();
+  const prevLangRef = React.useRef(lang);
 
   const {
     data: categories,
@@ -45,6 +42,14 @@ const CategoryListScreen: React.FC<
     isError,
     refetch,
   } = useGetCategoriesQuery(lang);
+
+  // Re-fetch when language changes
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      refetch();
+    }
+  }, [lang, refetch]);
 
   // ─── Pull-to-refresh ───────────────────────────────────────────────
   //
@@ -86,7 +91,7 @@ const CategoryListScreen: React.FC<
   if (isLoading && !categories) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-        <Header title="Categories" hideSearch hideSettings />
+        <Header title="Categories" hideSearch hideSettings showBack={false} />
         <View style={styles.skeletonContainer}>
           {Array.from({ length: LOADING_COUNT }).map((_, i) => (
             <CategoryCardSkeleton key={i} />
@@ -98,43 +103,40 @@ const CategoryListScreen: React.FC<
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
-      <Header title="Categories" hideSearch hideSettings />
+      <Header title="Categories" hideSearch hideSettings showBack={false} />
 
-      <FlatList
-        data={categories || []}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing.xl },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          isError && !categories ? (
-            <EmptyContent
-              icon="⚠️"
-              title={t('categories.error.loadFailed')}
-              actionLabel={t('common.retry')}
-              onAction={refetch}
-            />
-          ) : (
-            !categories || categories.length === 0 ? (
+      <PullToRefreshWrapper
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        backgroundColor={colors.bgSecondary}
+        spinnerColor={colors.primary}
+      >
+        <FlatList
+          data={categories || []}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + spacing.xl },
+          ]}
+          ListEmptyComponent={
+            isError && !categories ? (
+              <EmptyContent
+                icon="⚠️"
+                title={t('categories.error.loadFailed')}
+                actionLabel={t('common.retry')}
+                onAction={refetch}
+              />
+            ) : !categories || categories.length === 0 ? (
               <EmptyLogoContent
                 title={t('categories.empty')}
                 description={t('categories.emptyState.description')}
               />
             ) : null
-          )
-        }
-        showsVerticalScrollIndicator={false}
-      />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      </PullToRefreshWrapper>
     </View>
   );
 };

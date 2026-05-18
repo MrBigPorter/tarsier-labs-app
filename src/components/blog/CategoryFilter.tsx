@@ -20,13 +20,21 @@
  * - Empty: renders nothing
  * - Normal: renders chips
  */
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  useWindowDimensions,
+  LayoutChangeEvent,
+} from 'react-native';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import { useGetCategoriesQuery } from '@/api/endpoints/categories';
-import { useCurrentLanguage } from '@/lib/i18n';
+import { useAppLanguage } from '@/lib/i18n';
 import type { FrontendCategory } from '@/types/frontend-blog';
 
 interface CategoryFilterProps {
@@ -68,8 +76,53 @@ export function CategoryFilter({
   onSelect,
 }: CategoryFilterProps) {
   const { colors } = useTheme();
-  const lang = useCurrentLanguage();
-  const { data: categories, isLoading } = useGetCategoriesQuery(lang);
+  const lang = useAppLanguage();
+  const prevLangRef = React.useRef(lang);
+  const { data: categories, isLoading, refetch } = useGetCategoriesQuery(lang);
+  const scrollRef = useRef<ScrollView>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const chipLayouts = useRef<Map<string, { x: number; width: number }>>(
+    new Map(),
+  );
+
+  // Store chip layout position for scroll-to-center
+  const handleChipLayout = useCallback(
+    (id: string, event: LayoutChangeEvent) => {
+      const { x, width } = event.nativeEvent.layout;
+      chipLayouts.current.set(id, { x, width });
+    },
+    [],
+  );
+
+  // Scroll the selected chip to the horizontal center of the screen
+  const scrollToCenter = useCallback(
+    (id: string) => {
+      const layout = chipLayouts.current.get(id);
+      if (!layout) return;
+      const targetX = layout.x - screenWidth / 2 + layout.width / 2;
+      scrollRef.current?.scrollTo({ x: Math.max(0, targetX), animated: true });
+    },
+    [screenWidth],
+  );
+
+  // Wrap onSelect to also scroll the chip into center view
+  const handleChipPress = useCallback(
+    (categoryId: string | null) => {
+      onSelect(categoryId);
+      requestAnimationFrame(() => {
+        scrollToCenter(categoryId ?? 'all');
+      });
+    },
+    [onSelect, scrollToCenter],
+  );
+
+  // Re-fetch when language changes
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      refetch();
+    }
+  }, [lang, refetch]);
 
   // Loading state: skeleton
   if (isLoading) {
@@ -82,6 +135,7 @@ export function CategoryFilter({
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -104,7 +158,8 @@ export function CategoryFilter({
                   : colors.borderSecondary,
             },
           ]}
-          onPress={() => onSelect(null)}
+          onPress={() => handleChipPress(null)}
+          onLayout={(e: LayoutChangeEvent) => handleChipLayout('all', e)}
           activeOpacity={0.7}
           accessibilityRole="tab"
           accessibilityState={{ selected: selectedCategoryId === null }}
@@ -142,7 +197,10 @@ export function CategoryFilter({
                     : colors.borderSecondary,
                 },
               ]}
-              onPress={() => onSelect(category.id)}
+              onPress={() => handleChipPress(category.id)}
+              onLayout={(e: LayoutChangeEvent) =>
+                handleChipLayout(category.id, e)
+              }
               activeOpacity={0.7}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
@@ -155,9 +213,7 @@ export function CategoryFilter({
                 style={[
                   styles.chipText,
                   {
-                    color: isSelected
-                      ? '#ffffff'
-                      : colors.textSecondary,
+                    color: isSelected ? '#ffffff' : colors.textSecondary,
                   },
                 ]}
               >
@@ -174,7 +230,8 @@ export function CategoryFilter({
                     },
                   ]}
                 >
-                  {' '}{category.articleCount}
+                  {' '}
+                  {category.articleCount}
                 </Text>
               )}
             </TouchableOpacity>
@@ -197,11 +254,11 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,     // matches Web's px-5
-    paddingVertical: 10,       // matches Web's py-2.5
+    paddingHorizontal: 20, // matches Web's px-5
+    paddingVertical: 10, // matches Web's py-2.5
     borderRadius: borderRadius.md, // 8px matches Web's rounded-lg
     borderWidth: 1,
-    marginRight: 8,            // matches Web's gap-2
+    marginRight: 8, // matches Web's gap-2
   },
   chipText: {
     fontFamily: typography.base.fontFamily,
@@ -214,11 +271,11 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontFamily: typography.base.fontFamily,
-    fontSize: 12,              // matches Web's text-xs
+    fontSize: 12, // matches Web's text-xs
     fontWeight: '500',
   },
   skeletonChip: {
-    height: 38,                // matches chip height (10px padding top/bottom + 18px text)
+    height: 38, // matches chip height (10px padding top/bottom + 18px text)
     width: 80,
     borderRadius: borderRadius.md,
     marginRight: 8,

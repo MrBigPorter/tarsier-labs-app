@@ -21,7 +21,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import {
@@ -66,7 +66,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   maxInlineItems = 5,
 }) => {
   const { t, i18n } = useTranslation();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const dispatch = useAppDispatch();
 
   const activeLocale: Locale =
@@ -155,12 +155,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   /** bottomSheet variant — full list with check marks */
   return (
     <View style={styles.bottomSheetContainer}>
-      <Text
-        style={[
-          styles.bottomSheetTitle,
-          { color: colors.text },
-        ]}
-      >
+      <Text style={[styles.bottomSheetTitle, { color: colors.text }]}>
         {t('settings.language', 'Choose Language')}
       </Text>
       {enabledLocales.map(locale => {

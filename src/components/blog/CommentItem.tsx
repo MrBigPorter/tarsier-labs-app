@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
 import { useTranslation } from 'react-i18next';
@@ -49,12 +44,11 @@ export function CommentItem({
   articleId,
   onNavigateToAuth,
 }: CommentItemProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
   const [showReplies, setShowReplies] = useState(true);
   const hasReplies = comment.children && comment.children.length > 0;
   const isDeepNested = depth >= maxDepth;
-
 
   const handleReplyPress = () => {
     if (!isAuthenticated) {
@@ -69,7 +63,7 @@ export function CommentItem({
   const initials = comment.author
     ? comment.author
         .split(' ')
-        .map((n) => n[0])
+        .map(n => n[0])
         .join('')
         .toUpperCase()
         .slice(0, 2)
@@ -114,10 +108,7 @@ export function CommentItem({
         <View style={styles.header}>
           {/* Avatar */}
           <View
-            style={[
-              styles.avatar,
-              { backgroundColor: colors.primary + '20' },
-            ]}
+            style={[styles.avatar, { backgroundColor: colors.primary + '20' }]}
           >
             <Text style={[styles.avatarText, { color: colors.primary }]}>
               {initials}
@@ -133,7 +124,6 @@ export function CommentItem({
               {timeAgo}
             </Text>
           </View>
-
         </View>
 
         {/* Comment content */}
@@ -165,13 +155,12 @@ export function CommentItem({
             </TouchableOpacity>
           )}
         </View>
-
       </View>
 
       {/* Recursive replies */}
       {hasReplies && showReplies && (
         <View>
-          {comment.children!.map((reply) => (
+          {comment.children!.map(reply => (
             <CommentItem
               key={reply.id}
               comment={reply}

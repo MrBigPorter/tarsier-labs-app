@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 
 // ===================== Base Skeleton =====================
@@ -25,7 +25,7 @@ export function Skeleton({
   animated = true,
   style,
 }: SkeletonProps) {
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -111,7 +111,7 @@ const textSkeletonStyles = StyleSheet.create({
  * Article card skeleton (for list views)
  */
 export function ArticleCardSkeleton() {
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - spacing.md * 2;
 
@@ -216,10 +216,12 @@ export function ArticleListSkeleton({ count = 5 }: { count?: number }) {
  * Article detail page skeleton
  */
 export function ArticleDetailSkeleton() {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
-    <View style={[detailStyles.container, { backgroundColor: colors.background }]}>
+    <View
+      style={[detailStyles.container, { backgroundColor: colors.background }]}
+    >
       {/* Back button skeleton */}
       <Skeleton width={80} height={16} style={detailStyles.backButton} />
 
@@ -306,7 +308,7 @@ const detailStyles = StyleSheet.create({
  * Category card skeleton
  */
 export function CategoryCardSkeleton() {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   return (
     <View

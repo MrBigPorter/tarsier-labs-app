@@ -31,12 +31,8 @@
  */
 
 import React, { useRef, useEffect } from 'react';
-import {
-  Animated,
-  StyleSheet,
-  Dimensions,
-} from 'react-native';
-import { useTheme } from '@/lib/theme/ThemeContext';
+import { Animated, StyleSheet, Dimensions } from 'react-native';
+import { useModeColors } from '@/lib/theme/ThemeContext';
 import { borderRadius } from '@/lib/theme/spacing';
 
 interface ReadingProgressProps {
@@ -61,7 +57,7 @@ const ReadingProgress: React.FC<ReadingProgressProps> = ({
   color,
   trackColor,
 }) => {
-  const { colors } = useTheme();
+  const colors = useModeColors();
 
   // Internal animated value for controlled progress mode
   const internalAnim = useRef(new Animated.Value(0)).current;

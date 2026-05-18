@@ -21,7 +21,7 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing, typography } from '@/lib/theme';
 import Header from '@/components/layout/Header';
 import SvgIcon from '@/components/core/SvgIcon';
 import { AppImage } from '@/components/core/AppImage';
@@ -829,7 +829,7 @@ function FooterSection({
 
 const AboutScreen: React.FC<AboutTabScreenProps<'About'>> = () => {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const colors = useModeColors();
   const { t } = useTranslation();
 
   return (

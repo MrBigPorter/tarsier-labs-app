@@ -29,7 +29,9 @@
     "pageInfo": "Seite {page} von {totalPages}",
     "goBack": "Zurück",
     "pullDownToRetry": "Zum Wiederholen nach unten ziehen",
-    "checkBackLater": "Schauen Sie später wieder vorbei für neue Inhalte"
+    "checkBackLater": "Schauen Sie später wieder vorbei für neue Inhalte",
+    "warning": "Warnung",
+    "success": "Erfolg"
   },
   "categories": {
     "title": "Artikelkategorien",
@@ -331,10 +333,15 @@
     "pushNotifications": "Push-Benachrichtigungen",
     "data": "Daten",
     "clearCache": {
-      "name": "Cache leeren",
-      "confirm": "Cache leeren",
-      "message": "Dies löscht alle zwischengespeicherten Daten einschließlich Lesezeichen. Sie können sie jederzeit erneut herunterladen.",
-      "action": "Leeren"
+      "name": "Alle Daten löschen",
+      "confirm": "Alle Daten löschen",
+      "message": "Dies löscht den lokalen Cache UND entfernt dauerhaft Ihre Kommentare, Likes und Lesezeichen vom Server. Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "action": "Alle Daten löschen",
+      "loading": "Löschen...",
+      "success": "Alle Daten wurden erfolgreich gelöscht",
+      "successDetail": "Kommentare anonymisiert: {{anonymizedComments}} | Lesezeichen gelöscht: {{deletedBookmarks}}",
+      "partialSuccess": "Lokaler Cache gelöscht, aber Serverdaten konnten nicht gelöscht werden: {{error}}",
+      "error": "Fehler beim Löschen der Daten. Bitte versuchen Sie es erneut."
     },
     "account": "Konto",
     "signOut": {
