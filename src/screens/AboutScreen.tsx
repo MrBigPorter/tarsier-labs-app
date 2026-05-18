@@ -36,7 +36,14 @@ const teamMembers = [
     avatar:
       'https://img.joyminis.com/Gemini_Generated_Image_l8u1b7l8u1b7l8u1.png',
     github: 'https://github.com/MrBigPorter',
-    skills: ['TypeScript', 'React', 'Node.js', 'Flutter', 'DevOps'],
+    skills: [
+      'TypeScript',
+      'React',
+      'React Native',
+      'Node.js',
+      'Flutter',
+      'DevOps',
+    ],
   },
 ];
 
