@@ -317,10 +317,109 @@ After completing all the steps above, verify everything is ready:
 - [ ] `test` environment created
 - [ ] `production` environment created
 
+### Firebase App Distribution
+
+- [ ] Firebase service account JSON downloaded from Firebase Console
+- [ ] `firebase-service-account.json` added to `.gitignore`
+- [ ] `FIREBASE_SERVICE_ACCOUNT` GitHub Secret set (base64 of service account JSON)
+- [ ] `KEYSTORE_BASE64` GitHub Secret set (base64 of `android/app/release-upload-key.keystore`)
+- [ ] `.firebase-testers.txt` filled with tester email addresses
+- [ ] `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` GitHub Secrets set
+
 ### CI/CD
 
 - [ ] `deploy.yml` updated: CodePush job uses `code-push-standalone` with `CODEPUSH_SERVER_URL` + `CODEPUSH_ACCESS_KEY`
+- [ ] `deploy.yml` updated: Firebase App Distribution upload step added
 
 ---
 
 > **Pro tip:** Push to the `test` branch to trigger a trial run of the pipeline. Check the Actions tab in GitHub to see if all jobs succeed.
+
+---
+
+## 7. Firebase App Distribution Setup
+
+> This section covers setting up automatic uploads to Firebase App Distribution after each CI build.
+
+### 7.1 Prerequisites
+
+- A Firebase project (you already have one: `adroit-outlet-444914-m0`)
+- `google-services.json` in `android/app/` (already added)
+- Firebase service account JSON key (downloaded from Firebase Console)
+
+### 7.2 Add `KEYSTORE_BASE64` GitHub Secret
+
+The CI runner needs the keystore file to sign Android builds. Since `*.keystore` is gitignored, encode it as base64:
+
+```sh
+# From project root
+base64 -i android/app/release-upload-key.keystore | pbcopy
+```
+
+Then add a GitHub Secret:
+
+1. **GitHub → Settings → Secrets and variables → Actions → Secrets**
+2. Click **+ New repository secret**
+3. **Name:** `KEYSTORE_BASE64`
+4. **Value:** (paste from clipboard)
+5. Click **Add secret**
+
+### 7.3 Add `FIREBASE_SERVICE_ACCOUNT` GitHub Secret
+
+The Firebase service account JSON key is also gitignored (`.gitignore` now includes `firebase-service-account.json`). Encode it as base64:
+
+```sh
+# From project root
+base64 -i firebase-service-account.json | pbcopy
+```
+
+Then add a GitHub Secret:
+
+1. **Name:** `FIREBASE_SERVICE_ACCOUNT`
+2. **Value:** (paste from clipboard)
+3. Click **Add secret**
+
+### 7.4 Add Android Signing Secrets
+
+If not already set, add these GitHub Secrets for Gradle signing:
+
+| Secret              | Value                                 |
+| ------------------- | ------------------------------------- |
+| `KEYSTORE_FILE`     | `app/release-upload-key.keystore`     |
+| `KEYSTORE_PASSWORD` | Your keystore password (`haoran0718`) |
+| `KEY_ALIAS`         | `upload-key`                          |
+| `KEY_PASSWORD`      | Your key password (`haoran0718`)      |
+
+### 7.5 Configure Testers
+
+Edit [`.firebase-testers.txt`](../.firebase-testers.txt) in the project root and add tester email addresses, one per line:
+
+```
+tester1@example.com
+tester2@example.com
+```
+
+### 7.6 How It Works
+
+When the CI pipeline runs (push to `main`/`test` branch, or `workflow_dispatch`):
+
+1. **Decode keystore** — base64-decodes `KEYSTORE_BASE64` to `android/app/release-upload-key.keystore`
+2. **Decode Firebase service account** — base64-decodes `FIREBASE_SERVICE_ACCOUNT` to `firebase-service-account.json`
+3. **Build Android** — builds the APK (test) or AAB (production) with Gradle signing
+4. **Upload APK/AAB** — saves artifact to GitHub Actions
+5. **Upload to Firebase App Distribution** — uses `firebase-tools` CLI to upload to Firebase, notifying testers via email
+
+### 7.7 Triggering a Build
+
+**Automatic:**
+
+- Push to `test` branch → builds staging APK → uploads to Firebase App Distribution
+- Push to `main` branch → builds production AAB → uploads to Firebase App Distribution
+- Push version tag `v*` → builds production AAB → uploads to Firebase App Distribution
+
+**Manual:**
+
+```sh
+# Go to GitHub → Actions → "Deploy (Test / Production)" → "Run workflow"
+# Select "test" or "production" environment
+```

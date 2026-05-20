@@ -33,6 +33,7 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+firebase-service-account.json
 .kotlin/
 
 # node.js

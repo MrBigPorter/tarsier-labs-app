@@ -1,0 +1,3 @@
+# Firebase App Distribution Testers
+# Add tester email addresses below, one per line
+# Example: tester@example.com

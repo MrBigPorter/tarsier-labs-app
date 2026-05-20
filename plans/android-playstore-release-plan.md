@@ -300,3 +300,182 @@ make build-android
 3. **Closed Testing** — new developer accounts require 14 days of testing before production
 4. **API review** — if your API returns user-generated content, additional review may be required
 5. **Android 16 (SDK 36)** — ensure all dependency libraries are compatible with targetSdk 36
+
+---
+
+## 附录：CI/CD Firebase App Distribution 自动发布
+
+> 已配置 GitHub Actions 自动构建并上传到 Firebase App Distribution
+
+### ✅ 已完成（代码层面）
+
+| 文件                                                                                          | 改动                                                                 |
+| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)                             | 添加 keystore 解码、Firebase 服务账号解码、App Distribution 上传步骤 |
+| [`.firebase-testers.txt`](../.firebase-testers.txt)                                           | 测试者邮箱列表文件                                                   |
+| [`.gitignore`](../.gitignore)                                                                 | 添加 `firebase-service-account.json`                                 |
+| [`docs/ci-cd-setup-guide.md`](../docs/ci-cd-setup-guide.md#7-firebase-app-distribution-setup) | 新增 Firebase 配置文档                                               |
+
+---
+
+### 📋 手动操作步骤
+
+你需要完成以下 **4 大步**，CICD 才能跑起来。
+
+---
+
+### 第 1 步：下载 Firebase Admin SDK 私钥（JSON 文件）
+
+> 这是 Firebase 的「服务账号密钥」，CI 用它来上传 APK。
+
+**1.1 打开 Firebase 控制台**
+
+在浏览器输入这个地址，直接回车打开：
+
+```
+https://console.firebase.google.com/project/adroit-outlet-444914-m0/settings/serviceaccounts
+```
+
+**1.2 点击「生成新的私钥」**
+
+页面中间有一个蓝色按钮 **「生成新的私钥」**。点击它。
+
+**1.3 确认下载**
+
+弹窗会提示「此私钥无法再次检索」—— 点击确定。浏览器会自动下载一个 `.json` 文件。
+
+**1.4 把 JSON 复制到项目根目录**
+
+打开终端，运行以下命令：
+
+```bash
+# 1. 查看 Downloads 里有没有 firebase 相关的 JSON
+ls ~/Downloads/*.json
+
+# 2. 把它复制到项目根目录（文件名改为 firebase-service-account.json）
+cp ~/Downloads/firebase-service-account.json /Users/porter/Developer/frontend-blog-mobile/firebase-service-account.json
+
+# 3. 检查是否复制成功（应该显示文件信息）
+ls -la /Users/porter/Developer/frontend-blog-mobile/firebase-service-account.json
+```
+
+> **注意**：这个文件已被 `.gitignore` 忽略，不会提交到 git。
+
+**1.5 把 JSON 文件编码为 base64（用于 GitHub Secrets）**
+
+```bash
+base64 -i /Users/porter/Developer/frontend-blog-mobile/firebase-service-account.json | pbcopy
+```
+
+> `pbcopy` 会把内容复制到你的系统剪贴板。下一步粘贴到 GitHub 用。
+
+---
+
+### 第 2 步：配置 GitHub Secrets
+
+> 打开浏览器，进入你的 GitHub 仓库页面，然后：
+> 点击 **Settings** → 左侧 **Secrets and variables** → **Actions**
+> 点击绿色按钮 **「New repository secret」**
+
+你需要添加以下 **6 个 Secret**：
+
+#### Secret 1：FIREBASE_SERVICE_ACCOUNT
+
+| 字段  | 值                                                                |
+| ----- | ----------------------------------------------------------------- |
+| Name  | `FIREBASE_SERVICE_ACCOUNT`                                        |
+| Value | 直接按 **⌘V（Mac）** 粘贴（上一步 base64 的内容已经复制到剪贴板） |
+
+#### Secret 2：KEYSTORE_BASE64
+
+先运行这个命令，把 keystore 编码到剪贴板：
+
+```bash
+base64 -i /Users/porter/Developer/frontend-blog-mobile/android/app/release-upload-key.keystore | pbcopy
+```
+
+然后在 GitHub 新建 Secret：
+
+| 字段  | 值                |
+| ----- | ----------------- |
+| Name  | `KEYSTORE_BASE64` |
+| Value | 按 **⌘V** 粘贴    |
+
+#### Secret 3：KEYSTORE_FILE
+
+| 字段  | 值                                          |
+| ----- | ------------------------------------------- |
+| Name  | `KEYSTORE_FILE`                             |
+| Value | 手动输入：`app/release-upload-key.keystore` |
+
+> 注意：这是**文本**，不是上传文件。直接照抄上面那行字。
+
+#### Secret 4：KEYSTORE_PASSWORD
+
+| 字段  | 值                     |
+| ----- | ---------------------- |
+| Name  | `KEYSTORE_PASSWORD`    |
+| Value | 手动输入：`haoran0718` |
+
+#### Secret 5：KEY_ALIAS
+
+| 字段  | 值                     |
+| ----- | ---------------------- |
+| Name  | `KEY_ALIAS`            |
+| Value | 手动输入：`upload-key` |
+
+#### Secret 6：KEY_PASSWORD
+
+| 字段  | 值                     |
+| ----- | ---------------------- |
+| Name  | `KEY_PASSWORD`         |
+| Value | 手动输入：`haoran0718` |
+
+**添加完成后，你的 Secrets 列表应该看到这 6 项：**
+
+```
+FIREBASE_SERVICE_ACCOUNT      ********
+KEYSTORE_BASE64               ********
+KEYSTORE_FILE                 ********
+KEYSTORE_PASSWORD             ********
+KEY_ALIAS                     ********
+KEY_PASSWORD                  ********
+```
+
+---
+
+### 第 3 步：填写测试者邮箱
+
+用编辑器打开项目根目录下的 `.firebase-testers.txt` 文件。
+
+每行填一个测试者的邮箱：
+
+```
+zhangsan@example.com
+lisi@example.com
+wangwu@example.com
+```
+
+> 这些邮箱会收到 Firebase 发来的安装链接。
+
+---
+
+### 第 4 步：提交代码，触发 CI
+
+```bash
+# 添加到 git
+git add .
+
+# 提交
+git commit -m "ci: add firebase app distribution"
+
+# 推送到 GitHub
+git push
+```
+
+### CI 构建规则
+
+| 推送到分支 | CI 自动构建    | 上传到 Firebase   |
+| ---------- | -------------- | ----------------- |
+| `test`     | staging APK    | ✅ 测试者收到邮件 |
+| `main`     | production AAB | ✅ 测试者收到邮件 |
