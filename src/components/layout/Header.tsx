@@ -26,7 +26,7 @@ import {
   StatusBar,
   Image,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { spacing } from '@/lib/theme/spacing';
@@ -58,7 +58,6 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const route = useRoute();
   const { colors, isDark } = useTheme();
 
   // ─── Navigation helpers ───────────────────────────────────────────────

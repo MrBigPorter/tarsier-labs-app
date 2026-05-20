@@ -27,7 +27,6 @@ import {
   StyleSheet,
   Animated,
   Keyboard,
-  Platform,
 } from 'react-native';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { spacing } from '@/lib/theme/spacing';
@@ -161,9 +160,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           style={[
             styles.backdrop,
             {
-              backgroundColor: isDark
-                ? 'rgba(0,0,0,0.5)'
-                : 'rgba(0,0,0,0.3)',
+              backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)',
               opacity: backdropOpacity,
             },
           ]}
@@ -190,11 +187,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
               },
             ]}
           >
-            <SvgIcon
-              name="search"
-              size={20}
-              color={colors.textSecondary}
-            />
+            <SvgIcon name="search" size={20} color={colors.textSecondary} />
             <TextInput
               ref={inputRef}
               style={[
@@ -228,11 +221,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 accessibilityLabel="Clear search"
                 accessibilityRole="button"
               >
-                <SvgIcon
-                  name="x"
-                  size={16}
-                  color={colors.textSecondary}
-                />
+                <SvgIcon name="x" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </Animated.View>

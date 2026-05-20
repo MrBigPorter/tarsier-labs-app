@@ -86,8 +86,7 @@ const BookmarksScreen: React.FC<BookmarksTabScreenProps<'Bookmarks'>> = ({
     },
     [navigation],
   );
-
-  const prefetchArticle = useArticlePrefetch();
+  useArticlePrefetch();
 
   const handleRefresh = useCallback(() => {
     setCurrentPage(1);

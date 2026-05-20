@@ -38,7 +38,6 @@ const CategoryListScreen: React.FC<
   const {
     data: categories,
     isLoading,
-    isFetching,
     isError,
     refetch,
   } = useGetCategoriesQuery(lang);

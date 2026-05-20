@@ -49,7 +49,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -216,7 +216,7 @@ const MainTabNavigator = React.memo(
 
     return (
       <MainTab.Navigator
-        tabBar={({ state, descriptors, navigation }) => {
+        tabBar={({ state, _descriptors, navigation }) => {
           const tabs: TabItem[] = state.routes.map(route => ({
             key: route.key,
             icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,

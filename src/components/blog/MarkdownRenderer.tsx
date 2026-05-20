@@ -1,11 +1,5 @@
 import React, { Profiler, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  useWindowDimensions,
-  Text,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
@@ -58,7 +52,7 @@ type ContentSegment =
 const MarkdownRenderer = React.memo(function MarkdownRenderer({
   content,
   maxWidth,
-  enableCodeHighlight = false,
+  _enableCodeHighlight = false,
   contentVideo,
 }: MarkdownRendererProps) {
   const colors = useModeColors();

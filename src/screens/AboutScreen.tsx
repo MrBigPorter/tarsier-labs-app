@@ -17,13 +17,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Linking,
-  Platform,
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useModeColors, spacing, typography } from '@/lib/theme';
+import { useModeColors, spacing } from '@/lib/theme';
 import Header from '@/components/layout/Header';
-import SvgIcon from '@/components/core/SvgIcon';
 import { AppImage } from '@/components/core/AppImage';
 import type { AboutTabScreenProps } from '@/navigation/types';
 

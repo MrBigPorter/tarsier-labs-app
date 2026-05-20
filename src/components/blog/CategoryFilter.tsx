@@ -46,7 +46,7 @@ interface CategoryFilterProps {
  * Loading skeleton: renders 6 pulse placeholders
  */
 function CategoryFilterSkeleton() {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   return (
     <View style={styles.container}>
       <ScrollView

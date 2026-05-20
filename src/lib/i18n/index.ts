@@ -1,7 +1,7 @@
 import { Platform, NativeModules } from 'react-native';
 import i18n from 'i18next';
 import { initReactI18next, useTranslation } from 'react-i18next';
-import { Locale, getEnabledLocales, getLocaleToFileMap } from './config';
+import { Locale, getEnabledLocales } from './config';
 import { storage } from '@/lib/storage';
 
 export type { Locale };

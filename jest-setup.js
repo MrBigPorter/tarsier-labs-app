@@ -1,3 +1,4 @@
+/* eslint-env jest */
 /**
  * Jest setup file — mocks native modules that require native linking.
  *

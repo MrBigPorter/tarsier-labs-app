@@ -26,7 +26,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModeColors } from '@/lib/theme/ThemeContext';

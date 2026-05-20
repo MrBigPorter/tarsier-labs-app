@@ -42,7 +42,6 @@ import type { RootStackScreenProps } from '@/navigation/types';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const APP_VERSION = '1.0.0';
 const ICON_CIRCLE_SIZE = 36;
 const PROFILE_AVATAR_SIZE = 56;
 
@@ -476,13 +475,6 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
     setShowLanguageSheet(false);
     changeLanguage(langCode);
   }, []);
-
-  const handleNavigateTo = useCallback(
-    (screen: string) => {
-      (navigation as any).navigate(screen);
-    },
-    [navigation],
-  );
 
   // ─── Main render ────────────────────────────────────────────────────
 

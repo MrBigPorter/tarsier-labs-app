@@ -44,7 +44,6 @@ export function useCommentsInfiniteQuery(
   const [page, setPage] = useState(1);
   const [allItems, setAllItems] = useState<Comment[]>([]);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const isInitialLoadDone = useRef(false);
 
@@ -70,7 +69,11 @@ export function useCommentsInfiniteQuery(
   useEffect(() => {
     if (!data) return;
 
-    const { items: newItems = [], total: newTotal, totalPages: newTotalPages } = data;
+    const {
+      items: newItems = [],
+      total: newTotal,
+      totalPages: newTotalPages,
+    } = data;
 
     setTotal(newTotal);
     setTotalPages(newTotalPages);
@@ -86,8 +89,8 @@ export function useCommentsInfiniteQuery(
       setAllItems(newItems);
     } else {
       // Subsequent pages: append with deduplication
-      setAllItems((prev) => {
-        const existingIds = new Set(prev.map((c) => c.id));
+      setAllItems(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
         const uniqueNewItems = newItems.filter(
           (item: Comment) => !existingIds.has(item.id),
         );
@@ -123,12 +126,12 @@ export function useCommentsInfiniteQuery(
    * updateQueryData → cache → lazy query data → effect chain.
    */
   const prependComment = useCallback((comment: Comment) => {
-    setAllItems((prev) => {
+    setAllItems(prev => {
       // Guard: don't add if already present (e.g., refetch beat us to it)
-      if (prev.some((c) => c.id === comment.id)) return prev;
+      if (prev.some(c => c.id === comment.id)) return prev;
       return [comment, ...prev];
     });
-    setTotal((prev) => prev + 1);
+    setTotal(prev => prev + 1);
   }, []);
 
   /**
@@ -137,12 +140,12 @@ export function useCommentsInfiniteQuery(
    * the reply to that parent's children array.
    */
   const addReply = useCallback((parentId: string, reply: Comment) => {
-    setAllItems((prev) => {
+    setAllItems(prev => {
       function findAndInsert(comments: Comment[]): Comment[] {
-        return comments.map((comment) => {
+        return comments.map(comment => {
           if (comment.id === parentId) {
             const existing = comment.children || [];
-            if (existing.some((c) => c.id === reply.id)) return comment;
+            if (existing.some(c => c.id === reply.id)) return comment;
             return { ...comment, children: [reply, ...existing] };
           }
           if (comment.children?.length) {

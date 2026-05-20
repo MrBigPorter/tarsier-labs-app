@@ -9,7 +9,6 @@
  */
 
 import {
-  primitiveColors,
   primitiveColors_base,
   primitiveColors_grayLightMode,
   primitiveColors_brand,

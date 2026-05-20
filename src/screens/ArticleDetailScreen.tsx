@@ -83,7 +83,8 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
   const colors = useModeColors();
   const { width: screenWidth } = useWindowDimensions();
   const { t } = useTranslation();
-  const lang = route.params?.locale ?? useAppLanguage();
+  const appLanguage = useAppLanguage();
+  const lang = route.params?.locale ?? appLanguage;
 
   // ─── Redux ──────────────────────────────────────────────────────────
   const dispatch = useAppDispatch();
@@ -100,11 +101,10 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     refetch,
   } = useGetArticleBySlugQuery({ slug, lang });
 
-  const { data: relatedArticles, isLoading: relatedLoading } =
-    useGetRelatedArticlesQuery(
-      { articleId: article?.id || '', limit: 5, lang },
-      { skip: !article?.id },
-    );
+  const { data: relatedArticles } = useGetRelatedArticlesQuery(
+    { articleId: article?.id || '', limit: 5, lang },
+    { skip: !article?.id },
+  );
 
   // ─── Comments (infinite scroll + SSE) ────────────────────────────────
   // Note: comments API expects a slug, not a database ID

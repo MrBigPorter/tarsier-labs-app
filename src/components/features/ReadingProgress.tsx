@@ -33,7 +33,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Animated, StyleSheet, Dimensions } from 'react-native';
 import { useModeColors } from '@/lib/theme/ThemeContext';
-import { borderRadius } from '@/lib/theme/spacing';
 
 interface ReadingProgressProps {
   /** Native animated value from scrollY (alternative to progress) */
