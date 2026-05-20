@@ -44,6 +44,7 @@ export function useCommentsInfiniteQuery(
   const [page, setPage] = useState(1);
   const [allItems, setAllItems] = useState<Comment[]>([]);
   const [total, setTotal] = useState(0);
+  const [_totalPages, setTotalPages] = useState<number | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
   const isInitialLoadDone = useRef(false);
 

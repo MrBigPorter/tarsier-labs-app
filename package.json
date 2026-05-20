@@ -101,7 +101,8 @@
   },
   "lint-staged": {
     "*.{js,ts,tsx}": [
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
     ],
     "*.{json,md}": [
       "prettier --write"

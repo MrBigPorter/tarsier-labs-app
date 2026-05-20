@@ -52,7 +52,7 @@ type ContentSegment =
 const MarkdownRenderer = React.memo(function MarkdownRenderer({
   content,
   maxWidth,
-  _enableCodeHighlight = false,
+  enableCodeHighlight: _enableCodeHighlight = false,
   contentVideo,
 }: MarkdownRendererProps) {
   const colors = useModeColors();

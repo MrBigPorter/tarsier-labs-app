@@ -216,12 +216,16 @@ const MainTabNavigator = React.memo(
 
     const renderTabBar = React.useCallback(
       ({ state, navigation }: { state: any; navigation: any }) => {
-        const tabs: TabItem[] = state.routes.map(route => ({
-          key: route.key,
-          icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,
-          activeIcon: tabIcons[route.name]?.activeIcon as IconName | undefined,
-          label: t(TAB_LABEL_KEYS[route.name] ?? route.name),
-        }));
+        const tabs: TabItem[] = state.routes.map(
+          (route: { key: string; name: string }) => ({
+            key: route.key,
+            icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,
+            activeIcon: tabIcons[route.name]?.activeIcon as
+              | IconName
+              | undefined,
+            label: t(TAB_LABEL_KEYS[route.name] ?? route.name),
+          }),
+        );
         return (
           <Animated.View
             style={[
