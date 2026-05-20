@@ -67,7 +67,7 @@ jobs:
     name: Build Android (${{ needs.resolve-flavor.outputs.flavor_label }})
     needs: [resolve-flavor]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: ${{ needs.resolve-flavor.outputs.flavor }}
 
     steps:
@@ -118,12 +118,14 @@ jobs:
           # available via the runner's filesystem (e.g. GitHub Actions cache).
           if [ "${{ needs.resolve-flavor.outputs.flavor }}" = "test" ]; then
             cd android && ./gradlew assembleStagingRelease --no-daemon \
+              -PreactNativeArchitectures=arm64-v8a \
               -PKEYSTORE_FILE=${{ secrets.KEYSTORE_FILE }} \
               -PKEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
               -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
               -PKEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
           else
             cd android && ./gradlew bundleProductionRelease --no-daemon \
+              -PreactNativeArchitectures=arm64-v8a \
               -PKEYSTORE_FILE=${{ secrets.KEYSTORE_FILE }} \
               -PKEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
               -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
