@@ -29,7 +29,9 @@ export function Skeleton({
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    if (!animated) return;
+    if (!animated) {
+      return;
+    }
 
     const animation = Animated.loop(
       Animated.sequence([
@@ -138,6 +140,7 @@ export function ArticleCardSkeleton() {
           width={60}
           height={22}
           borderRadiusVal={borderRadius.sm}
+          // eslint-disable-next-line react-native/no-inline-styles
           style={{ position: 'absolute', bottom: spacing.sm, left: spacing.sm }}
         />
       </View>

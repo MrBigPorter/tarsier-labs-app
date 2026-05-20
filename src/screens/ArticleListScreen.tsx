@@ -147,7 +147,9 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   );
 
   const renderFooter = () => {
-    if (!isFetching || !hasMore) return null;
+    if (!isFetching || !hasMore) {
+      return null;
+    }
 
     return (
       <View style={styles.footerLoader}>
@@ -160,7 +162,9 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   };
 
   const renderEmpty = () => {
-    if (isLoading) return null;
+    if (isLoading) {
+      return null;
+    }
 
     if (isError) {
       return (

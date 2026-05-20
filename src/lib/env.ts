@@ -89,8 +89,12 @@ function detectFlavor(): 'staging' | 'production' | 'development' {
     const BuildConfig = require('react-native').NativeModules.RNBuildConfig;
     if (BuildConfig?.FLAVOR) {
       const flavor = String(BuildConfig.FLAVOR).toLowerCase();
-      if (flavor === 'staging') return 'staging';
-      if (flavor === 'production') return 'production';
+      if (flavor === 'staging') {
+        return 'staging';
+      }
+      if (flavor === 'production') {
+        return 'production';
+      }
     }
   } catch {
     // NativeModules not available — likely iOS

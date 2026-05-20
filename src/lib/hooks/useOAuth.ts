@@ -18,7 +18,11 @@ import { Platform, NativeModules, Linking } from 'react-native';
 import { useAppDispatch } from '@/store';
 import { setCredentials } from '@/store/slices/authSlice';
 import { env } from '@/lib/env';
-import { oauthProviders, CALLBACK_URL, OAuthProvider } from '@/lib/oauth/config';
+import {
+  oauthProviders,
+  CALLBACK_URL,
+  OAuthProvider,
+} from '@/lib/oauth/config';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -38,7 +42,9 @@ function parseQueryParams(url: string): Record<string, string> {
   const cleanUrl = fragmentStart !== -1 ? url.slice(0, fragmentStart) : url;
 
   const queryStart = cleanUrl.indexOf('?');
-  if (queryStart === -1) return {};
+  if (queryStart === -1) {
+    return {};
+  }
   const params: Record<string, string> = {};
   new URLSearchParams(cleanUrl.slice(queryStart)).forEach((value, key) => {
     params[key] = value;

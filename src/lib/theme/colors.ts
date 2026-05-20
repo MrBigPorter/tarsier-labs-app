@@ -52,9 +52,9 @@ export const colors = {
     error: primitiveColors_error['500'],
     info: primitiveColors_brand['500'],
   },
-  white: primitiveColors_base['white'],
-  black: primitiveColors_base['black'],
-  transparent: primitiveColors_base['transparent'],
+  white: primitiveColors_base.white,
+  black: primitiveColors_base.black,
+  transparent: primitiveColors_base.transparent,
 } as const;
 
 export type ColorKey = keyof typeof colors;

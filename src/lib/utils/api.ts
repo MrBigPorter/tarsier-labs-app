@@ -35,7 +35,9 @@ export interface ApiSuccessResponse<T> {
  * toast.show(message);
  */
 export function getApiErrorMessage(error: unknown): string {
-  if (typeof error === 'string') return error;
+  if (typeof error === 'string') {
+    return error;
+  }
 
   if (error instanceof Error) {
     return error.message;
@@ -47,15 +49,23 @@ export function getApiErrorMessage(error: unknown): string {
     // RTK Query error shape
     if (typeof err.data === 'object' && err.data !== null) {
       const data = err.data as Record<string, unknown>;
-      if (typeof data.message === 'string') return data.message;
+      if (typeof data.message === 'string') {
+        return data.message;
+      }
     }
 
     // Standard API error shape
-    if (typeof err.message === 'string') return err.message;
-    if (typeof err.error === 'string') return err.error;
+    if (typeof err.message === 'string') {
+      return err.message;
+    }
+    if (typeof err.error === 'string') {
+      return err.error;
+    }
 
     // Axios/fetch error shape
-    if (typeof err.statusText === 'string') return err.statusText;
+    if (typeof err.statusText === 'string') {
+      return err.statusText;
+    }
   }
 
   logger.warn('[API] Unknown error format:', error);
@@ -100,18 +110,24 @@ export function safeJsonParse<T>(value: string, fallback: T): T {
  * @example
  * const { items, totalPages } = extractPagination(response);
  */
-export function extractPagination<T>(
-  response: unknown,
-): { items: T[]; totalPages: number; total: number } {
+export function extractPagination<T>(response: unknown): {
+  items: T[];
+  totalPages: number;
+  total: number;
+} {
   const defaultPagination = { items: [] as T[], totalPages: 0, total: 0 };
 
-  if (!response || typeof response !== 'object') return defaultPagination;
+  if (!response || typeof response !== 'object') {
+    return defaultPagination;
+  }
 
   const data = (response as Record<string, unknown>).data as
     | Record<string, unknown>
     | undefined;
 
-  if (!data) return defaultPagination;
+  if (!data) {
+    return defaultPagination;
+  }
 
   return {
     items: (data.items as T[]) || [],

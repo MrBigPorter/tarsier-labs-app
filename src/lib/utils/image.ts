@@ -159,7 +159,9 @@ export function getArticleImageUrl({
   coverImage,
   size = 'medium',
 }: ArticleImageOptions): string | null {
-  if (!images && !coverImage) return null;
+  if (!images && !coverImage) {
+    return null;
+  }
 
   if (images) {
     // Sizes in priority order: requested → original → fallback to coverImage
@@ -229,7 +231,9 @@ const VIDEO_EXTENSIONS_LIST = [
  * ```
  */
 export function isVideoUrl(url: string | null | undefined): boolean {
-  if (!url) return false;
+  if (!url) {
+    return false;
+  }
 
   try {
     const pathname = new URL(url).pathname.toLowerCase();

@@ -9,16 +9,36 @@
  * Month names for archive grouping and display
  */
 export const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 /**
  * Short month names
  */
 const SHORT_MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /**
@@ -45,7 +65,9 @@ export function formatDate(
   options?: Intl.DateTimeFormatOptions,
 ): string {
   const date = safeParseDate(dateString);
-  if (!date) return dateString;
+  if (!date) {
+    return dateString;
+  }
 
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -64,7 +86,9 @@ export function formatDate(
  */
 export function formatShortDate(dateString: string): string {
   const date = safeParseDate(dateString);
-  if (!date) return dateString;
+  if (!date) {
+    return dateString;
+  }
 
   return `${SHORT_MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
@@ -78,7 +102,9 @@ export function formatShortDate(dateString: string): string {
  */
 export function formatRelativeTime(dateString: string): string {
   const date = safeParseDate(dateString);
-  if (!date) return dateString;
+  if (!date) {
+    return dateString;
+  }
 
   const now = Date.now();
   const diffMs = now - date.getTime();
@@ -89,12 +115,24 @@ export function formatRelativeTime(dateString: string): string {
   const diffWeeks = Math.floor(diffDays / 7);
   const diffMonths = Math.floor(diffDays / 30);
 
-  if (diffSeconds < 60) return 'just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffWeeks < 5) return `${diffWeeks}w ago`;
-  if (diffMonths < 12) return `${diffMonths}mo ago`;
+  if (diffSeconds < 60) {
+    return 'just now';
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+  if (diffDays < 7) {
+    return `${diffDays}d ago`;
+  }
+  if (diffWeeks < 5) {
+    return `${diffWeeks}w ago`;
+  }
+  if (diffMonths < 12) {
+    return `${diffMonths}mo ago`;
+  }
   return formatShortDate(dateString);
 }
 
@@ -107,7 +145,9 @@ export function formatRelativeTime(dateString: string): string {
  */
 export function formatISODate(dateString: string): string {
   const date = safeParseDate(dateString);
-  if (!date) return dateString;
+  if (!date) {
+    return dateString;
+  }
 
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -143,9 +183,9 @@ export function getMonthName(dateString: string): string {
  * Extract the date field from an article-like object.
  * Falls back to `updatedAt` if `publishedAt` is not available.
  */
-export function getArticleDate<T extends { publishedAt?: string; updatedAt?: string }>(
-  article: T,
-): string {
+export function getArticleDate<
+  T extends { publishedAt?: string; updatedAt?: string },
+>(article: T): string {
   return article.publishedAt || article.updatedAt || '';
 }
 
@@ -162,7 +202,9 @@ export function getArticleDate<T extends { publishedAt?: string; updatedAt?: str
  * //   ...
  * // ]
  */
-export function groupArticlesByYearMonth<T extends { publishedAt?: string; updatedAt?: string }>(
+export function groupArticlesByYearMonth<
+  T extends { publishedAt?: string; updatedAt?: string },
+>(
   articles: T[],
 ): Array<{
   title: string;
@@ -172,20 +214,28 @@ export function groupArticlesByYearMonth<T extends { publishedAt?: string; updat
     articles: T[];
   }>;
 }> {
-  if (!articles?.length) return [];
+  if (!articles?.length) {
+    return [];
+  }
 
   const grouped: Record<number, Record<number, T[]>> = {};
 
   articles.forEach(article => {
     const dateStr = getArticleDate(article);
     const date = safeParseDate(dateStr);
-    if (!date) return;
+    if (!date) {
+      return;
+    }
 
     const year = date.getFullYear();
     const month = date.getMonth();
 
-    if (!grouped[year]) grouped[year] = {};
-    if (!grouped[year][month]) grouped[year][month] = [];
+    if (!grouped[year]) {
+      grouped[year] = {};
+    }
+    if (!grouped[year][month]) {
+      grouped[year][month] = [];
+    }
     grouped[year][month].push(article);
   });
 
@@ -195,10 +245,10 @@ export function groupArticlesByYearMonth<T extends { publishedAt?: string; updat
       const year = Number(yearStr);
       const monthEntries = Object.entries(months)
         .sort(([a], [b]) => Number(b) - Number(a)) // Descending months
-        .map(([monthStr, articles]) => ({
+        .map(([monthStr, groupedArticles]) => ({
           month: MONTH_NAMES[Number(monthStr)],
           monthIndex: Number(monthStr),
-          articles,
+          articles: groupedArticles,
         }));
 
       return {

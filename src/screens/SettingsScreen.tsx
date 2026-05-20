@@ -328,6 +328,7 @@ const SectionCard: React.FC<{
     <View
       style={[
         styles.section,
+        // eslint-disable-next-line react-native/no-inline-styles
         {
           backgroundColor: colors.bgPrimary,
           borderLeftColor: destructive
@@ -626,6 +627,7 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
               onPress={() => handleLanguageSelect(lang.code)}
               style={[
                 styles.langItem,
+                // eslint-disable-next-line react-native/no-inline-styles
                 {
                   borderBottomColor: colors.borderSecondary,
                   backgroundColor: isSelected
@@ -638,6 +640,7 @@ const SettingsScreen: React.FC<RootStackScreenProps<'Settings'>> = ({
                 <Text
                   style={[
                     styles.langText,
+                    // eslint-disable-next-line react-native/no-inline-styles
                     {
                       color: isSelected
                         ? (colors.utilityBrand600 ?? '#ba6b20')

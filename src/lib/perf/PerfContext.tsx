@@ -107,7 +107,9 @@ function PerfProviderInner({ children }: PerfProviderProps): React.JSX.Element {
 
   // ── FPS loop ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      return;
+    }
 
     const samples: FrameSample[] = [];
 
@@ -209,11 +211,15 @@ function PerfProviderInner({ children }: PerfProviderProps): React.JSX.Element {
 
   useEffect(() => {
     const slowCall = recentApiCalls[0];
-    if (!slowCall || slowCall.duration <= SLOW_API_MS) return;
+    if (!slowCall || slowCall.duration <= SLOW_API_MS) {
+      return;
+    }
 
     // Dedup: only warn once per API call (compare by timestamp).
     // Prevents spamming when recentRenders keeps updating after the same call.
-    if (slowCall.timestamp === lastWarnedCallRef.current) return;
+    if (slowCall.timestamp === lastWarnedCallRef.current) {
+      return;
+    }
     lastWarnedCallRef.current = slowCall.timestamp;
 
     const suspects = recentRenders
@@ -227,7 +233,7 @@ function PerfProviderInner({ children }: PerfProviderProps): React.JSX.Element {
         .join('\n');
 
       console.warn(
-        `[PerfMonitor] 🧩 Render correlation for slow API:\n` +
+        '[PerfMonitor] 🧩 Render correlation for slow API:\n' +
           `${suspectLines}`,
       );
     }

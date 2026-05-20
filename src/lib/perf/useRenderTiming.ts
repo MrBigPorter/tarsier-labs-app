@@ -32,7 +32,9 @@ export function useRenderTiming(
       actualDuration: number,
     ) => {
       // Only track actual (mount/update) not nested-update to avoid noise
-      if (phase === 'nested-update') return;
+      if (phase === 'nested-update') {
+        return;
+      }
       recordRender({
         name,
         duration: Math.round(actualDuration * 100) / 100,

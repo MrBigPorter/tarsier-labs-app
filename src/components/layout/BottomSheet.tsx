@@ -199,10 +199,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       <Animated.View
         style={[
           styles.backdrop,
+          // eslint-disable-next-line react-native/no-inline-styles
           {
-            backgroundColor: isDark
-              ? 'rgba(0,0,0,0.6)'
-              : 'rgba(0,0,0,0.4)',
+            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.4)',
             opacity: backdropOpacity,
           },
         ]}
@@ -220,6 +219,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       <Animated.View
         style={[
           styles.sheet,
+          // eslint-disable-next-line react-native/no-inline-styles
           {
             height: calculatedHeight + insets.bottom,
             backgroundColor: colors.background,
@@ -238,10 +238,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             accessibilityRole="adjustable"
           >
             <View
-              style={[
-                styles.handle,
-                { backgroundColor: colors.textSecondary },
-              ]}
+              style={[styles.handle, { backgroundColor: colors.textSecondary }]}
             />
           </View>
         )}

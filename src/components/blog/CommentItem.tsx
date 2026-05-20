@@ -78,10 +78,18 @@ export function CommentItem({
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMins < 1) {
+      return 'Just now';
+    }
+    if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    }
+    if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    }
+    if (diffDays < 7) {
+      return `${diffDays}d ago`;
+    }
     return new Date(comment.createdAt).toLocaleDateString();
   }, [comment.createdAt]);
 
@@ -93,15 +101,18 @@ export function CommentItem({
       <View
         style={[
           styles.container,
+          // eslint-disable-next-line react-native/no-inline-styles
           {
             backgroundColor: depth > 0 ? 'transparent' : colors.card,
             borderColor: colors.border,
           },
-          depth > 0 && {
-            borderLeftWidth: 2,
-            borderLeftColor: colors.border,
-            paddingLeft: spacing.md,
-          },
+          depth > 0 &&
+            // eslint-disable-next-line react-native/no-inline-styles
+            {
+              borderLeftWidth: 2,
+              borderLeftColor: colors.border,
+              paddingLeft: spacing.md,
+            },
         ]}
       >
         {/* Author row */}
@@ -147,7 +158,7 @@ export function CommentItem({
                 style={[
                   styles.replyButton,
                   { color: colors.primary },
-                  !isCommentLoaded && { opacity: 0.5 },
+                  !isCommentLoaded && styles.replyButtonDisabled,
                 ]}
               >
                 {t('comment.reply')}
@@ -257,6 +268,9 @@ const styles = StyleSheet.create({
   replyButton: {
     fontSize: typography.small.fontSize,
     fontWeight: '600',
+  },
+  replyButtonDisabled: {
+    opacity: 0.5,
   },
   showRepliesButton: {
     paddingVertical: spacing.xs,

@@ -26,6 +26,7 @@ export function TagChip({
     <TouchableOpacity
       style={[
         styles.chip,
+        // eslint-disable-next-line react-native/no-inline-styles
         {
           backgroundColor: active ? colors.primary : colors.surface,
           borderColor: active ? colors.primary : colors.border,
@@ -42,6 +43,7 @@ export function TagChip({
       <Text
         style={[
           styles.label,
+          // eslint-disable-next-line react-native/no-inline-styles
           { color: active ? '#fff' : colors.textSecondary },
           size === 'small' && styles.labelSmall,
         ]}
@@ -54,6 +56,7 @@ export function TagChip({
         <View
           style={[
             styles.countBadge,
+            // eslint-disable-next-line react-native/no-inline-styles
             {
               backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.border,
             },
@@ -62,6 +65,7 @@ export function TagChip({
           <Text
             style={[
               styles.countText,
+              // eslint-disable-next-line react-native/no-inline-styles
               { color: active ? '#fff' : colors.textTertiary },
             ]}
           >

@@ -85,7 +85,9 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
           const newItems = tagData.articles.items.filter(
             a => !existingIds.has(a.id),
           );
-          if (newItems.length === 0) return prev;
+          if (newItems.length === 0) {
+            return prev;
+          }
           return [...prev, ...newItems];
         });
       }
@@ -143,7 +145,9 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
   );
 
   const renderFooter = () => {
-    if (!isFetching || !hasMore) return null;
+    if (!isFetching || !hasMore) {
+      return null;
+    }
     return (
       <View style={styles.footer}>
         <ActivityIndicator size="small" color={colors.primary} />

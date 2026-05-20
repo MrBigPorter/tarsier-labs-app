@@ -1,4 +1,8 @@
-import { blogApi, ApiResponseWrapper, ApiPaginatedResponse } from '@/api/baseApi';
+import {
+  blogApi,
+  ApiResponseWrapper,
+  ApiPaginatedResponse,
+} from '@/api/baseApi';
 import type { Comment } from '@/types/blog';
 import { commentStatusManager } from '@/lib/utils/commentStatus';
 
@@ -19,7 +23,7 @@ interface CreateCommentParams {
 }
 
 export const commentApi = blogApi.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     /**
      * Get comments for an article
      * GET /api/v1/frontend/blog/articles/:articleId/comments
@@ -101,22 +105,23 @@ export const commentApi = blogApi.injectEndpoints({
             { maxPollAttempts: 3, pollInterval: 60000 },
           );
 
-          commentStatusManager.startStatusPolling(
-            tempId,
-            async () => {
-              try {
-                const result = await dispatch(
-                  commentApi.endpoints.getCommentStatus.initiate(realComment.id),
-                );
-                const status = result.data?.status;
-                if (status === 'APPROVED') return 'approved';
-                if (status === 'REJECTED') return 'rejected';
-                return 'pending';
-              } catch {
-                return 'unknown';
+          commentStatusManager.startStatusPolling(tempId, async () => {
+            try {
+              const result = await dispatch(
+                commentApi.endpoints.getCommentStatus.initiate(realComment.id),
+              );
+              const status = result.data?.status;
+              if (status === 'APPROVED') {
+                return 'approved';
               }
-            },
-          );
+              if (status === 'REJECTED') {
+                return 'rejected';
+              }
+              return 'pending';
+            } catch {
+              return 'unknown';
+            }
+          });
         } catch {
           // Mutation failed — nothing to clean up. The screen doesn't call
           // prependComment since unwrap() throws, so no UI update occurs.
@@ -132,10 +137,11 @@ export const commentApi = blogApi.injectEndpoints({
       { id: string; status: string; articleId: string },
       string
     >({
-      query: (commentId) => ({
+      query: commentId => ({
         url: `/api/v1/frontend/blog/comments/${commentId}/status`,
       }),
-      transformResponse: (response: ApiResponseWrapper<any>) => unwrapData(response),
+      transformResponse: (response: ApiResponseWrapper<any>) =>
+        unwrapData(response),
     }),
 
     /**
@@ -156,10 +162,11 @@ export const commentApi = blogApi.injectEndpoints({
       },
       string
     >({
-      query: (commentId) => ({
+      query: commentId => ({
         url: `/api/v1/frontend/blog/comments/${commentId}/replies`,
       }),
-      transformResponse: (response: ApiResponseWrapper<any>) => unwrapData(response),
+      transformResponse: (response: ApiResponseWrapper<any>) =>
+        unwrapData(response),
     }),
   }),
   overrideExisting: false,

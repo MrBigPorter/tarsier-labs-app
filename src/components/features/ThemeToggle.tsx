@@ -17,12 +17,7 @@
  */
 
 import React, { useRef, useCallback } from 'react';
-import {
-  TouchableOpacity,
-  Animated,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { TouchableOpacity, Animated, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { spacing } from '@/lib/theme/spacing';
 import { useAppDispatch } from '@/store';
@@ -82,15 +77,20 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ size = 24 }) => {
       onPress={handlePress}
       style={[
         styles.container,
+        // eslint-disable-next-line react-native/no-inline-styles
         {
           width: size + spacing.sm,
           height: size + spacing.sm,
           borderRadius: (size + spacing.sm) / 2,
-          backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+          backgroundColor: isDark
+            ? 'rgba(255,255,255,0.1)'
+            : 'rgba(0,0,0,0.05)',
         },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      accessibilityLabel={
+        isDark ? 'Switch to light mode' : 'Switch to dark mode'
+      }
       accessibilityState={{ checked: isDark }}
     >
       <Animated.View

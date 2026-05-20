@@ -539,6 +539,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
             disabled={isOAuthLoading}
             style={[
               styles.oauthButton,
+              // eslint-disable-next-line react-native/no-inline-styles
               {
                 backgroundColor: isDark ? '#1C1C1E' : '#000000',
                 borderColor: isDark ? '#333333' : '#000000',
@@ -547,7 +548,10 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
             activeOpacity={0.7}
           >
             <SvgIcon name="apple" size={20} color="#FFFFFF" />
-            <Text style={[styles.oauthButtonText, { color: '#FFFFFF' }]}>
+            <Text
+              // eslint-disable-next-line react-native/no-inline-styles
+              style={[styles.oauthButtonText, { color: '#FFFFFF' }]}
+            >
               Apple
             </Text>
           </TouchableOpacity>

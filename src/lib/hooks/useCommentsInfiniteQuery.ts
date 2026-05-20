@@ -52,7 +52,9 @@ export function useCommentsInfiniteQuery(
 
   // Initial fetch when articleId is available
   useEffect(() => {
-    if (!enabled || !articleId) return;
+    if (!enabled || !articleId) {
+      return;
+    }
 
     // Reset state when article changes
     setPage(1);
@@ -67,7 +69,9 @@ export function useCommentsInfiniteQuery(
 
   // Process new data when it arrives
   useEffect(() => {
-    if (!data) return;
+    if (!data) {
+      return;
+    }
 
     const {
       items: newItems = [],
@@ -100,7 +104,9 @@ export function useCommentsInfiniteQuery(
   }, [data, page, pageSize]);
 
   const loadMore = useCallback(() => {
-    if (!articleId || isFetching || !hasMore) return;
+    if (!articleId || isFetching || !hasMore) {
+      return;
+    }
 
     const nextPage = page + 1;
     setPage(nextPage);
@@ -108,7 +114,9 @@ export function useCommentsInfiniteQuery(
   }, [articleId, isFetching, hasMore, page, pageSize, fetchComments]);
 
   const reload = useCallback(() => {
-    if (!articleId) return;
+    if (!articleId) {
+      return;
+    }
 
     setPage(1);
     setAllItems([]);
@@ -128,7 +136,9 @@ export function useCommentsInfiniteQuery(
   const prependComment = useCallback((comment: Comment) => {
     setAllItems(prev => {
       // Guard: don't add if already present (e.g., refetch beat us to it)
-      if (prev.some(c => c.id === comment.id)) return prev;
+      if (prev.some(c => c.id === comment.id)) {
+        return prev;
+      }
       return [comment, ...prev];
     });
     setTotal(prev => prev + 1);
@@ -145,7 +155,9 @@ export function useCommentsInfiniteQuery(
         return comments.map(comment => {
           if (comment.id === parentId) {
             const existing = comment.children || [];
-            if (existing.some(c => c.id === reply.id)) return comment;
+            if (existing.some(c => c.id === reply.id)) {
+              return comment;
+            }
             return { ...comment, children: [reply, ...existing] };
           }
           if (comment.children?.length) {

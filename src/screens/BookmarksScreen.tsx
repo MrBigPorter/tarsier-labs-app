@@ -115,7 +115,9 @@ const BookmarksScreen: React.FC<BookmarksTabScreenProps<'Bookmarks'>> = ({
   );
 
   const renderFooter = () => {
-    if (!isFetching || !hasMore) return null;
+    if (!isFetching || !hasMore) {
+      return null;
+    }
     return (
       <View style={styles.footer}>
         <ActivityIndicator size="small" color={colors.primary} />

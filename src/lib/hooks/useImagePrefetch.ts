@@ -59,7 +59,10 @@ export function useImagePrefetch(): UseImagePrefetchReturn {
       }
       return result;
     } catch (error) {
-      console.warn(`${LOG_PREFIX} prefetch failed for "${url.slice(0, 60)}"`, error);
+      console.warn(
+        `${LOG_PREFIX} prefetch failed for "${url.slice(0, 60)}"`,
+        error,
+      );
       return false;
     } finally {
       isPrefetchingRef.current = false;
@@ -71,16 +74,20 @@ export function useImagePrefetch(): UseImagePrefetchReturn {
       const validUrls = urls.filter(
         (u): u is string => typeof u === 'string' && u.length > 0,
       );
-      if (validUrls.length === 0) return [];
+      if (validUrls.length === 0) {
+        return [];
+      }
 
       // Only prefetch URLs not already in the set
-      const newUrls = validUrls.filter((u) => !prefetchedRef.current.has(u));
-      if (newUrls.length === 0) return [];
+      const newUrls = validUrls.filter(u => !prefetchedRef.current.has(u));
+      if (newUrls.length === 0) {
+        return [];
+      }
 
       isPrefetchingRef.current = true;
       try {
         const results = await Promise.allSettled(
-          newUrls.map((url) => Image.prefetch(url)),
+          newUrls.map(url => Image.prefetch(url)),
         );
 
         const outcomes: boolean[] = [];

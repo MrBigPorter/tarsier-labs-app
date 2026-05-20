@@ -179,7 +179,9 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
   // ─── Handlers ───────────────────────────────────────────────────────
 
   const handleBookmark = useCallback(() => {
-    if (!article) return;
+    if (!article) {
+      return;
+    }
     const newIsBookmarked = !isBookmarked;
     // Optimistic local update
     dispatch(toggleBookmarkOptimistic(article.id));
@@ -201,7 +203,9 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
   }, [article, dispatch, isBookmarked, addBookmark, removeBookmark]);
 
   const handleLike = useCallback(() => {
-    if (!article) return;
+    if (!article) {
+      return;
+    }
     const newIsLiked = !isLiked;
     // Optimistic local update
     dispatch(toggleLikeOptimistic(article.id));
@@ -237,7 +241,9 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
   }, [article, dispatch, isLiked, likeScale, likeArticle, unlikeArticle]);
 
   const handleShare = useCallback(async () => {
-    if (!article) return;
+    if (!article) {
+      return;
+    }
     await shareArticle(article, lang);
   }, [article, lang]);
 
@@ -258,7 +264,9 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
   }, []);
 
   const handleSubmitComment = useCallback(async () => {
-    if (!article || !commentText.trim()) return;
+    if (!article || !commentText.trim()) {
+      return;
+    }
 
     if (!user) {
       navigation.navigate('Auth');
@@ -284,8 +292,8 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
       setCommentText('');
       setReplyTo(null);
       scrollRef.current?.scrollToEnd({ animated: false });
-    } catch (error) {
-      console.warn('[Comment] Failed to submit comment:', error);
+    } catch (submissionError) {
+      console.warn('[Comment] Failed to submit comment:', submissionError);
     }
   }, [
     article,

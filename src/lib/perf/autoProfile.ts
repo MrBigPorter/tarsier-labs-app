@@ -24,16 +24,22 @@ import { Platform, ToastAndroid } from 'react-native';
 // RN's TypeScript defs don't include it, so we use (globalThis as any)
 // to avoid TS2451 (redeclare) / TS2339 (missing property) errors.
 
-function getHermes(): {
-  getRuntimeProperties: () => Record<string, string>;
-  enableSamplingProfiler?: () => void;
-  getSampledTrace?: (callback: (err: unknown, data: unknown) => void) => void;
-} | undefined {
+function getHermes():
+  | {
+      getRuntimeProperties: () => Record<string, string>;
+      enableSamplingProfiler?: () => void;
+      getSampledTrace?: (
+        callback: (err: unknown, data: unknown) => void,
+      ) => void;
+    }
+  | undefined {
   return (globalThis as any).HermesInternal as
     | {
         getRuntimeProperties: () => Record<string, string>;
         enableSamplingProfiler?: () => void;
-        getSampledTrace?: (callback: (err: unknown, data: unknown) => void) => void;
+        getSampledTrace?: (
+          callback: (err: unknown, data: unknown) => void,
+        ) => void;
       }
     | undefined;
 }
@@ -60,7 +66,9 @@ const FILE_PREFIX = 'perf-jank';
  * Returns true only if running on Hermes engine in __DEV__ mode.
  */
 function canUseHermesProfiler(): boolean {
-  if (!__DEV__) return false;
+  if (!__DEV__) {
+    return false;
+  }
   const hi = getHermes();
   if (!hi || typeof hi.getRuntimeProperties !== 'function') {
     return false;
@@ -93,15 +101,25 @@ async function saveProfileToDisk(profileData: unknown): Promise<string | null> {
       const BlobUtil = require('react-native-blob-util') as {
         fs: {
           dirs: { CacheDir: string };
-          createFile: (path: string, data: string, encoding: string) => Promise<void>;
+          createFile: (
+            path: string,
+            data: string,
+            encoding: string,
+          ) => Promise<void>;
         };
       };
       const path = `${BlobUtil.fs.dirs.CacheDir}/${filename}`;
-      await BlobUtil.fs.createFile(path, JSON.stringify(profileData, null, 2), 'utf8');
+      await BlobUtil.fs.createFile(
+        path,
+        JSON.stringify(profileData, null, 2),
+        'utf8',
+      );
       return path;
     } catch {
       // No file system module available — fallback to console
-      console.log(`[PerfMonitor] 📄 Profile data (install react-native-fs for file save):`);
+      console.log(
+        '[PerfMonitor] 📄 Profile data (install react-native-fs for file save):',
+      );
       console.log(JSON.stringify(profileData, null, 2).slice(0, 500) + '...');
       return null;
     }
@@ -125,9 +143,13 @@ function notifyUser(message: string): void {
  * No-op if already profiling or if Hermes API is unavailable.
  */
 function startProfiler(): boolean {
-  if (_isProfiling) return false;
+  if (_isProfiling) {
+    return false;
+  }
   if (!canUseHermesProfiler()) {
-    console.log('[PerfMonitor] Hermes Profiler not available (expected in Release build)');
+    console.log(
+      '[PerfMonitor] Hermes Profiler not available (expected in Release build)',
+    );
     return false;
   }
 
@@ -146,14 +168,19 @@ function startProfiler(): boolean {
  * Stop Hermes Sampling Profiler and retrieve the trace data.
  */
 async function stopAndRetrieveTrace(): Promise<unknown | null> {
-  if (!_isProfiling) return null;
+  if (!_isProfiling) {
+    return null;
+  }
 
   try {
     const trace = await new Promise<unknown>((resolve, reject) => {
       const hi = getHermes();
       hi?.getSampledTrace?.((err: unknown, data: unknown) => {
-        if (err) reject(err);
-        else resolve(data);
+        if (err) {
+          reject(err);
+        } else {
+          resolve(data);
+        }
       });
     });
     return trace;
@@ -180,14 +207,22 @@ async function stopAndRetrieveTrace(): Promise<unknown | null> {
  * - Not in __DEV__ mode
  */
 export function triggerJankProfile(): void {
-  if (!__DEV__) return;
-  if (_isProfiling) return;
+  if (!__DEV__) {
+    return;
+  }
+  if (_isProfiling) {
+    return;
+  }
 
   // Throttle: don't profile more than once per 30s
   const now = Date.now();
-  if (now - _lastProfileTimestamp < PROFILE_THROTTLE_MS) return;
+  if (now - _lastProfileTimestamp < PROFILE_THROTTLE_MS) {
+    return;
+  }
 
-  if (!startProfiler()) return;
+  if (!startProfiler()) {
+    return;
+  }
 
   _lastProfileTimestamp = now;
   notifyUser('🚨 检测到帧率过低，正在采集 CPU Profile (3s)...');

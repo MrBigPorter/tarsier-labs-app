@@ -159,6 +159,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <Animated.View
           style={[
             styles.backdrop,
+            // eslint-disable-next-line react-native/no-inline-styles
             {
               backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)',
               opacity: backdropOpacity,

@@ -67,7 +67,9 @@ export interface VideoPlaybackActions {
  * On Web: error.error, error.code
  */
 function extractVideoError(e: any): Record<string, unknown> {
-  if (!e) return { raw: 'unknown' };
+  if (!e) {
+    return { raw: 'unknown' };
+  }
 
   // react-native-video wraps error in nativeEvent
   const nativeEvent = e.nativeEvent ?? e;
@@ -102,7 +104,9 @@ function extractVideoError(e: any): Record<string, unknown> {
  * `errorException` or `errorString`. All three fields are checked.
  */
 function isAudioLatmError(e: any): boolean {
-  if (!e) return false;
+  if (!e) {
+    return false;
+  }
   const nativeEvent = e.nativeEvent ?? e;
   const err = nativeEvent.error ?? {};
   const exceptionStr = String(err.errorException ?? '');
@@ -244,7 +248,9 @@ export function useVideoPlayback(
     } else {
       // Before starting, pause all other videos playing in other cards
       Object.entries(videoPauseCallbacks).forEach(([id, pauseFn]) => {
-        if (id !== articleId) pauseFn();
+        if (id !== articleId) {
+          pauseFn();
+        }
       });
 
       // Start fresh: reset failure state (source is already set)

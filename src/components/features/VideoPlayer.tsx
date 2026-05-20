@@ -63,7 +63,9 @@ export function VideoPlayer({ article, priority = false }: VideoPlayerProps) {
   // Do NOT imperatively call videoRef.current?.resume() — it conflicts with
   // the paused prop and can prevent playback from starting.
 
-  if (!hasVideo) return null;
+  if (!hasVideo) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

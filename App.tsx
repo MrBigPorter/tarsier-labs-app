@@ -23,7 +23,6 @@ import React, { useEffect, useRef, useCallback } from 'react';
 // MUST be initialized before any React component renders.
 // Uses require() (not import) so it's tree-shaken in production builds.
 if (__DEV__) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const whyDidYouRender = require('@welldone-software/why-did-you-render');
   whyDidYouRender(React, {
     // Track only components explicitly marked with .whyDidYouRender = true
@@ -81,7 +80,9 @@ function AppContent(): React.JSX.Element {
 
   const handleStateChange = useCallback(
     (state: NavigationState | undefined) => {
-      if (!state) return;
+      if (!state) {
+        return;
+      }
       const currentRoute = state.routes[state.index]?.name ?? 'unknown';
       const now = Date.now();
       const duration = now - prevTimestampRef.current;

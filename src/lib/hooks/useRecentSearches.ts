@@ -53,13 +53,19 @@ export interface UseRecentSearchesReturn {
  * const { recentSearches, saveRecentSearch, clearRecentSearches } = useRecentSearches();
  */
 export function useRecentSearches(): UseRecentSearchesReturn {
-  const [recentSearches, setRecentSearches] = useState<string[]>(loadRecentSearches);
+  const [recentSearches, setRecentSearches] =
+    useState<string[]>(loadRecentSearches);
 
   const saveRecentSearch = useCallback((query: string) => {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      return;
+    }
 
     setRecentSearches(prev => {
-      const updated = [query, ...prev.filter(s => s !== query)].slice(0, MAX_RECENT);
+      const updated = [query, ...prev.filter(s => s !== query)].slice(
+        0,
+        MAX_RECENT,
+      );
       persistRecentSearches(updated);
       return updated;
     });

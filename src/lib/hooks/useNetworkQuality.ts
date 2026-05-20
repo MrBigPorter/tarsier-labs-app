@@ -154,7 +154,9 @@ function getDefaultQuality(): NetworkQuality {
  * Subsequent calls are no-ops.
  */
 function ensureSubscriptionInitialized(): void {
-  if (subscriptionInitialized) return;
+  if (subscriptionInitialized) {
+    return;
+  }
   subscriptionInitialized = true;
 
   // Initialize with defaults + real PixelRatio
@@ -210,7 +212,9 @@ export function useNetworkQuality(): NetworkQuality {
       // Skip React state update if values are effectively the same
       // (defensive check — the singleton already does this, but guards
       //  against edge cases where sharedState is set outside listener)
-      if (qualityEquals(prev, newQuality)) return;
+      if (qualityEquals(prev, newQuality)) {
+        return;
+      }
       currentRef.current = newQuality;
       setQuality(newQuality);
     };

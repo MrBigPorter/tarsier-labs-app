@@ -72,7 +72,9 @@ export function useCommentSSE(articleId: string | undefined): void {
   const handlerRef = useRef<((data: SSEEvent) => void) | null>(null);
 
   useEffect(() => {
-    if (!articleId) return;
+    if (!articleId) {
+      return;
+    }
 
     const handler = (data: SSEEvent) => {
       // Moderation event: notify CommentStatusManager
@@ -122,7 +124,7 @@ export function useCommentSSE(articleId: string | undefined): void {
 
           // Broadcast to all registered handlers
           const reg = sseRegistry.get(articleId);
-          reg?.onMessageHandlers.forEach((h) => h(data));
+          reg?.onMessageHandlers.forEach(h => h(data));
         } catch (err) {
           console.warn('[SSE] Failed to parse event data:', err);
         }
@@ -139,7 +141,9 @@ export function useCommentSSE(articleId: string | undefined): void {
     // -----------------------------------------------------------------------
     return () => {
       const reg = sseRegistry.get(articleId);
-      if (!reg) return;
+      if (!reg) {
+        return;
+      }
 
       if (handlerRef.current) {
         reg.onMessageHandlers.delete(handlerRef.current);
@@ -187,19 +191,23 @@ function insertReplyIntoCache(
       commentApi.util.updateQueryData(
         'getComments',
         { articleId, page: 1, pageSize: 20 },
-        (draft) => {
-          if (!draft?.items) return;
+        draft => {
+          if (!draft?.items) {
+            return;
+          }
 
           let replyInserted = false;
 
-          const updatedItems = draft.items.map((comment) => {
+          const updatedItems = draft.items.map(comment => {
             // Direct parent match
             if (comment.id === data.parentId) {
               replyInserted = true;
               const alreadyExists = (comment.children || []).some(
-                (c) => c.id === data.replyId,
+                c => c.id === data.replyId,
               );
-              if (alreadyExists) return comment;
+              if (alreadyExists) {
+                return comment;
+              }
               return {
                 ...comment,
                 children: [...(comment.children || []), newReply],
@@ -209,14 +217,16 @@ function insertReplyIntoCache(
             // Nested: parent is a child of this top-level comment
             if (comment.children?.length) {
               const parentIdx = comment.children.findIndex(
-                (child) => child.id === data.parentId,
+                child => child.id === data.parentId,
               );
               if (parentIdx !== -1) {
                 replyInserted = true;
                 const alreadyExists = (
                   comment.children[parentIdx].children || []
-                ).some((c) => c.id === data.replyId);
-                if (alreadyExists) return comment;
+                ).some(c => c.id === data.replyId);
+                if (alreadyExists) {
+                  return comment;
+                }
                 const updatedChildren = comment.children.map((child, idx) =>
                   idx === parentIdx
                     ? {

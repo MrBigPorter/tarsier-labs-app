@@ -67,7 +67,9 @@ function getSystemLanguage(): string | null {
       locale = I18nManager.localeIdentifier;
     }
 
-    if (!locale) return null;
+    if (!locale) {
+      return null;
+    }
 
     // Extract the language code from locale strings like 'zh-Hans', 'en-US', 'ja-JP'
     const langCode = locale.split('-')[0].toLowerCase();
@@ -86,7 +88,9 @@ function getSystemLanguage(): string | null {
 function getInitialLanguage(): string {
   // 1. Check persisted preference
   const persisted = getPersistedLanguage();
-  if (persisted) return persisted;
+  if (persisted) {
+    return persisted;
+  }
 
   // 2. Try system language
   const systemLang = getSystemLanguage();

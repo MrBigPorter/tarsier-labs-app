@@ -60,6 +60,7 @@ function CategoryFilterSkeleton() {
             key={i}
             style={[
               styles.skeletonChip,
+              // eslint-disable-next-line react-native/no-inline-styles
               {
                 backgroundColor: isDark ? '#22262f' : '#f0f0f1',
               },
@@ -98,7 +99,9 @@ export function CategoryFilter({
   const scrollToCenter = useCallback(
     (id: string) => {
       const layout = chipLayouts.current.get(id);
-      if (!layout) return;
+      if (!layout) {
+        return;
+      }
       const targetX = layout.x - screenWidth / 2 + layout.width / 2;
       scrollRef.current?.scrollTo({ x: Math.max(0, targetX), animated: true });
     },
@@ -130,7 +133,9 @@ export function CategoryFilter({
   }
 
   // Empty state: render nothing
-  if (!categories || categories.length === 0) return null;
+  if (!categories || categories.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -168,6 +173,7 @@ export function CategoryFilter({
           <Text
             style={[
               styles.chipText,
+              // eslint-disable-next-line react-native/no-inline-styles
               {
                 color:
                   selectedCategoryId === null
@@ -212,6 +218,7 @@ export function CategoryFilter({
               <Text
                 style={[
                   styles.chipText,
+                  // eslint-disable-next-line react-native/no-inline-styles
                   {
                     color: isSelected ? '#ffffff' : colors.textSecondary,
                   },
@@ -223,6 +230,7 @@ export function CategoryFilter({
                 <Text
                   style={[
                     styles.countText,
+                    // eslint-disable-next-line react-native/no-inline-styles
                     {
                       color: isSelected
                         ? 'rgba(255,255,255,0.6)'

@@ -123,7 +123,6 @@ export type AboutTabScreenProps<T extends keyof AboutStackParamList> =
 // ─── Navigation Helpers ──────────────────────────────────────────────────────
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace ReactNavigation {
     interface RootParamList extends RootStackParamList {}
   }

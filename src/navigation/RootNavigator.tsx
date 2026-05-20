@@ -214,38 +214,41 @@ const MainTabNavigator = React.memo(
       maxHeight: Math.max(0, TAB_BAR_HEIGHT + tabBarTranslateY.value),
     }));
 
+    const renderTabBar = React.useCallback(
+      ({ state, navigation }: { state: any; navigation: any }) => {
+        const tabs: TabItem[] = state.routes.map(route => ({
+          key: route.key,
+          icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,
+          activeIcon: tabIcons[route.name]?.activeIcon as IconName | undefined,
+          label: t(TAB_LABEL_KEYS[route.name] ?? route.name),
+        }));
+        return (
+          <Animated.View
+            style={[
+              styles.tabBarWrapper,
+              { backgroundColor: colors.background },
+              tabBarAnimatedStyle,
+            ]}
+          >
+            <TabBar
+              tabs={tabs}
+              activeTab={state.routes[state.index].key}
+              onTabPress={(key: string) => {
+                const route = state.routes.find((r: any) => r.key === key);
+                if (route) {
+                  navigation.navigate(route.name);
+                }
+              }}
+            />
+          </Animated.View>
+        );
+      },
+      [colors, tabBarAnimatedStyle, t],
+    );
+
     return (
       <MainTab.Navigator
-        tabBar={({ state, _descriptors, navigation }) => {
-          const tabs: TabItem[] = state.routes.map(route => ({
-            key: route.key,
-            icon: (tabIcons[route.name]?.icon ?? 'home') as IconName,
-            activeIcon: tabIcons[route.name]?.activeIcon as
-              | IconName
-              | undefined,
-            label: t(TAB_LABEL_KEYS[route.name] ?? route.name),
-          }));
-          return (
-            <Animated.View
-              style={[
-                styles.tabBarWrapper,
-                { backgroundColor: colors.background },
-                tabBarAnimatedStyle,
-              ]}
-            >
-              <TabBar
-                tabs={tabs}
-                activeTab={state.routes[state.index].key}
-                onTabPress={(key: string) => {
-                  const route = state.routes.find(r => r.key === key);
-                  if (route) {
-                    navigation.navigate(route.name);
-                  }
-                }}
-              />
-            </Animated.View>
-          );
-        }}
+        tabBar={renderTabBar}
         screenOptions={{
           headerShown: false,
         }}

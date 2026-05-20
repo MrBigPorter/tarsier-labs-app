@@ -118,7 +118,7 @@ const MarkdownRenderer = React.memo(function MarkdownRenderer({
   const handleInlineVideoError = useCallback((e: any) => {
     const nativeEvent = e?.nativeEvent ?? e;
     const err = nativeEvent?.error ?? {};
-    logger.error(`[MarkdownRenderer] inline video error`, {
+    logger.error('[MarkdownRenderer] inline video error', {
       platform: Platform.OS,
       errorString: err.errorString,
       errorCode: err.errorCode,

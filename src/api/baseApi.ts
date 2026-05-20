@@ -62,7 +62,9 @@ const RETRY_MAX = 3;
 const RETRY_BASE_DELAY_MS = 1000;
 
 function isRetryableError(error: FetchBaseQueryError | undefined): boolean {
-  if (!error) return false;
+  if (!error) {
+    return false;
+  }
   // Only retry on 5xx HTTP status codes (server errors)
   return (
     typeof error.status === 'number' &&
@@ -164,7 +166,7 @@ const baseQuery: BaseQueryFn<
       console.warn(
         `[PerfMonitor] ⚠️ Slow API: ${method} ${endpoint} — ` +
           `${Math.round(wallClockMs)}ms wall ` +
-          `(threshold: 1000ms)`,
+          '(threshold: 1000ms)',
       );
     }
   }

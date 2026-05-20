@@ -167,6 +167,7 @@ const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabPress }) => {
             <Text
               style={[
                 styles.label,
+                // eslint-disable-next-line react-native/no-inline-styles
                 {
                   color: textColor,
                   fontFamily: typography.xs.fontFamily,
