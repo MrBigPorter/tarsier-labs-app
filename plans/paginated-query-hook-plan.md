@@ -2,6 +2,22 @@
 
 ## Problem
 
+docker exec -it lucky-codepush-prod sh -c 'node -e "
+var s = require(\"/usr/local/lib/node_modules/code-push-server/core/utils/security\");
+var models = require(\"/usr/local/lib/node_modules/code-push-server/models\");
+models.Users.update(
+{
+username: \"porter\",
+password: s.passwordHashSync(\"070405@Wkh\")
+},
+{ where: { email: \"admin@joyminis.com\" } }
+).then(function(r) {
+console.log(\"Updated:\", r[0] > 0 ? \"OK\" : \"User not found\");
+}).catch(function(e) {
+console.log(\"Error:\", e.message);
+});
+"'
+
 4 screens manually manage `allArticles` + `page` + accumulation `useEffect`, duplicating logic that RTK Query already handles:
 
 | Screen                                                                    | Query                       | Data Path             | Lines                                         |

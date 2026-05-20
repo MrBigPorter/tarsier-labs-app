@@ -40,9 +40,15 @@
  * - TabBar is wrapped in Animated.View with translateY driven by tabBarTranslateY
  * - Uses react-native-reanimated useAnimatedStyle for UI-thread safe animation
  * - Shared with HomeScreen via ScrollContext
+ *
+ * Lazy-loading (P1-C):
+ * - Screens not in the initial tab view are lazy-loaded via React.lazy() to
+ *   reduce the initial JS bundle size.
+ * - Tab screens (always visible) remain as static imports.
+ * - Overlay screens use React.lazy() + Suspense for deferred loading.
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -61,22 +67,28 @@ import { env } from '@/lib/env';
 import { ScrollProvider, useScrollContext } from '@/lib/ScrollContext';
 import { useTranslation } from 'react-i18next';
 
-// Screens
+// ─── Static imports (tab screens — always visible on mount) ──────────────
 import HomeScreen from '@/screens/HomeScreen';
 import ArticleListScreen from '@/screens/ArticleListScreen';
-import ArticleDetailScreen from '@/screens/ArticleDetailScreen';
 import TagListScreen from '@/screens/TagListScreen';
 import TagArticlesScreen from '@/screens/TagArticlesScreen';
 import CategoryListScreen from '@/screens/CategoryListScreen';
 import CategoryArticlesScreen from '@/screens/CategoryArticlesScreen';
-import SearchScreen from '@/screens/SearchScreen';
 import BookmarksScreen from '@/screens/BookmarksScreen';
 import AboutScreen from '@/screens/AboutScreen';
-import AuthScreen from '@/screens/AuthScreen';
-import ArchiveScreen from '@/screens/ArchiveScreen';
-import SettingsScreen from '@/screens/SettingsScreen';
-import StatsScreen from '@/screens/StatsScreen';
-import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
+
+// ─── Lazy-loaded overlay screens (not in tabs — reduces initial bundle) ──
+const ArticleDetailScreen = React.lazy(
+  () => import('@/screens/ArticleDetailScreen'),
+);
+const SearchScreen = React.lazy(() => import('@/screens/SearchScreen'));
+const AuthScreen = React.lazy(() => import('@/screens/AuthScreen'));
+const ArchiveScreen = React.lazy(() => import('@/screens/ArchiveScreen'));
+const SettingsScreen = React.lazy(() => import('@/screens/SettingsScreen'));
+const StatsScreen = React.lazy(() => import('@/screens/StatsScreen'));
+const PrivacyPolicyScreen = React.lazy(
+  () => import('@/screens/PrivacyPolicyScreen'),
+);
 
 // Components
 import TabBar, { type TabItem } from '@/components/layout/TabBar';
@@ -341,21 +353,61 @@ function RootNavigator(): React.JSX.Element {
           </ScrollProvider>
         )}
       </RootStack.Screen>
-      <RootStack.Screen name="ArticleDetail" component={ArticleDetailScreen} />
+      <RootStack.Screen name="ArticleDetail">
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <ArticleDetailScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
       <RootStack.Screen
         name="Search"
-        component={SearchScreen}
         options={{ animation: 'slide_from_bottom' }}
-      />
+      >
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <SearchScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
       <RootStack.Screen
         name="Auth"
-        component={AuthScreen}
         options={{ animation: 'slide_from_bottom' }}
-      />
-      <RootStack.Screen name="Archive" component={ArchiveScreen} />
-      <RootStack.Screen name="Settings" component={SettingsScreen} />
-      <RootStack.Screen name="Stats" component={StatsScreen} />
-      <RootStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      >
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <AuthScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
+      <RootStack.Screen name="Archive">
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <ArchiveScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
+      <RootStack.Screen name="Settings">
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <SettingsScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
+      <RootStack.Screen name="Stats">
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <StatsScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
+      <RootStack.Screen name="PrivacyPolicy">
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <PrivacyPolicyScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
     </RootStack.Navigator>
   );
 }

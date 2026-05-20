@@ -55,6 +55,7 @@ import {
 } from '@/api/endpoints/bookmarks';
 import { useNetworkQuality } from '@/lib/hooks/useNetworkQuality';
 import { useImagePrefetch } from '@/lib/hooks/useImagePrefetch';
+import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import { getArticleImageUrl, isVideoUrl } from '@/lib/utils/image';
 import type { HomeTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
@@ -132,6 +133,9 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
 
   // ─── Image prefetch hook ───────────────────────────────────────────
   const { prefetchMany } = useImagePrefetch();
+
+  // ─── Article data prefetch (fires on finger-down, before navigation) ──
+  const prefetchArticle = useArticlePrefetch();
 
   // ─── State ────────────────────────────────────────────────────────────
 
@@ -383,6 +387,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
           article={item}
           onPress={handleArticlePress}
           onBookmark={handleBookmark}
+          onPrefetch={prefetchArticle}
           isBookmarked={bookmarkedIds[item.id]}
           showExcerpt
           // Use ref to avoid recreating this callback when networkQuality
@@ -396,7 +401,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     // networkQuality intentionally excluded — using ref to prevent
     // cascade re-renders of all visible ArticleCards when network
     // quality initializes from defaults to real values.
-    [handleArticlePress, handleBookmark, bookmarkedIds],
+    [handleArticlePress, handleBookmark, bookmarkedIds, prefetchArticle],
   );
 
   // ─── Footer: loading spinner during Load More ─────────────────────
@@ -498,7 +503,10 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
+          // Trigger load-more when user is 2 full screen-heights from the end.
+          // This gives the network request time to complete before the user
+          // actually hits the bottom, making pagination feel instantaneous.
+          onEndReachedThreshold={2}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           showsVerticalScrollIndicator={false}

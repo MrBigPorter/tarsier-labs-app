@@ -74,6 +74,13 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
+# Keystore properties (contains upload key passwords)
+keystore.properties
+
+# Exported certificates and provisioning profiles (iOS signing)
+*.p12
+*.mobileprovision
+
 # Environment Variables
 .env
 .env.development

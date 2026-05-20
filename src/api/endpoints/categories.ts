@@ -13,22 +13,24 @@ interface CategoryBySlugParams {
   page?: number;
   pageSize?: number;
   lang?: string;
+  /** Cache-busting key for pull-to-refresh — increments on each manual refresh */
+  _refreshKey?: number;
 }
 
 export const categoryApi = blogApi.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     /**
      * Get all categories
      * GET /api/v1/frontend/blog/categories
      */
     getCategories: builder.query<FrontendCategory[], string | void>({
-      query: (lang) => ({
+      query: lang => ({
         url: '/api/v1/frontend/blog/categories',
         params: lang ? { lang } : {},
       }),
       transformResponse: (response: ApiResponseWrapper<FrontendCategory[]>) =>
         unwrapData(response),
-      providesTags: (result) =>
+      providesTags: result =>
         result
           ? [
               ...result.map(({ id }) => ({ type: 'Category' as const, id })),
@@ -41,13 +43,17 @@ export const categoryApi = blogApi.injectEndpoints({
      * Get category detail with paginated articles
      * GET /api/v1/frontend/blog/categories/:slug
      */
-    getCategoryBySlug: builder.query<FrontendCategoryWithArticles, CategoryBySlugParams>({
+    getCategoryBySlug: builder.query<
+      FrontendCategoryWithArticles,
+      CategoryBySlugParams
+    >({
       query: ({ slug, page, pageSize, lang }) => ({
         url: `/api/v1/frontend/blog/categories/${slug}`,
         params: { page, pageSize, lang },
       }),
-      transformResponse: (response: ApiResponseWrapper<FrontendCategoryWithArticles>) =>
-        unwrapData(response),
+      transformResponse: (
+        response: ApiResponseWrapper<FrontendCategoryWithArticles>,
+      ) => unwrapData(response),
       providesTags: (result, _error, { slug }) =>
         result
           ? [

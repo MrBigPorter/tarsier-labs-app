@@ -24,13 +24,11 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Video from 'react-native-video';
 import { useModeColors } from '@/lib/theme/ThemeContext';
 import type { FrontendArticle } from '@/types/frontend-blog';
 import type { NetworkQuality } from '@/lib/hooks/useNetworkQuality';
-import { useNetworkQuality } from '@/lib/hooks/useNetworkQuality';
-import { useVideoPlayback } from '@/lib/hooks/useVideoPlayback';
 import { AppImage } from '@/components/core/AppImage';
+import { VideoPlayer } from '@/components/features/VideoPlayer';
 import { isVideoUrl } from '@/lib/utils/image';
 
 interface ArticleCardProps {
@@ -46,6 +44,11 @@ interface ArticleCardProps {
   networkQuality?: NetworkQuality;
   /** Priority image (first 2 items for LCP) */
   priority?: boolean;
+  /**
+   * Called on finger-down (`onPressIn`) — use to prefetch article data
+   * before the tap gesture completes and navigation begins.
+   */
+  onPrefetch?: (article: FrontendArticle) => void;
 }
 
 /** Format a number for display (e.g., 1234 → "1.2k") */
@@ -64,31 +67,19 @@ function ArticleCardComponent({
   showExcerpt = true,
   compact = false,
   featured = false,
-  networkQuality: externalNetworkQuality,
+  networkQuality,
   priority = false,
+  onPrefetch,
 }: ArticleCardProps) {
   const colors = useModeColors();
-  // Fallback to internal hook if parent doesn't provide networkQuality
-  const internalNetworkQuality = useNetworkQuality();
-  const networkQuality = externalNetworkQuality ?? internalNetworkQuality;
 
-  // ─── Video playback (extracted hook) ───────────────────────────────
+  // ─── Video detection ───────────────────────────────────────────────
 
-  const {
-    hasVideo,
-    videoPlaying,
-    videoPaused,
-    videoUri,
-    videoFailed,
-    hlsUrl,
-    mp4Url,
-    posterUrl,
-    handlePlayPress,
-    handleVideoLoadStart,
-    handleVideoLoad,
-    handleVideoError,
-    handleVideoEnd,
-  } = useVideoPlayback(article);
+  const hasVideo = Boolean(
+    article.meta?.video?.hlsUrl ||
+    (typeof article.coverImage === 'string' &&
+      article.coverImage.endsWith('.mp4')),
+  );
 
   // ─── Image detection ───────────────────────────────────────────────
 
@@ -114,6 +105,7 @@ function ArticleCardComponent({
         featured && styles.featuredCard,
       ]}
       onPress={() => onPress?.(article)}
+      onPressIn={onPrefetch ? () => onPrefetch(article) : undefined}
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`Article: ${article.title}`}
@@ -128,76 +120,16 @@ function ArticleCardComponent({
           ]}
         >
           {hasVideo ? (
-            <View style={styles.videoContainer}>
-              {videoPlaying && videoUri ? (
-                /* Video (mounted only after play tap) */
-                <Video
-                  source={{ uri: videoUri }}
-                  style={[
-                    styles.image,
-                    compact && styles.compactImage,
-                    featured && styles.featuredImage,
-                  ]}
-                  poster={posterUrl ?? undefined}
-                  posterResizeMode="cover"
-                  resizeMode="contain"
-                  controls={false}
-                  paused={videoPaused}
-                  onLoadStart={handleVideoLoadStart}
-                  onLoad={handleVideoLoad}
-                  onError={handleVideoError}
-                  onEnd={handleVideoEnd}
-                />
-              ) : (
-                /* Static poster via AppImage (blurhash + Cloudflare optimized) */
-                <AppImage
-                  uri={posterUrl}
-                  images={article.meta?.images}
-                  coverImage={
-                    article.coverImage && isVideoUrl(article.coverImage)
-                      ? undefined
-                      : article.coverImage
-                  }
-                  blurhash={article.meta?.blurhash}
-                  style={[
-                    styles.image,
-                    compact && styles.compactImage,
-                    featured && styles.featuredImage,
-                  ]}
-                  priority={priority}
-                />
-              )}
-
-              {/* Tap overlay: play when idle, pause/resume when playing */}
-              <TouchableOpacity
-                style={styles.playButtonOverlay}
-                activeOpacity={0.7}
-                onPress={handlePlayPress}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  videoPlaying && !videoPaused ? 'Pause video' : 'Play video'
-                }
-              >
-                {/* Show ▶ when not started yet, or when paused */}
-                {(!videoPlaying || videoPaused) && !videoFailed && (
-                  <View style={styles.playButtonCircle}>
-                    <Text style={styles.playButtonIcon}>▶</Text>
-                  </View>
-                )}
-                {/* Show ✕ when both HLS and MP4 failed */}
-                {videoFailed && (
-                  <View style={styles.playButtonCircle}>
-                    <Text style={styles.playButtonIcon}>✕</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
+            <VideoPlayer article={article} priority={priority} />
           ) : (
             /* Static image (no video) — AppImage handles blurhash + Cloudflare */
             <AppImage
               images={article.meta?.images}
               coverImage={article.coverImage}
-              blurhash={article.meta?.blurhash}
+              blurhash={
+                article.meta?.images?.blurhash ?? article.meta?.blurhash
+              }
+              networkQuality={networkQuality}
               style={[
                 styles.image,
                 compact && styles.compactImage,
@@ -262,6 +194,7 @@ function ArticleCardComponent({
 
         {/* Title */}
         <Text
+          accessibilityRole="header"
           style={[
             styles.title,
             { color: colors.textPrimary ?? colors.text },

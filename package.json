@@ -30,6 +30,7 @@
     "react-native": "0.85.3",
     "react-native-blurhash": "^2.1.3",
     "react-native-bootsplash": "^6",
+    "react-native-code-push": "^9.0.1",
     "react-native-error-boundary": "^3",
     "react-native-fast-image": "^8",
     "react-native-fs": "^2.20.0",

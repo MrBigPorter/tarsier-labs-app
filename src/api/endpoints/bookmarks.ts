@@ -1,5 +1,13 @@
-import { blogApi, ApiResponseWrapper, ApiPaginatedResponse } from '@/api/baseApi';
-import type { BookmarkedArticle, BookmarkResponse, BookmarkStatusResponse } from '@/types/frontend-blog';
+import {
+  blogApi,
+  ApiResponseWrapper,
+  ApiPaginatedResponse,
+} from '@/api/baseApi';
+import type {
+  BookmarkedArticle,
+  BookmarkResponse,
+  BookmarkStatusResponse,
+} from '@/types/frontend-blog';
 
 function unwrapData<T>(response: ApiResponseWrapper<T>): T {
   return response.data;
@@ -9,6 +17,8 @@ interface FetchBookmarksParams {
   page?: number;
   pageSize?: number;
   locale?: string;
+  /** Cache-busting key for pull-to-refresh — increments on each manual refresh */
+  _refreshKey?: number;
 }
 
 interface BookmarkActionParams {
@@ -16,18 +26,22 @@ interface BookmarkActionParams {
 }
 
 export const bookmarkApi = blogApi.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     /**
      * Get paginated list of bookmarked articles
      * GET /api/v1/frontend/blog/bookmarks
      */
-    getBookmarks: builder.query<ApiPaginatedResponse<BookmarkedArticle>, FetchBookmarksParams>({
+    getBookmarks: builder.query<
+      ApiPaginatedResponse<BookmarkedArticle>,
+      FetchBookmarksParams
+    >({
       query: ({ page, pageSize, locale }) => ({
         url: '/api/v1/frontend/blog/bookmarks',
         params: { page, pageSize, lang: locale },
       }),
-      transformResponse: (response: ApiResponseWrapper<ApiPaginatedResponse<BookmarkedArticle>>) =>
-        unwrapData(response),
+      transformResponse: (
+        response: ApiResponseWrapper<ApiPaginatedResponse<BookmarkedArticle>>,
+      ) => unwrapData(response),
       providesTags: ['Bookmark'],
     }),
 
@@ -63,12 +77,16 @@ export const bookmarkApi = blogApi.injectEndpoints({
      * Check if an article is bookmarked
      * GET /api/v1/frontend/blog/articles/:articleId/bookmark-status
      */
-    getBookmarkStatus: builder.query<BookmarkStatusResponse, BookmarkActionParams>({
+    getBookmarkStatus: builder.query<
+      BookmarkStatusResponse,
+      BookmarkActionParams
+    >({
       query: ({ articleId }) => ({
         url: `/api/v1/frontend/blog/articles/${articleId}/bookmark-status`,
       }),
-      transformResponse: (response: ApiResponseWrapper<BookmarkStatusResponse>) =>
-        unwrapData(response),
+      transformResponse: (
+        response: ApiResponseWrapper<BookmarkStatusResponse>,
+      ) => unwrapData(response),
       providesTags: (_result, _error, { articleId }) => [
         { type: 'Bookmark', id: `ARTICLE_${articleId}` },
       ],

@@ -1,0 +1,6 @@
+// ios/Config/Prod.xcconfig
+// Production flavor — standard bundle ID and display name
+
+PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs
+DISPLAY_NAME = Tarsier
+CODEPUSH_DEPLOYMENT_KEY = xUO3wCQ9KKEfTICaAHHLP22NNcPWf8EU92luy

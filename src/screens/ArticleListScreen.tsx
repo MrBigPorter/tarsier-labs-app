@@ -36,11 +36,9 @@ import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
-import { TAB_BAR_HEIGHT } from '@/navigation/RootNavigator';
+import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import type { HomeTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
-
-type SortOption = 'newest' | 'popular' | 'trending';
 
 const PAGE_SIZE = 15;
 
@@ -59,18 +57,22 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
 
   // State
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Data fetching
-  const { data, isLoading, isFetching, isError, error, refetch } =
-    useGetArticlesQuery({
+  // _refreshKey is a cache-busting parameter: on refresh(), the key increments,
+  // forcing RTK Query to create a new cache entry and always fetch from server.
+  const { data, isLoading, isFetching, isError, refetch } = useGetArticlesQuery(
+    {
       page,
       pageSize: PAGE_SIZE,
       categoryId: categorySlug,
       tagId: tagSlug,
       lang,
-    });
+      _refreshKey: refreshKey,
+    },
+  );
 
   // Accumulate articles across pages for infinite scroll
   React.useEffect(() => {
@@ -88,7 +90,7 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
     setPage(1);
     setAllArticles([]);
     refetch();
-  }, [categorySlug, tagSlug, lang]);
+  }, [categorySlug, tagSlug, lang, refetch]);
 
   // Determine if there are more pages
   const totalPages = data?.totalPages || 1;
@@ -106,6 +108,8 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
     [navigation],
   );
 
+  const prefetchArticle = useArticlePrefetch();
+
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
       setPage(prev => prev + 1);
@@ -115,8 +119,8 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   const handleRefresh = useCallback(() => {
     setPage(1);
     setAllArticles([]);
-    refetch();
-  }, [refetch]);
+    setRefreshKey(k => k + 1);
+  }, []);
 
   // ─── Dynamic title ──────────────────────────────────────────────────
 
@@ -131,10 +135,15 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
+        <ArticleCard
+          article={item}
+          onPress={handleArticlePress}
+          onPrefetch={prefetchArticle}
+          showExcerpt
+        />
       </View>
     ),
-    [handleArticlePress],
+    [handleArticlePress, prefetchArticle],
   );
 
   const renderFooter = () => {

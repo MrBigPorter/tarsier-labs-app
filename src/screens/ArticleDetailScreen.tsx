@@ -33,6 +33,7 @@ import {
   ActivityIndicator,
   TextInput,
   Animated,
+  InteractionManager,
 } from 'react-native';
 import {
   KeyboardAwareScrollView,
@@ -107,7 +108,30 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
 
   // ─── Comments (infinite scroll + SSE) ────────────────────────────────
   // Note: comments API expects a slug, not a database ID
-  const commentsQuery = useCommentsInfiniteQuery(slug);
+  //
+  // Progressive loading: comments are deferred until after the navigation
+  // transition has fully settled (InteractionManager).
+  // This prevents the slow comments API (~1400ms) from blocking the UI on
+  // screen entry.  We intentionally do NOT wait for the article query to
+  // resolve first — the slug is available immediately from route.params, so
+  // we can start the comments request in parallel with the article request,
+  // right after the animation completes.
+  const [commentsEnabled, setCommentsEnabled] = useState(false);
+
+  // Reset and re-enable comments whenever the slug changes (new article).
+  // InteractionManager fires after navigation animation + all queued JS
+  // interactions settle, so the UI is already interactive by then.
+  React.useEffect(() => {
+    setCommentsEnabled(false);
+    const task = InteractionManager.runAfterInteractions(() => {
+      setCommentsEnabled(true);
+    });
+    return () => task.cancel();
+  }, [slug]);
+
+  const commentsQuery = useCommentsInfiniteQuery(slug, {
+    enabled: commentsEnabled,
+  });
   useCommentSSE(slug);
 
   const [createComment, { isLoading: isSubmittingComment }] =
@@ -523,7 +547,13 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
             Comments ({article.commentsCount})
           </Text>
 
-          {commentsQuery.error ? (
+          {!commentsEnabled ? (
+            /* Deferred: show subtle loading indicator while waiting for
+               navigation transition + InteractionManager to settle */
+            <View style={styles.commentsDeferredPlaceholder}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : commentsQuery.error ? (
             <View style={styles.commentsError}>
               <Text style={[styles.commentsErrorText, { color: colors.error }]}>
                 {t('common.loadFailed')}
@@ -794,6 +824,10 @@ const styles = StyleSheet.create({
   commentsSection: {
     marginTop: spacing.xl,
     paddingHorizontal: spacing.lg,
+  },
+  commentsDeferredPlaceholder: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
   },
   commentInputContainer: {
     borderTopWidth: 1,

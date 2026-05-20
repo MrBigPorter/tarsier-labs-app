@@ -13,6 +13,8 @@ interface ArticleListParams {
   categoryId?: string;
   tagId?: string;
   lang?: string;
+  /** Cache-busting key for pull-to-refresh — increments on each manual refresh */
+  _refreshKey?: number;
 }
 
 interface SearchParams {

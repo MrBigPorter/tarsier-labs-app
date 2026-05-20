@@ -28,6 +28,7 @@ import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
+import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import type { TagsTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
@@ -45,6 +46,7 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
 
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const {
     data: tagData,
@@ -52,7 +54,13 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
     isFetching,
     isError,
     refetch,
-  } = useGetTagBySlugQuery({ slug: tagSlug, page, pageSize: 15, lang });
+  } = useGetTagBySlugQuery({
+    slug: tagSlug,
+    page,
+    pageSize: 15,
+    lang,
+    _refreshKey: refreshKey,
+  });
 
   // Re-fetch when language changes
   React.useEffect(() => {
@@ -106,6 +114,8 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
     [navigation],
   );
 
+  const prefetchArticle = useArticlePrefetch();
+
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
       setPage(prev => prev + 1);
@@ -115,16 +125,21 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
   const handleRefresh = useCallback(() => {
     setPage(1);
     setAllArticles([]);
-    refetch();
-  }, [refetch]);
+    setRefreshKey(k => k + 1);
+  }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
+        <ArticleCard
+          article={item}
+          onPress={handleArticlePress}
+          onPrefetch={prefetchArticle}
+          showExcerpt
+        />
       </View>
     ),
-    [handleArticlePress],
+    [handleArticlePress, prefetchArticle],
   );
 
   const renderFooter = () => {

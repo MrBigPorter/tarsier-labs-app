@@ -38,10 +38,23 @@ const DEV_CONFIG: EnvConfig = {
   OAUTH_APPLE_CLIENT_ID: '',
 };
 
+const TEST_CONFIG: EnvConfig = {
+  API_URL: 'https://dev-api.joyminis.com',
+  WEB_URL: 'https://blog-dev.joyminis.com',
+  SENTRY_DSN:
+    'https://59af1081c07587571c2ac0d27d2ac5bc@o4511086990524416.ingest.us.sentry.io/4511389161357312',
+  DEFAULT_LOCALE: 'en',
+  ENABLE_ANALYTICS: false,
+  LOG_LEVEL: 'debug',
+  OAUTH_GOOGLE_CLIENT_ID: '',
+  OAUTH_APPLE_CLIENT_ID: '',
+};
+
 const PROD_CONFIG: EnvConfig = {
   API_URL: 'https://api.joyminis.com',
   WEB_URL: 'https://blog.joyminis.com',
-  SENTRY_DSN: '',
+  SENTRY_DSN:
+    'https://59af1081c07587571c2ac0d27d2ac5bc@o4511086990524416.ingest.us.sentry.io/4511389161357312',
   DEFAULT_LOCALE: 'en',
   ENABLE_ANALYTICS: true,
   LOG_LEVEL: 'warn',
@@ -65,8 +78,44 @@ function isDevMode(): boolean {
   }
 }
 
+/**
+ * Detects which Android build flavor is active.
+ * In iOS, falls back to __DEV__ since iOS lacks a native flavor system.
+ *
+ * Returns: 'staging' | 'production' | 'development'
+ */
+function detectFlavor(): 'staging' | 'production' | 'development' {
+  try {
+    const BuildConfig = require('react-native').NativeModules.RNBuildConfig;
+    if (BuildConfig?.FLAVOR) {
+      const flavor = String(BuildConfig.FLAVOR).toLowerCase();
+      if (flavor === 'staging') return 'staging';
+      if (flavor === 'production') return 'production';
+    }
+  } catch {
+    // NativeModules not available — likely iOS
+  }
+
+  // iOS fallback: release = production, debug = development
+  if (!isDevMode()) {
+    return 'production';
+  }
+
+  return 'development';
+}
+
 function selectConfig(): EnvConfig {
-  return isDevMode() ? { ...DEV_CONFIG } : { ...PROD_CONFIG };
+  const flavor = detectFlavor();
+
+  switch (flavor) {
+    case 'staging':
+      return { ...TEST_CONFIG };
+    case 'production':
+      return { ...PROD_CONFIG };
+    case 'development':
+    default:
+      return { ...DEV_CONFIG };
+  }
 }
 
 // ─── Exported config ──────────────────────────────────────────────────
@@ -99,7 +148,7 @@ export const env = {
   OAUTH_APPLE_CLIENT_ID: config.OAUTH_APPLE_CLIENT_ID,
 
   /** Current build variant */
-  BUILD_VARIANT: isDevMode() ? 'development' : 'production',
+  BUILD_VARIANT: detectFlavor(),
 
   /** Whether to enable Sentry crash reporting */
   get SENTRY_ENABLED(): boolean {
@@ -112,6 +161,15 @@ export const isDev = isDevMode();
 
 /** Check if running in production build */
 export const isProd = !isDevMode();
+
+/** Current build flavor (staging / production / development) */
+export const buildFlavor = detectFlavor();
+
+/** Check if running in staging flavor */
+export const isTestFlavor = buildFlavor === 'staging';
+
+/** Check if running in production flavor */
+export const isProdFlavor = buildFlavor === 'production';
 
 /** Get the API base URL (no trailing slash — fetchBaseQuery concatenates correctly without one) */
 export function getApiBaseUrl(): string {

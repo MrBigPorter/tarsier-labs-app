@@ -17,8 +17,8 @@
 /** Default quality for Cloudflare image optimization */
 const DEFAULT_QUALITY = 75;
 
-/** Default width for Cloudflare image optimization */
-const DEFAULT_WIDTH = 640;
+/** Default width for Cloudflare image optimization (480px = good for mobile cards at ~90vw on 375-430px screens) */
+const DEFAULT_WIDTH = 480;
 
 /** Video file extensions to skip for Cloudflare Image Resizing */
 const VIDEO_EXTENSIONS = /\.(mp4|webm|ogg|mov|avi|mkv|m3u8|ts)(\?|#|$)/i;
@@ -233,10 +233,10 @@ export function isVideoUrl(url: string | null | undefined): boolean {
 
   try {
     const pathname = new URL(url).pathname.toLowerCase();
-    return VIDEO_EXTENSIONS_LIST.some((ext) => pathname.endsWith(ext));
+    return VIDEO_EXTENSIONS_LIST.some(ext => pathname.endsWith(ext));
   } catch {
     // If URL parsing fails (e.g., relative path), check string directly
     const urlLower = url.toLowerCase();
-    return VIDEO_EXTENSIONS_LIST.some((ext) => urlLower.endsWith(ext));
+    return VIDEO_EXTENSIONS_LIST.some(ext => urlLower.endsWith(ext));
   }
 }

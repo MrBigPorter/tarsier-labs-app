@@ -29,22 +29,18 @@ import {
 } from 'react-native';
 import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAB_BAR_HEIGHT } from '@/navigation/RootNavigator';
 import { useModeColors, spacing, typography, borderRadius } from '@/lib/theme';
 import { useAppSelector } from '@/store';
-import {
-  useGetBookmarksQuery,
-  useRemoveBookmarkMutation,
-} from '@/api/endpoints/bookmarks';
+import { useGetBookmarksQuery } from '@/api/endpoints/bookmarks';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
 import { ArticleListSkeleton } from '@/components/core/Skeleton';
-import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import { useTranslation } from 'react-i18next';
 import { useAppLanguage } from '@/lib/i18n';
+import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import type { BookmarksTabScreenProps } from '@/navigation/types';
-import type { FrontendArticle, BookmarkedArticle } from '@/types/frontend-blog';
+import type { FrontendArticle } from '@/types/frontend-blog';
 
 const PAGE_SIZE = 20;
 
@@ -61,15 +57,17 @@ const BookmarksScreen: React.FC<BookmarksTabScreenProps<'Bookmarks'>> = ({
 
   // ─── Pagination ─────────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // ─── RTK Query ──────────────────────────────────────────────────────
-  const { data, isLoading, isFetching, error, refetch } = useGetBookmarksQuery({
+  // _refreshKey is a cache-busting parameter: on refresh(), the key increments,
+  // forcing RTK Query to create a new cache entry and always fetch from server.
+  const { data, isLoading, isFetching } = useGetBookmarksQuery({
     page: currentPage,
     pageSize: PAGE_SIZE,
     locale: lang,
+    _refreshKey: refreshKey,
   });
-
-  const [removeBookmark] = useRemoveBookmarkMutation();
 
   const bookmarkedArticles = (data?.items ??
     []) as unknown as FrontendArticle[];
@@ -89,23 +87,18 @@ const BookmarksScreen: React.FC<BookmarksTabScreenProps<'Bookmarks'>> = ({
     [navigation],
   );
 
+  const prefetchArticle = useArticlePrefetch();
+
   const handleRefresh = useCallback(() => {
     setCurrentPage(1);
-    refetch();
-  }, [refetch]);
+    setRefreshKey(k => k + 1);
+  }, []);
 
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
       setCurrentPage(prev => prev + 1);
     }
   }, [isFetching, hasMore]);
-
-  const handleRemoveBookmark = useCallback(
-    (articleId: string) => {
-      removeBookmark({ articleId });
-    },
-    [removeBookmark],
-  );
 
   const handleSignIn = useCallback(() => {
     navigation.getParent()?.navigate('Auth');

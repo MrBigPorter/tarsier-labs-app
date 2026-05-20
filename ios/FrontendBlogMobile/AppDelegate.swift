@@ -3,6 +3,7 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 import AVFoundation
+import CodePush
 
 /// URLs to ignore for deep linking (handled by other means, e.g. OAuth)
 private let ignoredPaths = Set([
@@ -90,7 +91,7 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
 #if DEBUG
     RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    CodePush.bundleURL()
 #endif
   }
 }

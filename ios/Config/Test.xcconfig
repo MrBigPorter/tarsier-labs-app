@@ -1,0 +1,6 @@
+// ios/Config/Test.xcconfig
+// Test flavor — bundle ID with .test suffix, display name with (Test)
+
+PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test
+DISPLAY_NAME = Tarsier(Test)
+CODEPUSH_DEPLOYMENT_KEY = M2BSYLHORPs59cFQRU7voImqczkEf8EU92luy

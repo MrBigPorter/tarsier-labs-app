@@ -36,6 +36,7 @@ import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import SvgIcon from '@/components/core/SvgIcon';
+import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import type { RootStackScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
@@ -126,6 +127,8 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
     [navigation],
   );
 
+  const prefetchArticle = useArticlePrefetch();
+
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
       setPage(prev => prev + 1);
@@ -136,10 +139,15 @@ const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
   const renderArticleItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
+        <ArticleCard
+          article={item}
+          onPress={handleArticlePress}
+          onPrefetch={prefetchArticle}
+          showExcerpt
+        />
       </View>
     ),
-    [handleArticlePress],
+    [handleArticlePress, prefetchArticle],
   );
 
   // ─── Empty state: no query ──────────────────────────────────────────

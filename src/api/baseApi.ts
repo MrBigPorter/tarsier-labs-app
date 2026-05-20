@@ -24,6 +24,8 @@ import {
 import { getApiBaseUrl } from '@/lib/env';
 import { storage } from '@/lib/storage';
 import { getCurrentLanguage } from '@/lib/i18n';
+import { logout } from '@/store/slices/authSlice';
+import { navigateToAuth } from '@/lib/navigationRef';
 import { recordApiCall } from '@/lib/perf/apiTiming';
 
 /**
@@ -228,6 +230,9 @@ const baseQuery: BaseQueryFn<
             );
             storage.delete(AUTH_TOKEN_KEY);
             storage.delete(REFRESH_TOKEN_KEY);
+            // Sync Redux auth state and redirect to login
+            api.dispatch(logout());
+            navigateToAuth();
           }
         } else {
           // Refresh returned non-2xx (e.g. 400 INVALID_JWT_TOKEN)
@@ -235,6 +240,9 @@ const baseQuery: BaseQueryFn<
           console.warn('[API] Token refresh failed — clearing stored tokens');
           storage.delete(AUTH_TOKEN_KEY);
           storage.delete(REFRESH_TOKEN_KEY);
+          // Sync Redux auth state and redirect to login
+          api.dispatch(logout());
+          navigateToAuth();
         }
       } catch (error) {
         // Network error during refresh — clear tokens to avoid infinite retry loop
@@ -244,11 +252,17 @@ const baseQuery: BaseQueryFn<
         );
         storage.delete(AUTH_TOKEN_KEY);
         storage.delete(REFRESH_TOKEN_KEY);
+        // Sync Redux auth state and redirect to login
+        api.dispatch(logout());
+        navigateToAuth();
       }
     } else {
       // No refresh token available — user needs to re-authenticate
       console.warn('[API] 401 but no refresh token — clearing access token');
       storage.delete(AUTH_TOKEN_KEY);
+      // Sync Redux auth state and redirect to login
+      api.dispatch(logout());
+      navigateToAuth();
     }
   }
 

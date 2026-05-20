@@ -87,6 +87,7 @@ export function usePaginatedQuery<TData, TItem>(
   // ─── State ───────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
   const [allItems, setAllItems] = useState<TItem[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Track previous params to detect changes that should reset pagination
   const prevParamsRef = useRef(params);
@@ -97,29 +98,42 @@ export function usePaginatedQuery<TData, TItem>(
   // paint). By detecting and resetting synchronously during render, we
   // prevent stale accumulated data from flashing (e.g., Japanese articles
   // visible when switching to Chinese).
+  //
+  // IMPORTANT — render-phase update restart behaviour:
+  //   React sees these setState calls during render and RESTARTS the render
+  //   with the new state applied. However, prevParamsRef (a ref) is mutated
+  //   immediately and is NOT rolled back on restart. So in the restarted
+  //   render, paramsChanged = false and effectivePage falls back to `page`.
+  //   If we only reset allItems and rely on `effectivePage = paramsChanged ? 1 : page`,
+  //   the restarted render fires the query for the OLD page number (e.g. page 3)
+  //   of the new category — returning empty results and leaving the list blank.
+  //
+  //   Fix: also call setPage(1) here so that both allItems AND page are reset
+  //   together in the restarted render. effectivePage then correctly uses page=1.
   const paramsChanged = Object.keys(params).some(
     key => params[key] !== prevParamsRef.current[key],
   );
   if (paramsChanged) {
     prevParamsRef.current = { ...params };
-    // Reset accumulated items immediately. We do NOT call setPage(1) here
-    // because useState updates are queued — they don't apply until the next
-    // render. Instead, use effectivePage (computed below) so the RTK Query
-    // call in THIS render uses the correct page=1.
     setAllItems([]);
+    setPage(1);
   }
 
   // ─── Compute effective page ────────────────────────────────────────
-  // When params change (e.g., language switch), setPage(1) below would be
-  // queued but NOT applied in this render. Using effectivePage ensures the
-  // RTK Query call uses page=1 immediately, avoiding stale cache keys like
-  // { lang: 'zh', page: 3 } when it should be { lang: 'zh', page: 1 }.
+  // After the render-phase restart, paramsChanged=false and page=1 (both
+  // applied). effectivePage correctly resolves to 1 via the page state.
   const effectivePage = paramsChanged ? 1 : page;
 
   // ─── RTK Query call ─────────────────────────────────────────────────
-  const { data, isLoading, isFetching, isError, error, refetch } = useQueryHook(
-    { ...params, page: effectivePage, pageSize },
-  );
+  // _refreshKey is a cache-busting parameter: on refresh(), the key increments,
+  // forcing RTK Query to create a new cache entry and always fetch from server.
+  // This fixes the stuck-spinner bug where refetch() was called on the wrong page.
+  const { data, isLoading, isFetching, isError, error } = useQueryHook({
+    ...params,
+    page: effectivePage,
+    pageSize,
+    _refreshKey: refreshKey,
+  });
 
   // ─── Derive pagination info from data ───────────────────────────────
   const totalPages = data ? selectTotalPages(data) : 1;
@@ -151,15 +165,6 @@ export function usePaginatedQuery<TData, TItem>(
     }
   }, [data, effectivePage, selectItems]);
 
-  // ─── Sync page state with effectivePage ────────────────────────────
-  // When params change, we need the page state to also reflect the reset
-  // to 1, so that subsequent loadMore calls work correctly.
-  useEffect(() => {
-    if (paramsChanged && page !== 1) {
-      setPage(1);
-    }
-  }, [paramsChanged, page]);
-
   // ─── Load next page ────────────────────────────────────────────────
   const loadMore = useCallback(() => {
     if (!isFetching && hasMore) {
@@ -168,11 +173,14 @@ export function usePaginatedQuery<TData, TItem>(
   }, [isFetching, hasMore]);
 
   // ─── Refresh from page 1 ──────────────────────────────────────────
+  // Uses refreshKey to force a new RTK Query cache entry, guaranteeing
+  // a fresh server fetch with proper isFetching lifecycle (false→true→false).
+  // This replaces the broken refetch() pattern which fetched the wrong page.
   const refresh = useCallback(() => {
     setPage(1);
     setAllItems([]);
-    refetch();
-  }, [refetch]);
+    setRefreshKey(k => k + 1);
+  }, []);
 
   // ─── Display items ────────────────────────────────────────────────
   // Page 1: use direct RTK Query data (cache-first, synchronous).

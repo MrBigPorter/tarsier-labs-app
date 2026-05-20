@@ -21,18 +21,15 @@ import {
 } from 'react-native';
 import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAB_BAR_HEIGHT } from '@/navigation/RootNavigator';
 import { useModeColors, spacing, typography } from '@/lib/theme';
 import { useGetCategoryBySlugQuery } from '@/api/endpoints/categories';
 import { useAppLanguage } from '@/lib/i18n';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Header from '@/components/layout/Header';
-import {
-  ArticleListSkeleton,
-  ArticleCardSkeleton,
-} from '@/components/core/Skeleton';
+import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import type { CategoriesTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
@@ -45,18 +42,9 @@ const CategoryArticlesScreen: React.FC<
   const { t } = useTranslation();
   const lang = useAppLanguage();
 
-  const prevLangRef = React.useRef(lang);
-
-  React.useEffect(() => {
-    if (prevLangRef.current !== lang) {
-      prevLangRef.current = lang;
-      setPage(1);
-      refetch();
-    }
-  }, [lang]);
-
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const {
     data: categoryData,
@@ -69,10 +57,22 @@ const CategoryArticlesScreen: React.FC<
     page,
     pageSize: 15,
     lang,
+    _refreshKey: refreshKey,
   });
 
   const totalPages = categoryData?.articles?.totalPages || 1;
   const hasMore = page < totalPages;
+
+  const prevLangRef = React.useRef(lang);
+
+  // Re-fetch when language changes
+  React.useEffect(() => {
+    if (prevLangRef.current !== lang) {
+      prevLangRef.current = lang;
+      setPage(1);
+      refetch();
+    }
+  }, [lang, refetch]);
 
   // Accumulate articles across pages
   React.useEffect(() => {
@@ -118,6 +118,8 @@ const CategoryArticlesScreen: React.FC<
     [navigation],
   );
 
+  const prefetchArticle = useArticlePrefetch();
+
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
       setPage(prev => prev + 1);
@@ -127,16 +129,21 @@ const CategoryArticlesScreen: React.FC<
   const handleRefresh = useCallback(() => {
     setPage(1);
     setAllArticles([]);
-    refetch();
-  }, [refetch]);
+    setRefreshKey(k => k + 1);
+  }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: FrontendArticle }) => (
       <View style={styles.articleItem}>
-        <ArticleCard article={item} onPress={handleArticlePress} showExcerpt />
+        <ArticleCard
+          article={item}
+          onPress={handleArticlePress}
+          onPrefetch={prefetchArticle}
+          showExcerpt
+        />
       </View>
     ),
-    [handleArticlePress],
+    [handleArticlePress, prefetchArticle],
   );
 
   const renderFooter = () => {

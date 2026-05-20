@@ -29,7 +29,7 @@ react {
     //   The list of variants to that are debuggable. For those we're going to
     //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
     //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    // debuggableVariants = ["liteDebug", "liteDebugOptimized", "prodDebug", "prodDebugOptimized"]
+    debuggableVariants = ["stagingDebug", "productionDebug"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -65,7 +65,7 @@ react {
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -80,18 +80,26 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+// Load keystore.properties if it exists (for release signing)
+def keystorePropertiesFile = rootProject.file("app/keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.frontendblogmobile"
+    namespace "com.tarsier.labs"
     defaultConfig {
-        applicationId "com.frontendblogmobile"
+        applicationId "com.tarsier.labs"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
+        resValue "string", "app_name", "Tarsier"
     }
     signingConfigs {
         debug {
@@ -99,6 +107,50 @@ android {
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
+        }
+        release {
+            // Google Play App Signing — uses an upload key.
+            // Credentials are loaded from keystore.properties (local dev)
+            // or passed via Gradle -P flags / CI secrets.
+            if (keystorePropertiesFile.exists()) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            } else if (project.hasProperty('KEYSTORE_FILE') && rootProject.file(KEYSTORE_FILE).exists()) {
+                storeFile rootProject.file(KEYSTORE_FILE)
+                storePassword KEYSTORE_PASSWORD
+                keyAlias KEY_ALIAS
+                keyPassword KEY_PASSWORD
+            }
+        }
+    }
+    flavorDimensions "env"
+    productFlavors {
+        staging {
+            dimension "env"
+            missingDimensionStrategy 'env', 'staging'
+            applicationIdSuffix ".test"
+            versionNameSuffix "-test"
+            resValue "string", "app_name", "Tarsier(Test)"
+            // CodePush deployment key — replace with actual key from self-hosted server
+            // NOTE: Resource name must be "CodePushDeploymentKey" to match what
+            // react-native-code-push's autolinking template generates in PackageList.java.
+            resValue "string", "CodePushDeploymentKey", "pjANOoRUuBu4PPgpyPwdzH51LVvvf8EU92luy"
+            // ServerUrl — Android SDK natively reads this from string resources (CodePush.java:84-85)
+            resValue "string", "ServerUrl", "https://codepush.joyminis.com"
+        }
+        production {
+            dimension "env"
+            missingDimensionStrategy 'env', 'production'
+            applicationIdSuffix ""
+            resValue "string", "app_name", "Tarsier"
+            // CodePush deployment key — replace with actual key from self-hosted server
+            // NOTE: Resource name must be "CodePushDeploymentKey" to match what
+            // react-native-code-push's autolinking template generates in PackageList.java.
+            resValue "string", "CodePushDeploymentKey", "NXYx4qDMGpw3yddONvlCMjBUcsief8EU92luy"
+            // ServerUrl — Android SDK natively reads this from string resources (CodePush.java:84-85)
+            resValue "string", "ServerUrl", "https://codepush.joyminis.com"
         }
     }
     buildTypes {
@@ -110,9 +162,10 @@ android {
             manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Google Play App Signing — signingConfig can be null during development;
+            // Gradle will fall back to the default debug key. Set up a real upload key
+            // before submitting to Google Play.
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             // Disable cleartext traffic in release (HTTPS only).

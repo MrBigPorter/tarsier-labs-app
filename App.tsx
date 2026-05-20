@@ -35,15 +35,18 @@ if (__DEV__) {
   });
 }
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { StatusBar, StyleSheet, LogBox } from 'react-native';
+import {
+  StatusBar,
+  StyleSheet,
+  LogBox,
+  InteractionManager,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
-import {
-  NavigationContainer,
-  type NavigationContainerRef,
-} from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import type { NavigationState } from '@react-navigation/native';
+import { navigationRef } from '@/lib/navigationRef';
 import { ThemeProvider, useTheme } from '@/lib/theme/ThemeContext';
 import { store } from '@/store';
 import { restoreSession } from '@/store/slices/authSlice';
@@ -53,11 +56,16 @@ import { logger } from '@/lib/logger';
 import { initSentry, captureException, addBreadcrumb } from '@/lib/sentry';
 import { PerfProvider, PerfMonitor, usePerfMonitor } from '@/lib/perf';
 import BootSplash from 'react-native-bootsplash';
+import codePush from 'react-native-code-push';
 
 // Suppress known non-critical warnings in development
 if (__DEV__) {
   LogBox.ignoreLogs([
     'Non-serializable values were found in the navigation state',
+    // Sentry Native touch tracker fires this when tapping native-only components
+    // (e.g. react-native-video's <Video> uses ExoPlayer/AVPlayer, bypassing RN touch system).
+    // Completely harmless — Sentry just can't record a breadcrumb for that tap.
+    'Unable to find click target',
   ]);
 }
 
@@ -68,8 +76,6 @@ if (__DEV__) {
 function AppContent(): React.JSX.Element {
   const { colors, isDark } = useTheme();
   const { recordNav } = usePerfMonitor();
-  const navigationRef =
-    useRef<NavigationContainerRef<ReactNavigation.RootParamList>>(null);
   const prevRouteRef = useRef<string>('unknown');
   const prevTimestampRef = useRef<number>(Date.now());
 
@@ -131,7 +137,7 @@ function AppContentWithPerf(): React.JSX.Element {
 /**
  * Main App component with all providers
  */
-function App(): React.JSX.Element {
+function AppComponent(): React.JSX.Element {
   useEffect(() => {
     // Initialize app-level services
     const init = async () => {
@@ -140,8 +146,13 @@ function App(): React.JSX.Element {
         store.dispatch(restoreSession());
 
         // i18n is initialized via import at the top level
-        // Initialize Sentry for crash reporting & performance monitoring
-        initSentry();
+        // Defer Sentry initialization until after the first screen is fully
+        // rendered and all navigation animations have settled. This prevents
+        // the Sentry SDK (~30-50KB native overhead) from competing for CPU
+        // time during the critical startup path (LCP / first paint).
+        InteractionManager.runAfterInteractions(() => {
+          initSentry();
+        });
 
         logger.info('[App] App initialization complete');
         addBreadcrumb('App initialized', 'app');
@@ -172,6 +183,14 @@ function App(): React.JSX.Element {
     </GestureHandlerRootView>
   );
 }
+
+// Wrap with CodePush HOC for hot updates — check for updates on app resume,
+// install silently on next app restart (no UI interruption)
+const codePushOptions = {
+  checkFrequency: codePush.CheckFrequency.ON_APP_RESUME,
+  installMode: codePush.InstallMode.ON_NEXT_RESTART,
+};
+const App = codePush(codePushOptions)(AppComponent);
 
 const styles = StyleSheet.create({
   root: {

@@ -1,4 +1,4 @@
-package com.frontendblogmobile
+package com.tarsier.labs
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

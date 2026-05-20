@@ -13,22 +13,24 @@ interface TagBySlugParams {
   page?: number;
   pageSize?: number;
   lang?: string;
+  /** Cache-busting key for pull-to-refresh — increments on each manual refresh */
+  _refreshKey?: number;
 }
 
 export const tagApi = blogApi.injectEndpoints({
-  endpoints: (builder) => ({
+  endpoints: builder => ({
     /**
      * Get all tags
      * GET /api/v1/frontend/blog/tags
      */
     getTags: builder.query<FrontendTag[], string | void>({
-      query: (lang) => ({
+      query: lang => ({
         url: '/api/v1/frontend/blog/tags',
         params: lang ? { lang } : {},
       }),
       transformResponse: (response: ApiResponseWrapper<FrontendTag[]>) =>
         unwrapData(response),
-      providesTags: (result) =>
+      providesTags: result =>
         result
           ? [
               ...result.map(({ id }) => ({ type: 'Tag' as const, id })),
@@ -46,8 +48,9 @@ export const tagApi = blogApi.injectEndpoints({
         url: `/api/v1/frontend/blog/tags/${slug}`,
         params: { page, pageSize, lang },
       }),
-      transformResponse: (response: ApiResponseWrapper<FrontendTagWithArticles>) =>
-        unwrapData(response),
+      transformResponse: (
+        response: ApiResponseWrapper<FrontendTagWithArticles>,
+      ) => unwrapData(response),
       providesTags: (result, _error, { slug }) =>
         result
           ? [
@@ -65,7 +68,7 @@ export const tagApi = blogApi.injectEndpoints({
       FrontendTag[],
       { limit?: number; lang?: string } | void
     >({
-      query: (params) => {
+      query: params => {
         const { limit = 20, lang } = params || {};
         return {
           url: '/api/v1/frontend/blog/tags/popular',

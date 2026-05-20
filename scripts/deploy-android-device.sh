@@ -430,8 +430,12 @@ echo ""
 cd "$PROJECT_DIR"
 
 # Use react-native run-android with the selected device ID
+# NOTE: --mode stagingDebug is required because the project has multiple product
+# flavors (staging, production). Without it, Gradle can't resolve the ambiguous
+# task name "installDebug".
 npx react-native run-android \
     --deviceId "$SELECTED_ID" \
+    --mode stagingDebug \
     2>&1 | tee /tmp/react-native-android.log
 RC=${pipestatus[1]:-0}
 

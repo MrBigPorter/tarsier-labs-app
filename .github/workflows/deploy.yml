@@ -1,0 +1,246 @@
+name: Deploy (Test / Production)
+
+on:
+  push:
+    branches:
+      - main
+      - test
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  JAVA_VERSION: '17'
+
+defaults:
+  run:
+    shell: /bin/zsh -e {0}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Decide which flavor to build based on trigger
+  # ─────────────────────────────────────────────────────────────────────────────
+  resolve-flavor:
+    name: Resolve Flavor
+    runs-on: ubuntu-latest
+    outputs:
+      flavor: ${{ steps.resolve.outputs.flavor }}
+      flavor_label: ${{ steps.resolve.outputs.flavor_label }}
+
+    steps:
+      - name: Resolve environment
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FLAVOR="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
+            FLAVOR="test"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            FLAVOR="production"
+          else
+            echo "❌ Unknown branch/tag — cannot resolve flavor"
+            exit 1
+          fi
+
+          if [ "$FLAVOR" = "test" ]; then
+            echo "flavor=test" >> $GITHUB_OUTPUT
+            echo "flavor_label=Test" >> $GITHUB_OUTPUT
+          else
+            echo "flavor=production" >> $GITHUB_OUTPUT
+            echo "flavor_label=Production" >> $GITHUB_OUTPUT
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build Android
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-android:
+    name: Build Android (${{ needs.resolve-flavor.outputs.flavor_label }})
+    needs: [resolve-flavor]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ needs.resolve-flavor.outputs.flavor }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*') }}
+          restore-keys: gradle-${{ runner.os }}
+
+      - name: Build Android (${{ needs.resolve-flavor.outputs.flavor_label }})
+        run: |
+          # Gradle signing properties are passed from GitHub Secrets via -P flags.
+          # Set these in Settings → Secrets and variables → Actions:
+          #   KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+          # Also upload your .keystore file as a base64 secret or make it
+          # available via the runner's filesystem (e.g. GitHub Actions cache).
+          if [ "${{ needs.resolve-flavor.outputs.flavor }}" = "test" ]; then
+            cd android && ./gradlew assembleStagingRelease --no-daemon \
+              -PKEYSTORE_FILE=${{ secrets.KEYSTORE_FILE }} \
+              -PKEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
+              -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+              -PKEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          else
+            cd android && ./gradlew bundleProductionRelease --no-daemon \
+              -PKEYSTORE_FILE=${{ secrets.KEYSTORE_FILE }} \
+              -PKEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
+              -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+              -PKEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          fi
+
+      - name: Upload APK/AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ needs.resolve-flavor.outputs.flavor }}
+          path: |
+            android/app/build/outputs/apk/staging/release/app-staging-release.apk
+            android/app/build/outputs/bundle/productionRelease/app-production-release.aab
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build iOS
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-ios:
+    name: Build iOS (${{ needs.resolve-flavor.outputs.flavor_label }})
+    needs: [resolve-flavor]
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: ${{ needs.resolve-flavor.outputs.flavor }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: pods-${{ runner.os }}
+
+      - name: Install Pods
+        run: cd ios && USE_FRAMEWORKS=static pod install && cd ..
+
+      - name: Build iOS (${{ needs.resolve-flavor.outputs.flavor_label }})
+        run: |
+          if [ "${{ needs.resolve-flavor.outputs.flavor }}" = "test" ]; then
+            cd ios
+            xcodebuild -workspace FrontendBlogMobile.xcworkspace \
+                       -scheme FrontendBlogMobile-Test \
+                       -configuration Release-Test \
+                       -sdk iphoneos \
+                       -archivePath ./build/Test.xcarchive \
+                       archive \
+                       CODE_SIGN_STYLE=Manual \
+                       CODE_SIGNING_REQUIRED=NO \
+                       CODE_SIGNING_ALLOWED=NO
+          else
+            cd ios
+            xcodebuild -workspace FrontendBlogMobile.xcworkspace \
+                       -scheme FrontendBlogMobile \
+                       -configuration Release \
+                       -sdk iphoneos \
+                       -archivePath ./build/Prod.xcarchive \
+                       archive \
+                       CODE_SIGN_STYLE=Manual \
+                       CODE_SIGNING_REQUIRED=NO \
+                       CODE_SIGNING_ALLOWED=NO
+          fi
+
+      - name: Upload Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ needs.resolve-flavor.outputs.flavor }}
+          path: ios/build/*.xcarchive
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CodePush (hot update) — only for test branch pushes
+  # Uses self-hosted code-push-server at https://codepush.joyminis.com
+  # ─────────────────────────────────────────────────────────────────────────────
+  codepush-test:
+    name: CodePush Test (Hot Update)
+    needs: [resolve-flavor]
+    if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Install code-push-standalone CLI
+        run: npm install -g code-push-standalone
+
+      - name: Login to self-hosted CodePush
+        run: |
+          code-push-standalone login ${{ secrets.CODEPUSH_SERVER_URL }} \
+            --accessKey "${{ secrets.CODEPUSH_ACCESS_KEY }}"
+
+      - name: CodePush Staging (Android)
+        run: |
+          code-push-standalone release-react TarsierTest-android android \
+            --deploymentName Staging \
+            --description "CI: $(git log -1 --pretty=%s)"
+
+      - name: CodePush Staging (iOS)
+        run: |
+          code-push-standalone release-react TarsierTest-ios ios \
+            --deploymentName Staging \
+            --description "CI: $(git log -1 --pretty=%s)" \
+            --plistFile ios/FrontendBlogMobile/Info.plist \
+            --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj
