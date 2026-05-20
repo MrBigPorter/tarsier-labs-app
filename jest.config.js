@@ -17,7 +17,8 @@ module.exports = {
       'react-native-markdown-display|' +
       'react-native-sse|' +
       'react-native-video|' +
-      'react-native-svg' +
+      'react-native-svg|' +
+      'react-native-code-push' +
       ')/)',
   ],
 };

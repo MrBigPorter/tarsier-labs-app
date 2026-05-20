@@ -156,6 +156,7 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedRef: () => ({ current: null }),
     useAnimatedScrollHandler: () => ({}),
     useAnimatedGestureHandler: () => ({}),
+    useAnimatedReaction: (prepare, react) => {},
     createAnimatedComponent: component => component,
     makeMutable: init => ({ value: init }),
     Animation: () => ({}),
@@ -374,6 +375,16 @@ jest.mock('@sentry/react-native', () => ({
     Debug: 'debug',
   },
 }));
+
+// react-native-code-push — hot update (code-push-server SDK)
+// CodePush wraps the root component with an HOC that checks for updates.
+// In tests, we just return the component unmocked so it renders normally.
+jest.mock('react-native-code-push', () => {
+  const codePush = jest.fn(options => component => component);
+  codePush.CheckFrequency = { ON_APP_RESUME: 0 };
+  codePush.InstallMode = { ON_NEXT_RESTART: 0 };
+  return codePush;
+});
 
 // react-native-worklets-core — worklet threading
 jest.mock('react-native-worklets', () => ({
