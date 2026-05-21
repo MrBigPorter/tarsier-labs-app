@@ -182,7 +182,6 @@ jobs:
             echo "   Release notes: CI Build: $(git log -1 --pretty=%s)"
             firebase --non-interactive appdistribution:distribute "$APK_PATH" \
               --app "$FIREBASE_APP_ID" \
-              --testers-file .firebase-testers.txt \
               --release-notes "CI Build: $(git log -1 --pretty=%s)"
             echo "✅ Uploaded to Firebase App Distribution"
           else
