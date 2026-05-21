@@ -317,19 +317,19 @@ After completing all the steps above, verify everything is ready:
 - [ ] `test` environment created
 - [ ] `production` environment created
 
-### Firebase App Distribution
+### Google Play Internal Testing (CI Auto-Upload)
 
-- [ ] Firebase service account JSON downloaded from Firebase Console
-- [ ] `firebase-service-account.json` added to `.gitignore`
-- [ ] `FIREBASE_SERVICE_ACCOUNT` GitHub Secret set (base64 of service account JSON)
+- [ ] Google Play Android Developer API enabled in Google Cloud Console
+- [ ] Firebase/Google Cloud service account added as Admin in Google Play Console Users & permissions
+- [ ] `PLAY_SERVICE_ACCOUNT_KEY` GitHub Secret set (raw JSON content of service account key)
 - [ ] `KEYSTORE_BASE64` GitHub Secret set (base64 of `android/app/release-upload-key.keystore`)
-- [ ] `.firebase-testers.txt` filled with tester email addresses
 - [ ] `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` GitHub Secrets set
+- [ ] Testers added directly in Google Play Console → Internal Testing → Testers
 
 ### CI/CD
 
 - [ ] `deploy.yml` updated: CodePush job uses `code-push-standalone` with `CODEPUSH_SERVER_URL` + `CODEPUSH_ACCESS_KEY`
-- [ ] `deploy.yml` updated: Firebase App Distribution upload step added
+- [ ] `deploy.yml` updated: `r0adkll/upload-google-play` upload step added for direct Google Play Internal Testing
 
 ---
 
@@ -337,15 +337,16 @@ After completing all the steps above, verify everything is ready:
 
 ---
 
-## 7. Firebase App Distribution Setup
+## 7. Google Play Internal Testing Setup (CI Auto-Upload)
 
-> This section covers setting up automatic uploads to Firebase App Distribution after each CI build.
+> This section covers setting up automatic AAB uploads to Google Play Console's Internal Testing track via CI.
 
 ### 7.1 Prerequisites
 
-- A Firebase project (you already have one: `adroit-outlet-444914-m0`)
-- `google-services.json` in `android/app/` (already added)
-- Firebase service account JSON key (downloaded from Firebase Console)
+- A Google Play Developer account (✅ already registered)
+- App created in Google Play Console: **Tarsier** (`com.tarsier.labs`)
+- At least one AAB already uploaded to Play Console (to create the Internal Testing track)
+- Firebase service account JSON key (downloaded from Firebase Console — also used for Google Play API)
 
 ### 7.2 Add `KEYSTORE_BASE64` GitHub Secret
 
@@ -364,19 +365,19 @@ Then add a GitHub Secret:
 4. **Value:** (paste from clipboard)
 5. Click **Add secret**
 
-### 7.3 Add `FIREBASE_SERVICE_ACCOUNT` GitHub Secret
+### 7.3 Add `PLAY_SERVICE_ACCOUNT_KEY` GitHub Secret
 
-The Firebase service account JSON key is also gitignored (`.gitignore` now includes `firebase-service-account.json`). Encode it as base64:
+The Firebase/Google Cloud service account JSON key is used by `r0adkll/upload-google-play` Action to authenticate with Google Play API.
 
 ```sh
-# From project root
-base64 -i firebase-service-account.json | pbcopy
+# From project root, copy the raw JSON content (NOT base64-encoded)
+cat firebase-service-account.json | pbcopy
 ```
 
 Then add a GitHub Secret:
 
-1. **Name:** `FIREBASE_SERVICE_ACCOUNT`
-2. **Value:** (paste from clipboard)
+1. **Name:** `PLAY_SERVICE_ACCOUNT_KEY`
+2. **Value:** (paste raw JSON from clipboard — NOT base64)
 3. Click **Add secret**
 
 ### 7.4 Add Android Signing Secrets
@@ -390,36 +391,46 @@ If not already set, add these GitHub Secrets for Gradle signing:
 | `KEY_ALIAS`         | `upload-key`                          |
 | `KEY_PASSWORD`      | Your key password (`haoran0718`)      |
 
-### 7.5 Configure Testers
+### 7.5 Configure Testers in Google Play Console
 
-Edit [`.firebase-testers.txt`](../.firebase-testers.txt) in the project root and add tester email addresses, one per line:
+Testers are managed **directly in Google Play Console**, not via a local file.
 
-```
-tester1@example.com
-tester2@example.com
-```
+1. Go to **Google Play Console → Tarsier → Testing → Internal Testing**
+2. Under **Testers**, click **Add email addresses**
+3. Add tester emails (one per line), up to 100 testers
+4. Each tester receives an invitation link via email
+5. Testers must accept the invite and opt-in to feedback (optional)
+
+> ⚠️ Do **NOT** commit real email addresses to the repo. The `.firebase-testers.txt` file is kept as a template only.
 
 ### 7.6 How It Works
 
-When the CI pipeline runs (push to `main`/`test` branch, or `workflow_dispatch`):
+When the CI pipeline runs (`production` flavor on `main` branch push or version tag):
 
 1. **Decode keystore** — base64-decodes `KEYSTORE_BASE64` to `android/app/release-upload-key.keystore`
-2. **Decode Firebase service account** — base64-decodes `FIREBASE_SERVICE_ACCOUNT` to `firebase-service-account.json`
-3. **Build Android** — builds the APK (test) or AAB (production) with Gradle signing
-4. **Upload APK/AAB** — saves artifact to GitHub Actions
-5. **Upload to Firebase App Distribution** — uses `firebase-tools` CLI to upload to Firebase, notifying testers via email
+2. **Build Android AAB** — builds production signed AAB with Gradle
+3. **Upload AAB** — saves artifact to GitHub Actions
+4. **Upload to Google Play Internal Testing** — `r0adkll/upload-google-play` Action uploads the AAB directly to Google Play Console's Internal Testing track with `status: completed` (auto-published to testers)
+5. **Testers see update** — testers receive the update via Google Play Store on their devices
 
 ### 7.7 Triggering a Build
 
 **Automatic:**
 
-- Push to `test` branch → builds staging APK → uploads to Firebase App Distribution
-- Push to `main` branch → builds production AAB → uploads to Firebase App Distribution
-- Push version tag `v*` → builds production AAB → uploads to Firebase App Distribution
+- Push to `main` branch → builds production AAB → uploads to Google Play Internal Testing
+- Push version tag `v*` → builds production AAB → uploads to Google Play Internal Testing
+
+**Note:** Push to `test` branch still builds the staging APK but does NOT upload to Google Play (staging is for development only).
 
 **Manual:**
 
 ```sh
 # Go to GitHub → Actions → "Deploy (Test / Production)" → "Run workflow"
-# Select "test" or "production" environment
+# Select "production" environment to trigger Google Play upload
 ```
+
+### 7.8 Version Numbers
+
+- **versionCode** — auto-incremented using `GITHUB_RUN_NUMBER` in CI (each run gets a unique number)
+- **versionName** — manually set in [`android/app/build.gradle`](../android/app/build.gradle:100-103) following semantic versioning (`MAJOR.MINOR.PATCH`)
+- Update `versionName` manually for new releases (e.g., `1.1.0` for feature release)

@@ -87,3 +87,4 @@ keystore.properties
 .env.development
 .env.production
 .env.staging
+testers.csv

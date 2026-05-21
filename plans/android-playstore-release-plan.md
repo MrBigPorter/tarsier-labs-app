@@ -303,179 +303,89 @@ make build-android
 
 ---
 
-## 附录：CI/CD Firebase App Distribution 自动发布
+## 附录：CI/CD Google Play Internal Testing 自动发布
 
-> 已配置 GitHub Actions 自动构建并上传到 Firebase App Distribution
+> 已配置 GitHub Actions 自动构建并直接上传到 Google Play Console Internal Testing 轨道
 
 ### ✅ 已完成（代码层面）
 
-| 文件                                                                                          | 改动                                                                 |
-| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)                             | 添加 keystore 解码、Firebase 服务账号解码、App Distribution 上传步骤 |
-| [`.firebase-testers.txt`](../.firebase-testers.txt)                                           | 测试者邮箱列表文件                                                   |
-| [`.gitignore`](../.gitignore)                                                                 | 添加 `firebase-service-account.json`                                 |
-| [`docs/ci-cd-setup-guide.md`](../docs/ci-cd-setup-guide.md#7-firebase-app-distribution-setup) | 新增 Firebase 配置文档                                               |
+| 文件                                                                                                            | 改动                                                                                   |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)                                               | 使用 `r0adkll/upload-google-play` 替换 Firebase App Distribution，直接上传到 Play 内测 |
+| [`android/app/build.gradle`](../android/app/build.gradle)                                                       | `versionCode` 自动递增（使用 `GITHUB_RUN_NUMBER`），`versionName` 更新为 `1.0.1`       |
+| [`docs/ci-cd-setup-guide.md`](../docs/ci-cd-setup-guide.md#7-google-play-internal-testing-setup-ci-auto-upload) | 更新为 Google Play Internal Testing 配置文档                                           |
 
 ---
 
-### 📋 手动操作步骤
+### 📋 手动操作步骤（一次性设置）
 
-你需要完成以下 **4 大步**，CICD 才能跑起来。
-
----
-
-### 第 1 步：下载 Firebase Admin SDK 私钥（JSON 文件）
-
-> 这是 Firebase 的「服务账号密钥」，CI 用它来上传 APK。
-
-**1.1 打开 Firebase 控制台**
-
-在浏览器输入这个地址，直接回车打开：
-
-```
-https://console.firebase.google.com/project/adroit-outlet-444914-m0/settings/serviceaccounts
-```
-
-**1.2 点击「生成新的私钥」**
-
-页面中间有一个蓝色按钮 **「生成新的私钥」**。点击它。
-
-**1.3 确认下载**
-
-弹窗会提示「此私钥无法再次检索」—— 点击确定。浏览器会自动下载一个 `.json` 文件。
-
-**1.4 把 JSON 复制到项目根目录**
-
-打开终端，运行以下命令：
-
-```bash
-# 1. 查看 Downloads 里有没有 firebase 相关的 JSON
-ls ~/Downloads/*.json
-
-# 2. 把它复制到项目根目录（文件名改为 firebase-service-account.json）
-cp ~/Downloads/firebase-service-account.json /Users/porter/Developer/frontend-blog-mobile/firebase-service-account.json
-
-# 3. 检查是否复制成功（应该显示文件信息）
-ls -la /Users/porter/Developer/frontend-blog-mobile/firebase-service-account.json
-```
-
-> **注意**：这个文件已被 `.gitignore` 忽略，不会提交到 git。
-
-**1.5 把 JSON 文件编码为 base64（用于 GitHub Secrets）**
-
-```bash
-base64 -i /Users/porter/Developer/frontend-blog-mobile/firebase-service-account.json | pbcopy
-```
-
-> `pbcopy` 会把内容复制到你的系统剪贴板。下一步粘贴到 GitHub 用。
+以下是 CI 上线前需要完成的 **手动设置**（已完成 ✅）：
 
 ---
 
-### 第 2 步：配置 GitHub Secrets
+### 第 1 步：启用 Google Play Android Developer API ✅
 
-> 打开浏览器，进入你的 GitHub 仓库页面，然后：
-> 点击 **Settings** → 左侧 **Secrets and variables** → **Actions**
-> 点击绿色按钮 **「New repository secret」**
+> 在 Google Cloud Console 中启用 Play 的 API，让 service account 能调用 Play 上传接口。
 
-你需要添加以下 **6 个 Secret**：
-
-#### Secret 1：FIREBASE_SERVICE_ACCOUNT
-
-| 字段  | 值                                                                |
-| ----- | ----------------------------------------------------------------- |
-| Name  | `FIREBASE_SERVICE_ACCOUNT`                                        |
-| Value | 直接按 **⌘V（Mac）** 粘贴（上一步 base64 的内容已经复制到剪贴板） |
-
-#### Secret 2：KEYSTORE_BASE64
-
-先运行这个命令，把 keystore 编码到剪贴板：
-
-```bash
-base64 -i /Users/porter/Developer/frontend-blog-mobile/android/app/release-upload-key.keystore | pbcopy
-```
-
-然后在 GitHub 新建 Secret：
-
-| 字段  | 值                |
-| ----- | ----------------- |
-| Name  | `KEYSTORE_BASE64` |
-| Value | 按 **⌘V** 粘贴    |
-
-#### Secret 3：KEYSTORE_FILE
-
-| 字段  | 值                                          |
-| ----- | ------------------------------------------- |
-| Name  | `KEYSTORE_FILE`                             |
-| Value | 手动输入：`app/release-upload-key.keystore` |
-
-> 注意：这是**文本**，不是上传文件。直接照抄上面那行字。
-
-#### Secret 4：KEYSTORE_PASSWORD
-
-| 字段  | 值                     |
-| ----- | ---------------------- |
-| Name  | `KEYSTORE_PASSWORD`    |
-| Value | 手动输入：`haoran0718` |
-
-#### Secret 5：KEY_ALIAS
-
-| 字段  | 值                     |
-| ----- | ---------------------- |
-| Name  | `KEY_ALIAS`            |
-| Value | 手动输入：`upload-key` |
-
-#### Secret 6：KEY_PASSWORD
-
-| 字段  | 值                     |
-| ----- | ---------------------- |
-| Name  | `KEY_PASSWORD`         |
-| Value | 手动输入：`haoran0718` |
-
-**添加完成后，你的 Secrets 列表应该看到这 6 项：**
-
-```
-FIREBASE_SERVICE_ACCOUNT      ********
-KEYSTORE_BASE64               ********
-KEYSTORE_FILE                 ********
-KEYSTORE_PASSWORD             ********
-KEY_ALIAS                     ********
-KEY_PASSWORD                  ********
-```
+1. 打开 **Google Cloud Console**：https://console.cloud.google.com/apis/library/androidpublisher.googleapis.com
+2. 确保选择了项目 `adroit-outlet-444914-m0`
+3. 点击 **Enable**（已启用 ✅）
 
 ---
 
-### 第 3 步：填写测试者邮箱
+### 第 2 步：添加 Service Account 到 Google Play Console ✅
 
-用编辑器打开项目根目录下的 `.firebase-testers.txt` 文件。
+> 把 Firebase 的 service account 邮箱加到 Play Console 中，授予上传权限。
 
-每行填一个测试者的邮箱：
-
-```
-zhangsan@example.com
-lisi@example.com
-wangwu@example.com
-```
-
-> 这些邮箱会收到 Firebase 发来的安装链接。
+1. 打开 **Google Play Console** → **Settings** → **Users & permissions**
+2. 点击 **Invite new user**
+3. 输入 service account 邮箱（在 Firebase Console → Project Settings → Service Accounts 中可以找到）
+4. 权限选择 **Admin**（所有权限）
+5. 点击 **Invite**（已添加 ✅，确认 13 个权限）
 
 ---
 
-### 第 4 步：提交代码，触发 CI
+### 第 3 步：创建 `PLAY_SERVICE_ACCOUNT_KEY` GitHub Secret ✅
 
-```bash
-# 添加到 git
-git add .
+> 把 service account 的 JSON 密钥存为 GitHub Secret，供 CI 使用。
 
-# 提交
-git commit -m "ci: add firebase app distribution"
+1. 打开 **Firebase Console** → **Project Settings** → **Service Accounts**
+2. 点击 **Generate new private key** → 下载 JSON 文件
+3. 复制 JSON 文件的**全部原始内容**（不要 base64 编码）
+4. 打开 **GitHub → Settings → Secrets and variables → Actions**
+5. 点击 **New repository secret**
+   - **Name:** `PLAY_SERVICE_ACCOUNT_KEY`
+   - **Value:** 粘贴 JSON 原始内容
+6. 点击 **Add secret**（已创建 ✅）
 
-# 推送到 GitHub
-git push
-```
+---
+
+### 第 4 步：在 Google Play Console 添加测试者
+
+> 测试者管理直接在 Google Play Console 中操作，不再需要本地文件。
+
+1. 打开 **Google Play Console → Tarsier → Testing → Internal Testing**
+2. 在 **Testers** 部分，点击 **Add email addresses**
+3. 输入测试者的 Gmail 邮箱（每行一个）
+4. 点击 **Save**
+5. 测试者会收到邀请链接，点击加入即可
+
+> ⚠️ 不要将真实邮箱提交到 git 仓库。`.firebase-testers.txt` 仅作为模板保留。
+
+---
 
 ### CI 构建规则
 
-| 推送到分支 | CI 自动构建    | 上传到 Firebase   |
-| ---------- | -------------- | ----------------- |
-| `test`     | staging APK    | ✅ 测试者收到邮件 |
-| `main`     | production AAB | ✅ 测试者收到邮件 |
+| 推送到分支 | CI 自动构建    | 上传到 Google Play Internal Testing |
+| ---------- | -------------- | ----------------------------------- |
+| `test`     | staging APK    | ❌ 不上传（仅开发调试）             |
+| `main`     | production AAB | ✅ 上传到 Internal Testing 并发布   |
+| `v*` tag   | production AAB | ✅ 上传到 Internal Testing 并发布   |
+
+### 版本号规则
+
+- **versionCode** — 自动递增，每个 CI 运行使用 `GITHUB_RUN_NUMBER`（如 #8 → versionCode 8）
+- **versionName** — 手动在 [`android/app/build.gradle`](../android/app/build.gradle:100-103) 中设置，遵循语义化版本 `MAJOR.MINOR.PATCH`
+  - 大版本改动 → 改 MAJOR（如 `2.0.0`）
+  - 新功能 → 改 MINOR（如 `1.1.0`）
+  - 小修复 → 改 PATCH（如 `1.0.2`）

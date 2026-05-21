@@ -69,6 +69,16 @@ If you delete your account:
 - Anonymised content (e.g., public comments) may be retained
 - Backup copies are purged within 90 days
 
+### 4.3 How to Request Deletion
+
+To request account deletion:
+
+1. **By Email**: Send an email from the address associated with your account to **mrporterdev@gmail.com** with the subject line **"Account Deletion Request"**.
+2. **In-App**: Go to Settings → Account → Delete Account to delete your data directly.
+3. **Processing Time**: We will process your request within 30 days and send a confirmation email once complete.
+
+If you have any issues with the deletion process, please contact us at **mrporterdev@gmail.com**.
+
 ## 5. Your Rights
 
 Depending on your jurisdiction, you may have the right to:
@@ -79,7 +89,7 @@ Depending on your jurisdiction, you may have the right to:
 - **Objection**: Object to processing of your data for marketing purposes
 - **Withdraw Consent**: Withdraw consent at any time (does not affect lawfulness of prior processing)
 
-To exercise these rights, contact us at **privacy@tarsierlabs.com**.
+To exercise these rights, contact us at **mrporterdev@gmail.com**.
 
 ## 6. Third-Party Services
 
@@ -118,7 +128,7 @@ We may update this Privacy Policy from time to time. Material changes will be no
 
 If you have questions about this Privacy Policy, please contact us:
 
-- **Email**: privacy@tarsierlabs.com
+- **Email**: mrporterdev@gmail.com
 - **Address**: Tarsier Labs, 123 Innovation Drive, Singapore 018906
 - **In-App**: Settings → About Tarsier
 
@@ -187,6 +197,16 @@ If you have questions about this Privacy Policy, please contact us:
 - 匿名化内容（如公开评论）可能会被保留
 - 备份副本将在90天内清除
 
+### 4.3 如何请求删除
+
+要请求删除账户：
+
+1. **通过电子邮件**：用您账户关联的邮箱地址发送邮件至 **mrporterdev@gmail.com**，主题为 **"Account Deletion Request"**。
+2. **在应用内**：前往 设置 → 账户 → 删除账户，直接删除您的数据。
+3. **处理时间**：我们将在30天内处理您的请求，并在完成后发送确认邮件。
+
+如果在删除过程中遇到任何问题，请通过 **mrporterdev@gmail.com** 联系我们。
+
 ## 5. 您的权利
 
 根据您所在的司法管辖区，您可能享有以下权利：
@@ -197,7 +217,7 @@ If you have questions about this Privacy Policy, please contact us:
 - **反对权**：反对为营销目的处理您的数据
 - **撤回同意**：随时撤回同意（不影响此前处理的合法性）
 
-如需行使这些权利，请通过 **privacy@tarsierlabs.com** 联系我们。
+如需行使这些权利，请通过 **mrporterdev@gmail.com** 联系我们。
 
 ## 6. 第三方服务
 
@@ -236,7 +256,7 @@ If you have questions about this Privacy Policy, please contact us:
 
 如果您对本隐私政策有任何疑问，请联系我们：
 
-- **电子邮件**：privacy@tarsierlabs.com
+- **电子邮件**：mrporterdev@gmail.com
 - **地址**：Tarsier Labs, 123 Innovation Drive, Singapore 018906
 - **应用内**：设置 → 关于Tarsier
 
@@ -286,10 +306,34 @@ If you have questions about this Privacy Policy, please contact us:
 
 ## 4. データの保持
 
-アカウントがアクティブである限り、お客様のデータを保持します。アカウントを削除した場合：
+アカウントがアクティブである限り、お客様のデータを保持します。
+
+### 4.1 アクティビティデータの消去
+
+アプリの 設定 > データ > すべてのデータを消去 からいつでもアクティビティデータを消去できます。これにより：
+- 記事のコメントが削除されます（スレッドコンテキストを保持するために「[削除済み]」として匿名化）
+- すべてのブックマークが削除されます
+- すべてのいいねが削除されます
+- デバイス上のキャッシュデータがすべて消去されます（認証トークンを含むため再ログインが必要）
+
+アカウント自体は**削除されません** — 再認証後もアプリを引き続きご利用いただけます。
+
+### 4.2 アカウントの削除
+
+アカウントを削除した場合：
 - プロフィールと個人データは30日以内に完全に削除されます
 - 匿名化されたコンテンツ（公開コメントなど）は保持される場合があります
 - バックアップコピーは90日以内に消去されます
+
+### 4.3 削除のリクエスト方法
+
+アカウント削除をリクエストするには：
+
+1. **メールによる場合**：アカウントに登録されているメールアドレスから **mrporterdev@gmail.com** まで、件名を **「Account Deletion Request」** として送信してください。
+2. **アプリ内から**：設定 → アカウント → アカウントを削除 から直接データを削除できます。
+3. **処理時間**：リクエストから30日以内に処理し、完了後確認メールをお送りします。
+
+削除プロセスに関して問題がある場合は、**mrporterdev@gmail.com** までお問い合わせください。
 
 ## 5. ユーザーの権利
 
@@ -301,7 +345,7 @@ If you have questions about this Privacy Policy, please contact us:
 - **異議権**：マーケティング目的でのデータ処理に異議を唱える権利
 - **同意の撤回**：いつでも同意を撤回する権利（それ以前の処理の合法性には影響しません）
 
-これらの権利を行使するには、**privacy@tarsierlabs.com** までお問い合わせください。
+これらの権利を行使するには、**mrporterdev@gmail.com** までお問い合わせください。
 
 ## 6. 第三者サービス
 
@@ -340,7 +384,7 @@ If you have questions about this Privacy Policy, please contact us:
 
 本プライバシーポリシーに関するご質問は、以下までお問い合わせください：
 
-- **メール**：privacy@tarsierlabs.com
+- **メール**：mrporterdev@gmail.com
 - **住所**：Tarsier Labs, 123 Innovation Drive, Singapore 018906
 - **アプリ内**：設定 → Tarsierについて
 
@@ -390,10 +434,34 @@ If you have questions about this Privacy Policy, please contact us:
 
 ## 4. 데이터 보관
 
-사용자의 계정이 활성 상태인 동안 데이터를 보관합니다. 계정을 삭제할 경우:
+사용자의 계정이 활성 상태인 동안 데이터를 보관합니다.
+
+### 4.1 활동 데이터 지우기
+
+앱의 설정 > 데이터 > 모든 데이터 지우기에서 언제든지 활동 데이터를 지울 수 있습니다. 이 작업은:
+- 기사에서 댓글을 삭제합니다(스레드 컨텍스트 유지를 위해 "[삭제됨]"으로 익명화)
+- 모든 북마크를 제거합니다
+- 모든 좋아요를 제거합니다
+- 기기에서 모든 캐시 데이터를 지웁니다(인증 토큰 포함, 재로그인 필요)
+
+계정 자체는 **삭제되지 않습니다** — 재인증 후 앱을 계속 사용할 수 있습니다.
+
+### 4.2 계정 삭제
+
+계정을 삭제할 경우:
 - 프로필 및 개인 데이터는 30일 이내에 영구 삭제됩니다
 - 익명화된 콘텐츠(예: 공개 댓글)는 보관될 수 있습니다
 - 백업 복사본은 90일 이내에 제거됩니다
+
+### 4.3 삭제 요청 방법
+
+계정 삭제를 요청하려면:
+
+1. **이메일로**: 계정에 등록된 이메일 주소에서 **mrporterdev@gmail.com**로 제목을 **"Account Deletion Request"**로 하여 보내주세요.
+2. **앱 내에서**: 설정 → 계정 → 계정 삭제로 직접 데이터를 삭제할 수 있습니다.
+3. **처리 시간**: 요청 접수 후 30일 이내에 처리하며, 완료 후 확인 이메일을 보내드립니다.
+
+삭제 과정에 문제가 있는 경우 **mrporterdev@gmail.com**으로 문의해 주십시오.
 
 ## 5. 사용자의 권리
 
@@ -405,7 +473,7 @@ If you have questions about this Privacy Policy, please contact us:
 - **반대권**: 마케팅 목적의 데이터 처리에 반대할 권리
 - **동의 철회권**: 언제든지 동의를 철회할 권리(이전 처리의 적법성에는 영향 없음)
 
-이러한 권리를 행사하려면 **privacy@tarsierlabs.com**으로 연락해 주십시오.
+이러한 권리를 행사하려면 **mrporterdev@gmail.com**으로 연락해 주십시오.
 
 ## 6. 제3자 서비스
 
@@ -444,7 +512,7 @@ If you have questions about this Privacy Policy, please contact us:
 
 본 개인정보처리방침에 관한 질문이 있으시면 다음으로 연락해 주십시오:
 
-- **이메일**: privacy@tarsierlabs.com
+- **이메일**: mrporterdev@gmail.com
 - **주소**: Tarsier Labs, 123 Innovation Drive, Singapore 018906
 - **앱 내**: 설정 → Tarsier 소개
 
@@ -494,10 +562,34 @@ Nous **ne vendons pas** vos informations personnelles à des tiers. Nous pouvons
 
 ## 4. Conservation des données
 
-Nous conservons vos données tant que votre compte est actif. Si vous supprimez votre compte :
+Nous conservons vos données tant que votre compte est actif.
+
+### 4.1 Effacement de vos données d'activité
+
+Vous pouvez effacer vos données d'activité à tout moment depuis Paramètres > Données > Effacer toutes les données. Cela va :
+- Supprimer vos commentaires des articles (anonymisés en "[supprimé]" pour préserver le contexte des fils de discussion)
+- Supprimer tous vos favoris
+- Supprimer tous vos likes
+- Effacer toutes les données mises en cache sur votre appareil (y compris les jetons d'authentification, nécessitant une reconnexion)
+
+Votre compte lui-même ne **sera pas** supprimé — vous pouvez continuer à utiliser l'application après vous être réauthentifié.
+
+### 4.2 Suppression du compte
+
+Si vous supprimez votre compte :
 - Votre profil et vos données personnelles sont définitivement supprimés dans les 30 jours
 - Le contenu anonymisé (par exemple, les commentaires publics) peut être conservé
 - Les copies de sauvegarde sont purgées dans les 90 jours
+
+### 4.3 Comment demander la suppression
+
+Pour demander la suppression de votre compte :
+
+1. **Par e-mail** : Envoyez un e-mail depuis l'adresse associée à votre compte à **mrporterdev@gmail.com** avec l'objet **"Account Deletion Request"**.
+2. **Dans l'application** : Allez dans Paramètres → Compte → Supprimer le compte pour supprimer vos données directement.
+3. **Délai de traitement** : Nous traiterons votre demande dans un délai de 30 jours et vous enverrons un e-mail de confirmation une fois terminé.
+
+Si vous rencontrez des problèmes avec le processus de suppression, veuillez nous contacter à **mrporterdev@gmail.com**.
 
 ## 5. Vos droits
 
@@ -509,7 +601,7 @@ Selon votre juridiction, vous pouvez avoir le droit de :
 - **Opposition** : Vous opposer au traitement de vos données à des fins marketing
 - **Retrait du consentement** : Retirer votre consentement à tout moment (sans affecter la légalité du traitement antérieur)
 
-Pour exercer ces droits, contactez-nous à **privacy@tarsierlabs.com**.
+Pour exercer ces droits, contactez-nous à **mrporterdev@gmail.com**.
 
 ## 6. Services tiers
 
@@ -548,7 +640,7 @@ Nous pouvons mettre à jour cette politique de confidentialité de temps à autr
 
 Si vous avez des questions concernant cette politique de confidentialité, veuillez nous contacter :
 
-- **E-mail** : privacy@tarsierlabs.com
+- **E-mail** : mrporterdev@gmail.com
 - **Adresse** : Tarsier Labs, 123 Innovation Drive, Singapore 018906
 - **Dans l'application** : Paramètres → À propos de Tarsier
 
@@ -598,22 +690,46 @@ Wir **verkaufen nicht** Ihre persönlichen Daten an Dritte. Wir können Daten we
 
 ## 4. Datenaufbewahrung
 
-Wir bewahren Ihre Daten auf, solange Ihr Konto aktiv ist. Wenn Sie Ihr Konto löschen:
+Wir bewahren Ihre Daten auf, solange Ihr Konto aktiv ist.
+
+### 4.1 Löschen Ihrer Aktivitätsdaten
+
+Sie können Ihre Aktivitätsdaten jederzeit über die App-Einstellungen > Daten > Alle Daten löschen entfernen. Dies wird:
+- Ihre Kommentare zu Artikeln löschen (anonymisiert als "[gelöscht]", um den Thread-Kontext zu erhalten)
+- Alle Ihre Lesezeichen entfernen
+- Alle Ihre "Gefällt mir"-Angaben entfernen
+- Alle zwischengespeicherten Daten auf Ihrem Gerät löschen (einschließlich Authentifizierungstoken, erneute Anmeldung erforderlich)
+
+Ihr Konto selbst wird **nicht** gelöscht — Sie können die App nach erneuter Authentifizierung weiterhin nutzen.
+
+### 4.2 Kontolöschung
+
+Wenn Sie Ihr Konto löschen:
 - Ihr Profil und Ihre persönlichen Daten werden innerhalb von 30 Tagen endgültig gelöscht
 - Anonymisierte Inhalte (z. B. öffentliche Kommentare) können aufbewahrt werden
 - Sicherungskopien werden innerhalb von 90 Tagen gelöscht
+
+### 4.3 So beantragen Sie die Löschung
+
+Um die Löschung Ihres Kontos zu beantragen:
+
+1. **Per E-Mail**: Senden Sie eine E-Mail von der mit Ihrem Konto verknüpften Adresse an **mrporterdev@gmail.com** mit dem Betreff **"Account Deletion Request"**.
+2. **In der App**: Gehen Sie zu Einstellungen → Konto → Konto löschen, um Ihre Daten direkt zu löschen.
+3. **Bearbeitungszeit**: Wir bearbeiten Ihre Anfrage innerhalb von 30 Tagen und senden Ihnen eine Bestätigungs-E-Mail, sobald der Vorgang abgeschlossen ist.
+
+Wenn Sie Probleme mit dem Löschvorgang haben, kontaktieren Sie uns bitte unter **mrporterdev@gmail.com**.
 
 ## 5. Ihre Rechte
 
 Abhängig von Ihrem Gerichtsstand haben Sie möglicherweise das Recht auf:
 - **Auskunft**: Anforderung einer Kopie Ihrer personenbezogenen Daten
 - **Berichtigung**: Korrektur ungenauer oder unvollständiger Daten
-- **Löschung**: Anforderung der Löschung Ihrer Daten („Recht auf Vergessenwerden“)
+- **Löschung**: Anforderung der Löschung Ihrer Daten („Recht auf Vergessenwerden")
 - **Datenübertragbarkeit**: Erhalt Ihrer Daten in einem maschinenlesbaren Format
 - **Widerspruch**: Widerspruch gegen die Verarbeitung Ihrer Daten zu Marketingzwecken
 - **Widerruf der Einwilligung**: Jederzeitiger Widerruf der Einwilligung (die Rechtmäßigkeit der bisherigen Verarbeitung bleibt unberührt)
 
-Zur Ausübung dieser Rechte kontaktieren Sie uns unter **privacy@tarsierlabs.com**.
+Zur Ausübung dieser Rechte kontaktieren Sie uns unter **mrporterdev@gmail.com**.
 
 ## 6. Drittanbieterdienste
 
@@ -646,13 +762,13 @@ Wir implementieren branchenübliche Sicherheitsmaßnahmen:
 Wir können diese Datenschutzerklärung von Zeit zu Zeit aktualisieren. Wesentliche Änderungen werden mitgeteilt über:
 - App-interne Benachrichtigung beim nächsten Start
 - E-Mail (falls Sie eine angegeben haben)
-- Aktualisiertes „Stand“-Datum oben auf dieser Seite
+- Aktualisiertes „Stand"-Datum oben auf dieser Seite
 
 ## 11. Kontakt
 
 Bei Fragen zu dieser Datenschutzerklärung kontaktieren Sie uns bitte:
 
-- **E-Mail**: privacy@tarsierlabs.com
+- **E-Mail**: mrporterdev@gmail.com
 - **Adresse**: Tarsier Labs, 123 Innovation Drive, Singapore 018906
 - **In der App**: Einstellungen → Über Tarsier
 
