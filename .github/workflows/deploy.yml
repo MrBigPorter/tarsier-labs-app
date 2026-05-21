@@ -137,11 +137,17 @@ jobs:
             android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           retention-days: 30
 
+      - name: 🔑 Write Google Play service account key
+        if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
+        run: echo "${PLAY_SA_KEY}" > /tmp/android-play-sa.json
+        env:
+          PLAY_SA_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}
+
       - name: 🚀 Upload to Google Play Internal Testing
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
         uses: r0adkll/upload-google-play@v1.1.5
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}
+          serviceAccountJson: /tmp/android-play-sa.json
           packageName: com.tarsier.labs
           releaseFile: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           track: internal
