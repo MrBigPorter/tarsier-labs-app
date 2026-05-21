@@ -155,9 +155,10 @@ jobs:
           serviceAccountJson: /tmp/android-play-sa.json
           packageName: com.tarsier.labs
           releaseFiles: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
-          track: internal
+          tracks: internal
           status: completed
           changesNotSentForReview: true
+          inAppUpdatePriority: 0
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Build iOS
