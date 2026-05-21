@@ -137,11 +137,29 @@ jobs:
             android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           retention-days: 30
 
+      - name: 🔑 Write & validate service account key
+        if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
+        shell: bash
+        run: |
+          echo '${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}' > /tmp/android-play-sa.json
+
+          # Validate JSON format
+          if ! echo '{}' | jq . > /dev/null 2>&1; then
+            echo "⚠️ jq not available, skipping JSON validation"
+          elif ! jq . /tmp/android-play-sa.json > /dev/null 2>&1; then
+            echo "❌ PLAY_SERVICE_ACCOUNT_KEY is NOT valid JSON!"
+            echo "First 200 chars: $(head -c 200 /tmp/android-play-sa.json)"
+            exit 1
+          else
+            echo "✅ Valid JSON — project: $(jq -r '.project_id' /tmp/android-play-sa.json)"
+            echo "   client_email: $(jq -r '.client_email' /tmp/android-play-sa.json)"
+          fi
+
       - name: 🚀 Upload to Google Play Internal Testing
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJson: ${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}
+          serviceAccountJson: /tmp/android-play-sa.json
           packageName: com.tarsier.labs
           releaseFiles: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           track: internal
