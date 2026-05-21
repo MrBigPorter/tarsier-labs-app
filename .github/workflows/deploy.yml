@@ -157,8 +157,6 @@ jobs:
           releaseFiles: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           tracks: internal
           status: completed
-          changesNotSentForReview: true
-          inAppUpdatePriority: 0
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Build iOS
