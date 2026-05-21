@@ -142,21 +142,31 @@ Size: **1024×500px**
 
 ## 5. Category
 
-**Recommended**: **News & Magazines**
+**Updated 2026-05-21**: ~~News & Magazines~~ → **Productivity** ✅
 
-> Rationale: The app is a blog reader/aggregator that presents articles from various categories (tech, lifestyle, etc.), similar to news and magazine apps. "Books & Reference" is more suited for dictionary/reference apps or dedicated book readers like Kindle.
+> **原因**: 根据 Gemini AI 建议，News & Magazines 类别对新闻聚合类应用审核较严，可能需要提供新闻来源授权证明。Productivity 类别审核更宽松，上架更快。
+
+| 类别             | 风险                 | 最终选择 |
+| ---------------- | -------------------- | -------- |
+| News & Magazines | 高风险，需新闻源授权 | ❌       |
+| **Productivity** | 低风险，审核通过率高 | ✅       |
 
 ---
 
 ## 6. Tags
 
-As specified:
+**Updated 2026-05-21 ⚠️ 重要说明**
 
-| Tag       | Scope                                         |
-| --------- | --------------------------------------------- |
-| `blog`    | Core functionality — the app is a blog reader |
-| `reading` | Primary use case — reading articles           |
-| `tech`    | Content focus — tech articles and programming |
+Google Play Console **不支持自定义标签**，只能从预定义列表中选择。原计划中的 `reading`、`tech` 等标签在 Play Console 中不存在。
+
+**实际已选择的标签:**
+
+| Tag               | Play Console 分类 | 说明               |
+| ----------------- | ----------------- | ------------------ |
+| `Blog`            | Social            | 博客阅读器核心功能 |
+| `News aggregator` | News & magazines  | 新闻聚合阅读       |
+
+> **⚠️ 注意**: 即使选择了 Productiviy 类别，News aggregator 标签仍然可选，因为它属于 Play Console 的预定义标签库，不属于类别绑定。
 
 ---
 
@@ -175,12 +185,32 @@ As specified:
 
 ## Execution Steps
 
-1. Copy short description into Google Play Console
-2. Copy full description into Google Play Console
-3. Generate 8 screenshots using AI (use guide above) — upload to console
-4. Generate 1 Feature Graphic using AI prompt above — upload to console
-5. Select category: **News & Magazines**
-6. Add tags: **blog**, **reading**, **tech**
-7. Fill in additional fields (app name, language, etc.)
-8. Complete Data Safety section (see existing plan for details)
-9. Complete Content Rating questionnaire
+### ✅ 已完成
+
+| #   | Step                                                            | Status    |
+| --- | --------------------------------------------------------------- | --------- |
+| 1   | Copy short description into Google Play Console                 | ✅ 已完成 |
+| 2   | Copy full description into Google Play Console                  | ✅ 已完成 |
+| 3   | Generate 8 phone screenshots (1080×1920) — upload to console    | ✅ 已完成 |
+| 4   | Generate 10-inch tablet screenshots — upload to console         | ✅ 已完成 |
+| 5   | Generate 1 Feature Graphic (1024×500px) — upload to console     | ✅ 已完成 |
+| 6   | Select category: **Productivity** ~~News & Magazines~~          | ✅ 已完成 |
+| 7   | Add tags: **Blog**, **News aggregator** ~~blog, reading, tech~~ | ✅ 已完成 |
+| 8   | Fill in contact info (email, phone, website)                    | ✅ 已完成 |
+| 9   | Complete Data Safety section                                    | ✅ 已完成 |
+| 10  | Complete Content Rating questionnaire                           | ✅ 已完成 |
+| 11  | Set Pricing & Distribution (Free / All countries)               | ✅ 已完成 |
+
+### ⏳ 下一步
+
+| #   | Step                  | Notes                               |
+| --- | --------------------- | ----------------------------------- |
+| 12  | Closed Testing 审核   | 等待 Quick Checks → Send for review |
+| 13  | 14天测试期            | 需要 20+ 测试者                     |
+| 14  | Promote to Production | 14天后提升到 Production 轨道        |
+
+> **参考文档**:
+>
+> - 完整发布流程: [`android-google-play-complete-flow.md`](./android-google-play-complete-flow.md)
+> - 上架计划: [`android-playstore-release-plan.md`](./android-playstore-release-plan.md)
+> - Content Rating 答案: [`android-content-rating-answers.md`](./android-content-rating-answers.md)

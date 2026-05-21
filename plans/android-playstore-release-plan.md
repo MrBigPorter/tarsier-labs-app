@@ -13,7 +13,7 @@
 
 ---
 
-## 🔴 第一阶段：代码层面修改（必须）
+## 🔴 第一阶段：代码层面修改（已完成 ✅）
 
 ### 1. 更改 Package Name 为 `com.tarsier.labs`
 
@@ -224,8 +224,30 @@ const PROD_CONFIG: EnvConfig = {
   - Size: 16:9 or 9:16
   - Generate using Android emulator
 - **Feature Graphic** (1024x500px)
-- **Category**: News & Magazines or Books & Reference
-- **Tags**: blog, reading, tech
+- **Category**: ~~News & Magazines~~ → **Productivity** ⚠️ 重要变更
+- **Tags**: ~~blog, reading, tech~~ → **Blog, News aggregator** ⚠️ 重要变更
+
+#### 关于 Category 选择的说明
+
+> **2026-05-21 更新**: 最初选择 `News & Magazines`，后根据 Gemini AI 建议改为 `Productivity`。
+>
+> **原因**: News & Magazines 类别对新闻聚合类应用审核较严格，可能需要提供新闻来源授权证明。Productivity 类别审核更宽松，上架更快。
+
+| 类别             | 风险                 | 选择 |
+| ---------------- | -------------------- | ---- |
+| News & Magazines | 高风险，需新闻源授权 | ❌   |
+| **Productivity** | 低风险，审核通过率高 | ✅   |
+
+#### 关于 Tags 的说明
+
+> **2026-05-21 更新**: Google Play Console 仅支持**预定义标签**，不支持自定义标签。
+>
+> 原计划 `reading`, `tech` 标签在 Play Console 中不存在。
+>
+> **实际选择**:
+>
+> - `Blog` (Social 分类)
+> - `News aggregator` (News & magazines 分类)
 
 ### 14. Set up Data Safety
 
@@ -247,19 +269,110 @@ Complete the Google Play content rating questionnaire:
 - Expected rating: **Everyone** or **Teen**
 - Blog content, no adult material
 
+> 完整的 Content Rating 问答记录请参考 [`plans/android-content-rating-answers.md`](./android-content-rating-answers.md)
+
 ### 16. Set up Pricing & Distribution
 
 - Free app
 - Select distribution countries (default: all)
 - Confirm no ads (no ad SDK found in codebase, select "No")
 
-### 17. Set up Testers
+### 17. Set up Testers — Closed Testing（关键步骤）
 
-- Closed Testing is required before production release for new accounts
-- Google Play requires: **20 testers for 14 days** (unless you have a Managed Publishing exception)
-- Recommendation: start with Internal Testing, then promote to Closed Testing
+> **新账号必须**完成 Closed Testing 才能发布 Production。
 
-### 18. Build AAB & Upload
+#### 17.1 测试路径选择
+
+2026-05-21 实际操作为: **跳过 Internal Testing，直接走 Closed Testing 路径**
+
+| 路径                      | 说明                                               | 选择        |
+| ------------------------- | -------------------------------------------------- | ----------- |
+| Internal → Closed Testing | CI 自动上传到 Internal → 再手动设置 Closed Testing | ❌ 跳过     |
+| **直接 Closed Testing**   | 从 CI Artifacts 下载 AAB → 手动上传到 Closed       | ✅ 实际采用 |
+
+#### 17.2 获取 AAB
+
+方式一：从 CI Artifacts 下载
+
+1. 推送代码到 `main` 分支触发 [deploy.yml](../.github/workflows/deploy.yml)
+2. GitHub Actions 构建完成后，在 Workflow 页面找到 **Artifacts** 部分
+3. 下载 `app-production-release.aab`
+
+方式二：本地构建
+
+```bash
+make build-prod-aab
+# 输出: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
+```
+
+#### 17.3 Closed Testing 详细步骤
+
+> ⚠️ **重要: Countries 和 Testers 必须在 Track 设置页面配置，而不是在 Release 创建页面！**
+
+```mermaid
+flowchart TD
+    A["导航到 Closed Testing Alpha"] --> B["Track 设置\nSelect countries/regions"]
+    B --> C["选择所有 176 个国家\n点击 Save"]
+    C --> D["Testers 设置\nAdd email addresses"]
+    D --> E["输入测试者邮箱\n点击 Save"]
+    E --> F["Create a new release\n上传 AAB"]
+    F --> G["填写 Release Notes\n填写 Feedback URL/Email"]
+    G --> H["检查预览\n确认 Countries + Testers"]
+    H --> I["回到 Publishing Overview\n等待 Quick Checks"]
+```
+
+**分步操作:**
+
+| #   | 步骤                       | 说明                                                                          |
+| --- | -------------------------- | ----------------------------------------------------------------------------- |
+| 1   | 导航到 Closed Testing 页面 | Play Console → Testing → Closed Testing → Alpha                               |
+| 2   | 设置 Countries             | Track 设置 → Select countries/regions → 选择所有国家（共 176 个）→ 保存       |
+| 3   | 设置 Testers               | Track 设置 → Testers → Add email addresses → 输入测试者邮箱（每行一个）→ 保存 |
+| 4   | 创建 Release               | Create a new release → 上传 AAB → 填写 Release Notes                          |
+| 5   | 填写 Feedback URL/Email    | 必须填写，用于测试者提交反馈。填写 mrporterdev@gmail.com                      |
+| 6   | 检查预览                   | 确认版本号、Countries、Testers 都正确                                         |
+| 7   | 回到 Publishing Overview   | 等待 Quick Checks 完成（最多 10 分钟）                                        |
+| 8   | 点击 Send for review       | 提交审核                                                                      |
+
+#### 17.4 常见错误及解决方法
+
+| 错误信息                                                                                    | 原因                            | 解决方法                                      |
+| ------------------------------------------------------------------------------------------- | ------------------------------- | --------------------------------------------- |
+| "No countries or regions have been selected for this track"                                 | Countries 未在 Track 设置页保存 | 回到 Track 设置 → Select countries → 保存     |
+| "This release will not be available to any users because you haven't specified any testers" | Testers 未在 Track 设置页保存   | 回到 Track 设置 → Testers → Add email → 保存  |
+| "Changes not yet sent for review"                                                           | 发布尚未提交审核                | 等待 Quick Checks 完成 → 点击 Send for review |
+
+> 💡 **经验总结**: 先设置 Countries 和 Testers 并保存，**然后再**创建 Release。如果在创建 Release 后才发现 Countries/Testers 未配置，需要回到 Track 设置页面修改并保存，然后回到 Release 页面重新检查。
+
+### 18. Publishing Overview — 最终提交流程
+
+当所有配置完成后，Publishing Overview 页面会显示各部分的完成状态。
+
+**页面布局:**
+
+```
+Publishing Overview 页面:
+  ┌─────────────────────────────────────────────┐
+  │  ✓ App content (App content)                │  ← 绿色勾 = 通过
+  │  ✓ Store settings                           │
+  │  ✓ Store listing                            │
+  │  ✓ Data safety                              │
+  │  ✓ Content rating                           │
+  │  ✓ Pricing & distribution                   │
+  │  ⏳ Closed Testing (Alpha) — Quick Checks   │  ← 等待中
+  └─────────────────────────────────────────────┘
+
+状态文字: "Changes not yet sent for review"
+         "Running quick checks... Up to 10 minutes remaining"
+```
+
+**操作要点:**
+
+1. **先保存每个部分** — 如果某部分显示为未完成状态（没有绿色勾），点击进入并点击页面底部的 **Save**，即使没有修改也要保存
+2. **等待 Quick Checks** — Google 会自动检查配置是否正确，通常需要 1-10 分钟
+3. **点击 Send for review** — Quick Checks 完成后会显示 "Ready to send for review"
+
+### 19. Build AAB & Upload
 
 ```bash
 # Switch to production environment
@@ -276,20 +389,28 @@ make build-android
 
 ## 📋 Execution Order Summary
 
-| #     | Task                                               | Type     | Est. Files |
-| ----- | -------------------------------------------------- | -------- | ---------- |
-| 1     | Change package name to `com.tarsier.labs`          | Code     | ~5         |
-| 2     | Remove unused permissions (CAMERA, LOCATION)       | Code     | 1          |
-| 3     | Create Upload Key + configure Release signing      | Config   | 2          |
-| 4     | Update version (versionCode 1, versionName 1.0.0)  | Code     | 1          |
-| 5     | Enable ProGuard                                    | Code     | 1          |
-| 6     | Add Adaptive Icon                                  | Assets   | ~4         |
-| 7     | Restrict screen orientation (portrait)             | Code     | 1          |
-| 8     | Configure Sentry DSN                               | Config   | 1          |
-| 9     | Configure OAuth Client ID                          | Config   | 1          |
-| 10    | Deploy privacy policy to blog.joyminis.com/privacy | External | -          |
-| 11-17 | Google Play Console setup                          | External | -          |
-| 18    | Build AAB & upload                                 | Build    | -          |
+| #   | Task                                                | Type     | Status        |
+| --- | --------------------------------------------------- | -------- | ------------- |
+| 1   | Change package name to `com.tarsier.labs`           | Code     | ✅ 已完成     |
+| 2   | Remove unused permissions (CAMERA, LOCATION)        | Code     | ✅ 已完成     |
+| 3   | Create Upload Key + configure Release signing       | Config   | ✅ 已完成     |
+| 4   | Update version (versionCode 1, versionName 1.0.0)   | Code     | ✅ 已完成     |
+| 5   | Enable ProGuard                                     | Code     | ✅ 已完成     |
+| 6   | Add Adaptive Icon                                   | Assets   | ✅ 已完成     |
+| 7   | Restrict screen orientation (portrait)              | Code     | ✅ 已完成     |
+| 8   | Configure Sentry DSN                                | Config   | 🔲 待完成     |
+| 9   | Configure OAuth Client ID                           | Config   | 🔲 待完成     |
+| 10  | Deploy privacy policy to blog.joyminis.com/privacy  | External | 🔲 待完成     |
+| 11  | Google Play Console — Create app                    | External | ✅ 已完成     |
+| 12  | Google Play App Signing                             | External | ✅ 已完成     |
+| 13  | Store Listing (name/desc/screenshots/category/tags) | External | ✅ 已完成     |
+| 14  | Data Safety                                         | External | ✅ 已完成     |
+| 15  | Content Rating                                      | External | ✅ 已完成     |
+| 16  | Pricing & Distribution                              | External | ✅ 已完成     |
+| 17  | Closed Testing setup + AAB upload                   | External | ✅ 已提交审核 |
+| 18  | Publishing Overview → Send for review               | External | ⏳ 等待中     |
+| 19  | Closed Testing 14-day (20 testers)                  | External | 🔲 待完成     |
+| 20  | Promote to Production                               | External | 🔲 待完成     |
 
 ---
 
@@ -297,15 +418,20 @@ make build-android
 
 1. **Package name is irreversible** — once uploaded to Play Console, it can never be changed
 2. **Key security** — Upload Key must be backed up; without it you cannot update the app
-3. **Closed Testing** — new developer accounts require 14 days of testing before production
-4. **API review** — if your API returns user-generated content, additional review may be required
-5. **Android 16 (SDK 36)** — ensure all dependency libraries are compatible with targetSdk 36
+3. **Closed Testing** — new developer accounts require 14 days of testing with at least 20 testers before production
+4. **Countries/Testers must be set at Track level** — not at Release level. This is a common gotcha!
+5. **API review** — if your API returns user-generated content, additional review may be required
+6. **Android 16 (SDK 36)** — ensure all dependency libraries are compatible with targetSdk 36
+7. **Category choice matters** — Productivity > News & Magazines for faster review
+8. **Tags are predefined** — Google Play does not support custom tags; only choose from the predefined list
 
 ---
 
 ## 附录：CI/CD Google Play Internal Testing 自动发布
 
 > 已配置 GitHub Actions 自动构建并直接上传到 Google Play Console Internal Testing 轨道
+>
+> **⚠️ 注意**: 首次上架时我们选择了跳过 Internal Testing 直接走 Closed Testing。Internal Testing 的自动发布适用于后续版本迭代。
 
 ### ✅ 已完成（代码层面）
 
@@ -360,17 +486,17 @@ make build-android
 
 ---
 
-### 第 4 步：在 Google Play Console 添加测试者
+### 第 4 步：在 Google Play Console 添加测试者（Closed Testing 路径）
 
-> 测试者管理直接在 Google Play Console 中操作，不再需要本地文件。
+> 对于 Closed Testing，测试者直接在 Play Console 的 Track 设置中添加。
 
-1. 打开 **Google Play Console → Tarsier → Testing → Internal Testing**
-2. 在 **Testers** 部分，点击 **Add email addresses**
+1. 打开 **Google Play Console → Tarsier → Testing → Closed Testing → Alpha**
+2. 在 **Track 设置**中 → **Testers** → **Add email addresses**
 3. 输入测试者的 Gmail 邮箱（每行一个）
 4. 点击 **Save**
-5. 测试者会收到邀请链接，点击加入即可
+5. 审核通过后，测试者会收到邀请链接，点击加入即可
 
-> ⚠️ 不要将真实邮箱提交到 git 仓库。`.firebase-testers.txt` 仅作为模板保留。
+> ⚠️ 不要将真实邮箱提交到 git 仓库。
 
 ---
 

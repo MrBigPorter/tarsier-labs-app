@@ -12,40 +12,57 @@
 ```mermaid
 flowchart TB
     A["开始: 开发阶段"] --> B["代码准备\npackage name / 权限 / 签名"]
-    B --> C["构建 Release AAB\n./gradlew bundleProductionRelease"]
-    C --> D{"本地构建成功?"}
-    D -->|"否"| E["修复构建错误\nJDK 版本 / Gradle"]
+    B --> C["构建 Release AAB\nCI / 本地 build"]
+    C --> D{"构建成功?"}
+    D -->|"否"| E["修复构建错误"]
     E --> C
     D -->|"是"| F["Google Play Console\n创建应用 Tarsier"]
-    F --> G["App Integrity\n配置 Upload Key 证书"]
-    G --> H["Internal Testing\n上传 AAB 创建发布"]
-    H --> I{"Internal Testing\n发布成功?"}
-    I -->|"否"| J["检查 AAB / 版本号\n修复后重试"]
-    J --> H
-    I -->|"是"| K["Firebase Console\nGoogle Play 集成 - Link"]
-    K --> L{"Firebase Play 关联\n成功?"}
-    L -->|"否"| M["从 Google Play Console\nSettings/Linked services 关联"]
+
+    subgraph "Play Console 配置"
+        F --> G1["Store Settings\nCategory / Tags / Contact"]
+        G1 --> G2["Store Listing\n名称 / 描述 / 截图"]
+        G2 --> G3["App Content\n政府/金融/广告/健康声明"]
+        G3 --> G4["Data Safety\n数据收集声明"]
+        G4 --> G5["Content Rating\n内容分级问卷"]
+        G5 --> G6["Pricing & Distribution\n免费 / 所有国家"]
+    end
+
+    G6 --> H{"选择测试路径"}
+
+    H -->|"方案 A: Internal → Closed"| I1["CI 自动上传到\nInternal Testing"]
+    I1 --> I2["Internal 测试验证"]
+    I2 --> J
+
+    H -->|"方案 B: 跳过 Internal\n直接 Closed Testing"| J["从 CI Artifacts\n下载 AAB"]
+
+    J --> K["Closed Testing Alpha\n手动上传 AAB 创建发布"]
+    K --> L{"Countries/Testers\n已配置?"}
+    L -->|"否"| M["回到 Track 设置页\n配置 Countries + Testers\n（非 Release 页！）"]
     M --> L
-    L -->|"是"| N["配置测试者\n.firebase-testers.txt"]
-    N --> O["CI/CD 自动构建\ndeploy.yml"]
-    O --> P{"Firebase App Distribution\n上传成功?"}
-    P -->|"否"| Q["排查 CI 错误\n修复后重试"]
+    L -->|"是"| N["填写 Release Notes\n填写 Feedback URL/Email"]
+    N --> O["Publishing Overview\n触发 Quick Checks"]
+
+    O --> P{"Checks 通过?"}
+    P -->|"否"| Q["修复问题后重试"]
     Q --> O
-    P -->|"是"| R["Internal Testing 分发\n测试者收到安装链接"]
-    R --> S["测试验证\n功能 / 崩溃 / 反馈"]
-    S --> T{"测试通过?"}
-    T -->|"否"| U["修复 Bug\n迭代代码"]
-    U --> C
-    T -->|"是"| V["Closed Testing\n20 测试者 x 14 天"]
-    V --> W{"14 天测试\n完成?"}
-    W -->|"否"| V
-    W -->|"是"| X["Promote to Production\n提交审核"]
-    X --> Y{"Google 审核\n通过?"}
-    Y -->|"否"| Z["修改后重新提交"]
-    Z --> X
-    Y -->|"是"| AA["正式上架\nGoogle Play Store"]
-    AA --> AB["后续迭代\n新版本 / 新功能"]
-    AB --> C
+    P -->|"是"| R["点击 Send for review\n提交审核"]
+
+    R --> S{"Google 审核\n通过?"}
+    S -->|"否"| T["根据反馈修改\n重新提交"]
+    T --> R
+    S -->|"是"| U["Closed Testing 激活\n20 测试者 x 14 天"]
+
+    U --> V{"14 天测试\n完成?"}
+    V -->|"否"| U
+    V -->|"是"| W["Promote to Production\n提交审核"]
+
+    W --> X{"Production 审核\n通过?"}
+    X -->|"否"| Y["修改后重新提交"]
+    Y --> W
+    X -->|"是"| Z["正式上架\nGoogle Play Store"]
+
+    Z --> AA["后续迭代\n版本管理 / CI 自动发布"]
+    AA --> C
 ```
 
 ---
@@ -77,7 +94,7 @@ make build-prod-aab
 android/app/build/outputs/bundle/productionRelease/app-production-release.aab
 ```
 
-> **注意**: 本地构建需要 JDK 17。如果系统 JDK 版本不匹配，使用 GitHub Actions Artifacts 下载 AAB。
+> **注意**: 本地构建需要 JDK 17。推荐从 GitHub Actions Artifacts 下载 AAB（`deploy.yml` 每次构建都会上传 Artifact）。
 
 ---
 
@@ -87,93 +104,62 @@ android/app/build/outputs/bundle/productionRelease/app-production-release.aab
 
 ```mermaid
 flowchart LR
-    A["创建应用\nTarsier"] --> B["App Integrity\n配置 Upload Key"]
-    B --> C["Internal Testing\n上传 AAB 发布"]
-    C --> D["Firebase Play 关联\n从 Play Console Linked services"]
-    D --> E["Store Listing\n名称/描述/截图"]
-    E --> F["Data Safety\n数据声明"]
-    F --> G["Content Rating\n内容分级问卷"]
-    G --> H["Pricing & Distribution\n免费/所有国家"]
-    H --> I["Closed Testing\n20 人 x 14 天"]
-    I --> J["Production\n提交审核上架"]
+    A["创建应用\nTarsier"] --> B["Store Settings\nCategory / Tags"]
+    B --> C["Store Listing\n名称 / 描述 / 截图"]
+    C --> D["App Content\n声明政府/金融/广告/健康"]
+    D --> E["Data Safety\n数据收集声明"]
+    E --> F["Content Rating\n内容分级问卷"]
+    F --> G["Pricing & Distribution\n免费 / 所有国家"]
+    G --> H["Closed Testing\nCountries + Testers + AAB"]
+    H --> I["Publishing Overview\nSend for review"]
+    I --> J["审核 → 14天测试 → Production"]
 ```
 
 ### 2.2 已完成操作
 
-| #   | 步骤                        | 详情                                                         | 状态      |
-| --- | --------------------------- | ------------------------------------------------------------ | --------- |
-| 1   | 创建应用                    | Tarsier / App / Free / `com.tarsier.labs`                    | ✅ 已完成 |
-| 2   | Internal Testing 发布       | 上传 `app-production-release.aab` v1.0.0                     | ✅ 已完成 |
-| 3   | Firebase ↔ Google Play 关联 | 从 Google Play Console → Settings → Linked services 关联成功 | ✅ 已完成 |
-| 4   | 上传密钥配置                | TODO: 在 App Integrity 中设置 Upload Key 证书指纹            | ⏳ 待完成 |
+| #   | 步骤                   | 详情                                                                                                                    | 状态      |
+| --- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------- |
+| 1   | 创建应用               | Tarsier / App / Free / `com.tarsier.labs`                                                                               | ✅ 已完成 |
+| 2   | Store Settings         | 类别: Productivity / 标签: Blog + News aggregator / 联系信息: mrporterdev@gmail.com / +639451297266 / blog.joyminis.com | ✅ 已完成 |
+| 3   | Store Listing          | 名称: Tarsier / 短描述 + 完整描述已填写 / 8 张手机截图 + 10-inch 平板截图已上传 / Feature Graphic 已上传                | ✅ 已完成 |
+| 4   | App Content 声明       | 政府应用: No / 金融功能: None / 广告 ID: No / 健康功能: No / 全部通过 ✅                                                | ✅ 已完成 |
+| 5   | Data Safety            | 根据代码分析逐项声明（账号信息/应用活动/崩溃数据等）                                                                    | ✅ 已完成 |
+| 6   | Content Rating         | IARC 问卷已完成 / 预期 Everyone                                                                                         | ✅ 已完成 |
+| 7   | Pricing & Distribution | 免费 / 所有国家 / 不含广告                                                                                              | ✅ 已完成 |
+| 8   | CI/CD 自动构建         | [`deploy.yml`](../.github/workflows/deploy.yml) main 分支自动构建 AAB + 上传 Artifact                                   | ✅ 已完成 |
+| 9   | Service Account 权限   | Firebase service account 已加入 Play Console Users & permissions / 13 个权限已授予                                      | ✅ 已完成 |
 
-### 2.3 待完成操作
+### 2.3 当前待完成操作
 
-| #   | 步骤                                | 说明                                                                                                               | 优先级 |
-| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------ |
-| 1   | **App Integrity - 配置 Upload Key** | 在 Play Console → Setup → App Integrity → 添加 Upload Key 证书指纹                                                 | 🔴 高  |
-| 2   | **Store Listing**                   | 填写应用名称、简介、完整描述                                                                                       | 🟡 中  |
-| 3   | **Feature Graphic**                 | 上传 1024x500px 宣传图（已有 [`assets/play-store-feature-graphic.png`](../assets/play-store-feature-graphic.png)） | 🟡 中  |
-| 4   | **Screenshots**                     | 至少 2 张手机截图 (1080x1920)                                                                                      | 🟡 中  |
-| 5   | **Data Safety**                     | 声明数据收集和使用情况                                                                                             | 🟡 中  |
-| 6   | **Content Rating**                  | 完成内容分级问卷（预计 Everyone / Teen）                                                                           | 🟡 中  |
-| 7   | **Pricing & Distribution**          | 设置为免费 / 所有国家                                                                                              | 🟡 中  |
-| 8   | **Closed Testing**                  | 20 测试者 x 14 天（新账号必须）                                                                                    | 🟡 中  |
+| #   | 步骤                       | 说明                                                                                                | 优先级 |
+| --- | -------------------------- | --------------------------------------------------------------------------------------------------- | ------ |
+| 1   | **等待 Quick Checks 完成** | Publishing Overview 显示 "Running quick checks... Up to 10 minutes"，等待完成后点击 Send for review | 🔴 高  |
+| 2   | **Closed Testing 审核**    | Google 审核 Closed Testing 发布（通常 1-3 天，快则几小时）                                          | 🔴 高  |
+| 3   | **招募 20+ 测试者**        | 审核通过后需要至少 20 名测试者参与 14 天连续测试                                                    | 🟡 中  |
+| 4   | **14 天 Closed Testing**   | 测试期间需要测试者保持活跃（安装 + 使用）                                                           | 🟡 中  |
+| 5   | **Promote to Production**  | 14 天后从 Closed Testing 提升到 Production 轨道                                                     | 🟡 中  |
+| 6   | **Production 审核 + 上架** | Google 审核 Production 发布（通常 1-3 天）                                                          | 🟡 中  |
 
 ---
 
 ## 阶段三：CI/CD 自动化分发
 
-### 3.1 架构图
-
-```mermaid
-flowchart TB
-    subgraph "GitHub"
-        A["Push to main/test branch"] --> B["GitHub Actions\nbuild.yml / deploy.yml"]
-    end
-
-    subgraph "CI Pipeline"
-        B --> C["1. Checkout code"]
-        C --> D["2. Setup Node + JDK 17"]
-        D --> E["3. yarn install"]
-        E --> F["4. Decode secrets\nkeystore + firebase SA"]
-        F --> G["5. Build AAB\nbundleProductionRelease"]
-        G --> H["6. Firebase App Distribution\nappdistribution:distribute"]
-    end
-
-    subgraph "Firebase"
-        H --> I["Firebase Console\nApp Distribution"]
-        I --> J["Send email to testers"]
-    end
-
-    subgraph "Testers"
-        J --> K["Tester receives\ninstall link"]
-        K --> L["Download & install\non device"]
-    end
-
-    subgraph "Google Play"
-        I -.->|"AAB stored"| M["Google Play\nInternal Testing"]
-        M --> N["Google Play App Signing\nre-signs the AAB"]
-        N --> O["Optimized APK\ndelivered to testers"]
-    end
-```
-
-### 3.2 CI/CD 配置
+### 3.1 CI/CD 配置
 
 | 配置项        | 详情                                                              |
 | ------------- | ----------------------------------------------------------------- |
 | CI 文件       | [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) |
-| 触发分支      | `test` → staging APK / `main` → production AAB                    |
+| 触发分支      | `main` → production AAB                                           |
 | 构建命令      | `cd android && ./gradlew bundleProductionRelease`                 |
-| Firebase 上传 | `npx firebase-tools appdistribution:distribute`                   |
-| 测试者文件    | [`.firebase-testers.txt`](../.firebase-testers.txt)               |
-| 服务账号      | Firebase Admin SDK (GitHub Secret: `FIREBASE_SERVICE_ACCOUNT`)    |
+| Artifact 上传 | `actions/upload-artifact@v4` 上传 AAB                             |
+| Play 自动上传 | 使用 `r0adkll/upload-google-play` 上传到 Internal Testing         |
 
-### 3.3 GitHub Secrets
+### 3.2 GitHub Secrets
 
 | Secret Name                | 用途                             | 状态      |
 | -------------------------- | -------------------------------- | --------- |
 | `FIREBASE_SERVICE_ACCOUNT` | Firebase Admin SDK 私钥 (base64) | ✅ 已配置 |
+| `PLAY_SERVICE_ACCOUNT_KEY` | Google Play Service Account JSON | ✅ 已配置 |
 | `KEYSTORE_BASE64`          | 上传密钥库 (base64)              | ✅ 已配置 |
 | `KEYSTORE_FILE`            | 密钥库路径                       | ✅ 已配置 |
 | `KEYSTORE_PASSWORD`        | 密钥库密码                       | ✅ 已配置 |
@@ -188,84 +174,168 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-    A["Internal Testing\n最多 100 人\n无需审核"] --> B["Closed Testing\n20 人 x 14 天\n新账号必须"]
-    B --> C["Open Testing\n可选\n更多人测试"]
-    C --> D["Production\n正式上架\n需要 Google 审核"]
+    A["Internal Testing\n最多 100 人\n无需审核\nCI 自动上传"] -.->|"可选绕过"| B
+    B["Closed Testing\n20 人 x 14 天\n新账号必须\n需审核通过才激活"] --> C["Production\n正式上架\nGoogle 审核"]
 ```
 
 ### 4.2 当前状态
 
-| 层级                 | 状态      | 说明                             |
-| -------------------- | --------- | -------------------------------- |
-| **Internal Testing** | ✅ 已完成 | v1.0.0 已发布，Firebase 已关联   |
-| **Closed Testing**   | ⏳ 待开始 | 需收集 20 个测试者邮箱           |
-| **Production**       | ❌ 未开始 | 需完成 Closed Testing 后才能提交 |
+| 层级               | 状态        | 说明                                              |
+| ------------------ | ----------- | ------------------------------------------------- |
+| **App Content**    | ✅ 全部完成 | 政府/金融/广告/健康 四项声明全部提交              |
+| **Store Settings** | ✅ 全部完成 | Productivity / Blog + News aggregator / 联系方式  |
+| **Store Listing**  | ✅ 全部完成 | 名称/描述/截图/Feature Graphic 全部填写           |
+| **Data Safety**    | ✅ 全部完成 | 数据声明已提交                                    |
+| **Content Rating** | ✅ 全部完成 | IARC 问卷已完成                                   |
+| **Pricing**        | ✅ 全部完成 | 免费/所有国家                                     |
+| **Closed Testing** | ⏳ 审核中   | v1.0.1 (versionCode 27) 已提交，等待 Quick Checks |
+| **Production**     | ❌ 未开始   | 需完成 Closed Testing 14 天后才能提交             |
 
 ### 4.3 时间线
 
 ```
 Day 1:     ✅ 代码准备 + 签名配置
 Day 1:     ✅ Google Play 创建应用
-Day 1:     ✅ Internal Testing 发布 AAB
-Day 1:     ✅ Firebase ↔ Google Play 关联
-Day 1:     ⏳ 配置 CI 测试者 .firebase-testers.txt
-Day 1:     ⏳ 运行 CI 验证 Firebase 上传
-Day 1-7:   🔲 Store Listing / Data Safety / Content Rating
+Day 1:     ✅ Store Settings / Store Listing / App Content
+Day 1:     ✅ Data Safety / Content Rating / Pricing
+Day 1:     ✅ AAB v1.0.1 上传到 Closed Testing Alpha
+Day 1:     ⏳ Quick Checks + Send for review
+Day 1-3:   🔲 Google Closed Testing 审核
 Day 1-14:  🔲 Closed Testing (20 测试者)
 Day 15:    🔲 Promote to Production
-Day 15-17: 🔲 Google 审核 (1-3 天)
+Day 15-17: 🔲 Google Production 审核
 Day 17:    🎯 正式上架 Google Play Store
 ```
 
 ---
 
+## 阶段五：实操要点与避坑指南（本次发布经验总结）
+
+### 5.1 Store Settings — 类别选择
+
+| 类别             | 风险                 | 选择 |
+| ---------------- | -------------------- | ---- |
+| News & Magazines | 高风险，需新闻源授权 | ❌   |
+| **Productivity** | 低风险，审核通过率高 | ✅   |
+
+> **Gemini AI 建议**: News & Magazines 类别对新闻聚合类应用审核较严，可能要求提供新闻来源授权证明。Productivity 或 Tools 类别审核更宽松，上架更快。
+
+### 5.2 Store Tags — Play Console 预定义标签
+
+Google Play Console **不支持自定义标签**，只能从预定义列表中选择。
+
+| 标签                 | 所属分类         | 选择 |
+| -------------------- | ---------------- | ---- |
+| `Blog`               | Social           | ✅   |
+| `News aggregator`    | News & magazines | ✅   |
+| `reading`, `tech` 等 | 自定义           | ❌   |
+
+> 之前计划的 `reading`, `tech` 标签在 Play Console 中不存在，最终选择 `Blog` + `News aggregator`。
+
+### 5.3 Closed Testing — Countries & Testers 关键坑
+
+**⚠️ 最重要的一条经验: Countries 和 Testers 必须在 Track 设置页面配置，而不是在 Release 创建页面！**
+
+```
+正确流程:
+Track 设置页 (Settings for this track)
+  ├── Select countries/regions → 选择所有 176 个国家 → 保存
+  ├── Testers → Add email addresses → 输入测试者邮箱 → 保存
+  └── 然后再回去创建 Release
+```
+
+**错误示范**（第一次踩坑）:
+
+1. 在 Closed Testing 页面创建 Release
+2. 填写 Release 详情后预览 → 报错 "No countries selected"
+3. 回到 Track 设置页重新配置 Countries 和 Testers
+4. 返回 Release 页重新填写 Release Notes
+
+> 建议顺序: **先设置 Countries → 再设置 Testers → 最后创建 Release**
+
+### 5.4 Closed Testing — 发布步骤（详细）
+
+| #   | 步骤                       | 说明                                                                          |
+| --- | -------------------------- | ----------------------------------------------------------------------------- |
+| 1   | 获取 AAB                   | 从 GitHub Actions Artifacts 下载 `app-production-release.aab`                 |
+| 2   | 导航到 Closed Testing 页面 | Play Console → Testing → Closed Testing → Alpha                               |
+| 3   | 设置 Countries             | Track 设置 → Select countries/regions → 选择所有国家（共 176 个）→ 保存       |
+| 4   | 设置 Testers               | Track 设置 → Testers → Add email addresses → 输入测试者邮箱（每行一个）→ 保存 |
+| 5   | 创建 Release               | Create a new release → 上传 AAB → 填写 Release Notes                          |
+| 6   | 填写 Feedback URL/Email    | 必须填写，用于测试者提交反馈。填写 mrporterdev@gmail.com                      |
+| 7   | 检查预览                   | 确认版本号、Countries、Testers 都正确                                         |
+| 8   | 回到 Publishing Overview   | 等待 Quick Checks 完成（最多 10 分钟）                                        |
+| 9   | 点击 Send for review       | 提交审核                                                                      |
+
+### 5.5 Publishing Overview — 提交流程
+
+```
+Publishing Overview 页面:
+  ┌─────────────────────────────────────────────┐
+  │  ✓ App content (App content)                │  ← 绿色勾 = 通过
+  │  ✓ Store settings                           │
+  │  ✓ Store listing                            │
+  │  ✓ Data safety                              │
+  │  ✓ Content rating                           │
+  │  ✓ Pricing & distribution                   │
+  │  ⏳ Closed Testing (Alpha) — Quick Checks   │  ← 等待中
+  └─────────────────────────────────────────────┘
+
+状态: "Changes not yet sent for review"
+      "Running quick checks... Up to 10 minutes remaining"
+```
+
+**操作要点**:
+
+- 如果某部分显示为未完成状态（没有绿色勾），点击该部分进入并**点击页面底部的 Save**，即使没有修改也要保存
+- 每次 Save 会触发该部分的状态刷新
+- Quick Checks 完成后会显示 "Ready to send for review"
+- 此时点击 **Send for review** 提交
+
+### 5.6 App Content 声明汇总
+
+| 声明项          | 回答 | 依据                                                                                             |
+| --------------- | ---- | ------------------------------------------------------------------------------------------------ |
+| 政府应用        | No   | Tarsier 不是政府应用                                                                             |
+| 金融功能        | None | 不提供任何金融功能                                                                               |
+| 广告 ID (AD_ID) | No   | [`AndroidManifest.xml`](../android/app/src/main/AndroidManifest.xml) 无 `AD_ID` 权限，无广告 SDK |
+| 健康功能        | No   | 不提供健康相关功能                                                                               |
+
+---
+
 ## 当前待办清单
 
-### 🔴 立即执行（必须先做）
+### 🔴 立即执行
 
-1. **配置 Upload Key 证书到 App Integrity**
-
-   ```bash
-   keytool -list -v -keystore android/app/release-upload-key.keystore -alias upload-key
-   ```
-
-   复制 SHA-1 指纹 → Play Console → Setup → App Integrity → Add upload key
-
-2. **更新 `.firebase-testers.txt`** 填入你的邮箱
-
-   ```
-   porter@example.com
-   ```
-
-3. **推送触发 CI** 验证 Firebase App Distribution 上传成功
+1. **等待 Quick Checks 完成** → 点击 **Send for review**
+2. **审核通过后 → 招募 20+ 测试者**（当前已有 8 人，至少还需要 12 人）
 
 ### 🟡 下一步
 
-4. 填写 Store Listing（名称 / 描述 / 截图）
-5. 配置 Data Safety 声明
-6. 完成 Content Rating 问卷
-7. 准备 Closed Testing（收集 20 个测试者）
+3. 测试者加入 Closed Testing 并安装使用 14 天
+4. 14 天后 Promote to Production
 
 ### 🔵 长期维护
 
-8. 正式上架后的版本迭代
-9. 版本号管理（`versionCode` 递增 + `versionName` 语义化版本）
-10. 持续通过 CI 自动化分发
+5. 正式上架后的版本迭代
+6. 版本号管理（`versionCode` 递增 + `versionName` 语义化版本）
+7. 后续版本可通过 CI 自动上传到 Internal Testing
 
 ---
 
 ## 关键概念说明
 
-### Firebase App Distribution 流程
+### Internal Testing vs Closed Testing
 
-```
-开发者推送代码 → GitHub Actions 构建 AAB → Firebase 上传
-    → Firebase 发送邮件给测试者 → 测试者下载安装
-```
+| 特性        | Internal Testing         | Closed Testing               |
+| ----------- | ------------------------ | ---------------------------- |
+| 审核        | 无需审核，立即生效       | 需要 Google 审核通过后才激活 |
+| 测试者上限  | 100 人                   | 无上限（但需审核）           |
+| 新账号要求  | 可选                     | **必须**，20 人 x 14 天      |
+| CI 自动上传 | ✅ 已配置 (`deploy.yml`) | ❌ 需手动上传（本流程）      |
+| 使用场景    | 内部开发人员自测         | 发布前的正式测试             |
 
-- 不需要经过 Google Play 审核
-- 适合内部测试和 CI 自动化
-- Firebase 和 Google Play 关联后，AAB 自动使用 Google Play App Signing
+> **注意**: 本次发布选择了跳过 Internal Testing，直接通过 Closed Testing 提交。原因是 Internal Testing 虽然无需审核但测试者无法通过 Play Store 安装，体验不如直接走 Closed Testing 流程。
 
 ### Google Play App Signing
 
