@@ -3,8 +3,8 @@ name: Deploy (Test / Production)
 on:
   push:
     branches:
-      - main
       - test
+      - hotfix
     tags:
       - 'v*'
   workflow_dispatch:
@@ -45,7 +45,9 @@ jobs:
             FLAVOR="${{ github.event.inputs.environment }}"
           elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
             FLAVOR="test"
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
+            FLAVOR="production"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             FLAVOR="production"
           else
             echo "❌ Unknown branch/tag — cannot resolve flavor"
@@ -302,5 +304,61 @@ jobs:
           code-push-standalone release-react TarsierTest-ios ios \
             --deploymentName Staging \
             --description "CI: $(git log -1 --pretty=%s)" \
+            --plistFile ios/FrontendBlogMobile/Info.plist \
+            --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # CodePush (hot update) — hotfix branch → Production
+  # Uses self-hosted code-push-server at https://codepush.joyminis.com
+  # ─────────────────────────────────────────────────────────────────────────────
+  codepush-production:
+    name: CodePush Production (Hotfix)
+    needs: [resolve-flavor]
+    if: ${{ github.ref == 'refs/heads/hotfix' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable --ignore-scripts
+
+      - name: Apply patches
+        run: npx patch-package
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test
+
+      - name: Install code-push-standalone CLI
+        run: npm install -g code-push-standalone
+
+      - name: Login to self-hosted CodePush
+        run: |
+          code-push-standalone login ${{ secrets.CODEPUSH_SERVER_URL }} \
+            --accessKey "${{ secrets.CODEPUSH_ACCESS_KEY }}"
+
+      - name: CodePush Production (Android)
+        run: |
+          code-push-standalone release-react Tarsier-android android \
+            --deploymentName Production \
+            --description "HOTFIX: $(git log -1 --pretty=%s)"
+
+      - name: CodePush Production (iOS)
+        run: |
+          code-push-standalone release-react Tarsier-ios ios \
+            --deploymentName Production \
+            --description "HOTFIX: $(git log -1 --pretty=%s)" \
             --plistFile ios/FrontendBlogMobile/Info.plist \
             --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj

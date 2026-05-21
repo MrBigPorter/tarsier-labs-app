@@ -88,3 +88,6 @@ keystore.properties
 .env.production
 .env.staging
 testers.csv
+
+# Study materials (interview prep, not for commit)
+study/
