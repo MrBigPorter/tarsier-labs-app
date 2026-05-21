@@ -141,7 +141,7 @@ jobs:
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJsonPrivKey: ${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}
+          serviceAccountJson: ${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}
           packageName: com.tarsier.labs
           releaseFiles: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           track: internal
