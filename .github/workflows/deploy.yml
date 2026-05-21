@@ -150,13 +150,13 @@ jobs:
 
       - name: 🚀 Upload to Google Play Internal Testing
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
-        uses: r0adkll/upload-google-play@v1.1.5
-        with:
-          serviceAccountJson: /tmp/android-play-sa.json
-          packageName: com.tarsier.labs
-          releaseFiles: android/app/build/outputs/bundle/productionRelease/app-production-release.aab
-          tracks: internal
-          status: completed
+        run: |
+          node scripts/upload-android-play-store.mjs \
+            --service-account-json /tmp/android-play-sa.json \
+            --package-name com.tarsier.labs \
+            --aab-path android/app/build/outputs/bundle/productionRelease/app-production-release.aab \
+            --track internal \
+            --status completed
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Build iOS
