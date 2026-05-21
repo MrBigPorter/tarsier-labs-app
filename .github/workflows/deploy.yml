@@ -137,11 +137,39 @@ jobs:
             android/app/build/outputs/bundle/productionRelease/app-production-release.aab
           retention-days: 30
 
-      - name: 🔑 Write Google Play service account key
+      - name: 🔑 Write & validate Google Play service account key
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
-        run: echo "${PLAY_SA_KEY}" > /tmp/android-play-sa.json
         env:
           PLAY_SA_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_KEY }}
+        run: |
+          # Validate secret is not empty
+          if [ -z "${PLAY_SA_KEY}" ]; then
+            echo "❌ ERROR: PLAY_SERVICE_ACCOUNT_KEY is empty or not configured."
+            echo ""
+            echo "   This secret must be set in GitHub repository secrets:"
+            echo "   Settings → Secrets and variables → Actions → Repository secrets"
+            echo "   Secret name: PLAY_SERVICE_ACCOUNT_KEY"
+            echo "   Value: the full JSON content of your Google Play service account key"
+            exit 1
+          fi
+
+          # Write the key file (printf handles multi-line JSON safely)
+          printf '%s' "${PLAY_SA_KEY}" > /tmp/android-play-sa.json
+
+          # Validate it's valid JSON
+          if command -v jq > /dev/null 2>&1; then
+            if ! jq . /tmp/android-play-sa.json > /dev/null 2>&1; then
+              echo "❌ ERROR: PLAY_SERVICE_ACCOUNT_KEY is not valid JSON"
+              echo "   First 200 chars: $(head -c 200 /tmp/android-play-sa.json)"
+              exit 1
+            fi
+            echo "✅ Service account key written & validated"
+            echo "   Project: $(jq -r '.project_id' /tmp/android-play-sa.json)"
+            echo "   Client email: $(jq -r '.client_email' /tmp/android-play-sa.json)"
+          else
+            echo "⚠️  jq not available, skipping JSON validation"
+            echo "   File written: $(wc -c < /tmp/android-play-sa.json) bytes"
+          fi
 
       - name: 🔍 Verify AAB exists
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
