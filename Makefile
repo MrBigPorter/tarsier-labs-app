@@ -534,13 +534,21 @@ android-key-info: ## Show SHA-1 and SHA-256 fingerprints of the release upload k
 	@if [ ! -f "$(KEYSTORE_FILE)" ]; then \
 		echo "❌ Keystore not found: $(KEYSTORE_FILE)"; \
 		exit 1; \
+	fi; \
+	STORE_PASS=$$(grep '^storePassword' "$(KEYSTORE_PROPS)" 2>/dev/null | head -1 | cut -d= -f2-); \
+	if [ -z "$$STORE_PASS" ]; then \
+		read "STORE_PASS?🔐 Enter keystore password: "; \
+	fi; \
+	keytool -list -v -keystore "$(KEYSTORE_FILE)" -storepass "$$STORE_PASS" 2>/dev/null | grep -E "(SHA[0-9]*:|Alias name|Valid from|Entry type)" | head -10; \
+	if [ $$? -ne 0 ]; then \
+		echo ""; \
+		echo "⚠️  Failed to read keystore. Possible causes:"; \
+		echo "   • Wrong password — check keystore.properties or enter manually"; \
+		echo "   • Keystore file is corrupted"; \
+		keytool -list -v -keystore "$(KEYSTORE_FILE)" 2>&1 | head -5; \
 	fi
-	@keytool -list -v -keystore "$(KEYSTORE_FILE)" -storepass:file "$(KEYSTORE_PROPS)" 2>/dev/null | grep -E "(SHA[0-9]:|Alias name|Valid from|Entry type)" | head -10 || \
-		(keytool -list -v -keystore "$(KEYSTORE_FILE)" 2>&1 | head -20 && \
-		echo "" && \
-		echo "⚠️  Could not auto-read password. Set STORE_PASS or use keystore.properties")
 
-android-debug-key-info: ## Show debug.keystore SHA-1 fingerprint (for Firebase / Google Sign-In)
+android-debug-key-info: ## Show debug.keystore SHA-256 fingerprint (for assetlinks.json)
 	@echo "🔍 Android Debug Keystore Info"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@DEBUG_KEY=$$HOME/.android/debug.keystore; \
@@ -550,7 +558,19 @@ android-debug-key-info: ## Show debug.keystore SHA-1 fingerprint (for Firebase /
 		echo "   keytool -genkey -v -keystore $$DEBUG_KEY -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname 'CN=Android Debug,O=Android,C=US'"; \
 		exit 1; \
 	fi; \
-	keytool -list -v -keystore "$$DEBUG_KEY" -storepass android 2>/dev/null | grep -E "(SHA[0-9]:|Alias name)" | head -5
+	echo "   SHA-1:   $$(keytool -list -v -keystore "$$DEBUG_KEY" -storepass android 2>/dev/null | grep SHA1 | head -1 | awk '{print $$NF}')"; \
+	echo "   SHA-256: $$(keytool -list -v -keystore "$$DEBUG_KEY" -storepass android 2>/dev/null | grep 'SHA256:' | head -1 | awk '{print $$NF}')"
+
+android-key-sha256: ## Quick: get SHA-256 only (for assetlinks.json). Usage: make android-key-sha256 [PASS=storepass]
+	@if [ ! -f "$(KEYSTORE_FILE)" ]; then \
+		echo "❌ Keystore not found: $(KEYSTORE_FILE)"; \
+		exit 1; \
+	fi; \
+	STORE_PASS=$${PASS:-$$(grep '^storePassword' "$(KEYSTORE_PROPS)" 2>/dev/null | head -1 | cut -d= -f2-)}; \
+	if [ -z "$$STORE_PASS" ]; then \
+		read "STORE_PASS?🔐 Enter keystore password: "; \
+	fi; \
+	echo "$$(keytool -list -v -keystore "$(KEYSTORE_FILE)" -storepass "$$STORE_PASS" 2>/dev/null | grep 'SHA256:' | head -1 | awk '{print $$NF}')"
 
 android-key-backup: ## Create encrypted backup of keystore + properties to Desktop
 	@echo "💾 Backing up Android release upload keystore..."

@@ -135,6 +135,8 @@ android {
             applicationIdSuffix ".test"
             versionNameSuffix "-test"
             resValue "string", "app_name", "Tarsier(Test)"
+            // Deep link host for staging
+            manifestPlaceholders = [deepLinkHost: "blog-dev.joyminis.com"]
             // CodePush deployment key — replace with actual key from self-hosted server
             // NOTE: Resource name must be "CodePushDeploymentKey" to match what
             // react-native-code-push's autolinking template generates in PackageList.java.
@@ -147,6 +149,8 @@ android {
             missingDimensionStrategy 'env', 'production'
             applicationIdSuffix ""
             resValue "string", "app_name", "Tarsier"
+            // Deep link host for production
+            manifestPlaceholders = [deepLinkHost: "blog.joyminis.com"]
             // CodePush deployment key — replace with actual key from self-hosted server
             // NOTE: Resource name must be "CodePushDeploymentKey" to match what
             // react-native-code-push's autolinking template generates in PackageList.java.
