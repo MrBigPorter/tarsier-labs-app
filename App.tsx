@@ -34,12 +34,7 @@ if (__DEV__) {
   });
 }
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import {
-  StatusBar,
-  StyleSheet,
-  LogBox,
-  InteractionManager,
-} from 'react-native';
+import { StatusBar, StyleSheet, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -151,9 +146,10 @@ function AppComponent(): React.JSX.Element {
         // rendered and all navigation animations have settled. This prevents
         // the Sentry SDK (~30-50KB native overhead) from competing for CPU
         // time during the critical startup path (LCP / first paint).
-        InteractionManager.runAfterInteractions(() => {
+        // Note: setTimeout(0) is used instead of the deprecated InteractionManager.
+        setTimeout(() => {
           initSentry();
-        });
+        }, 0);
 
         logger.info('[App] App initialization complete');
         addBreadcrumb('App initialized', 'app');
