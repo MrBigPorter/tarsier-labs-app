@@ -150,7 +150,7 @@ android {
             applicationIdSuffix ""
             resValue "string", "app_name", "Tarsier"
             // Deep link host for production
-            manifestPlaceholders = [deepLinkHost: "blog.joyminis.com"]
+            manifestPlaceholders = [deepLinkHost: "tarsierlabs.app"]
             // CodePush deployment key — replace with actual key from self-hosted server
             // NOTE: Resource name must be "CodePushDeploymentKey" to match what
             // react-native-code-push's autolinking template generates in PackageList.java.

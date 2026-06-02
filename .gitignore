@@ -91,3 +91,6 @@ testers.csv
 
 # Study materials (interview prep, not for commit)
 study/
+
+# Planning documents (not for commit)
+plans/
