@@ -67,7 +67,10 @@ interface SvgIconProps {
  * Each icon should be a functional component receiving:
  *   { color, strokeWidth }: { color: string; strokeWidth: number }
  */
-const ICONS: Record<IconName, React.FC<{ color: string; strokeWidth: number }>> = {
+const ICONS: Record<
+  IconName,
+  React.FC<{ color: string; strokeWidth: number }>
+> = {
   'chevron-left': ({ color, strokeWidth }) => (
     <G>
       <Path
@@ -447,14 +450,78 @@ const ICONS: Record<IconName, React.FC<{ color: string; strokeWidth: number }>> 
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <Line x1="12" y1="1" x2="12" y2="3" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="12" y1="21" x2="12" y2="23" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="1" y1="12" x2="3" y2="12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="21" y1="12" x2="23" y2="12" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
-      <Line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Line
+        x1="12"
+        y1="1"
+        x2="12"
+        y2="3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="12"
+        y1="21"
+        x2="12"
+        y2="23"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="4.22"
+        y1="4.22"
+        x2="5.64"
+        y2="5.64"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="18.36"
+        y1="18.36"
+        x2="19.78"
+        y2="19.78"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="1"
+        y1="12"
+        x2="3"
+        y2="12"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="21"
+        y1="12"
+        x2="23"
+        y2="12"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="4.22"
+        y1="19.78"
+        x2="5.64"
+        y2="18.36"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="18.36"
+        y1="5.64"
+        x2="19.78"
+        y2="4.22"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
     </G>
   ),
   moon: ({ color, strokeWidth }) => (
@@ -890,7 +957,7 @@ const ICONS: Record<IconName, React.FC<{ color: string; strokeWidth: number }>> 
   apple: ({ color }) => (
     <G>
       <Path
-        d="M12 22c-1.3 0-2.6-.6-3.5-1.6a5.4 5.4 0 01-4.5 0C2 19.2 1 16.5 1 13.5c0-4.4 2.5-7 5.5-7 1.5 0 2.5.5 3.5 1 .9-.5 2-1 3.5-1 2.5 0 5 1.7 5.5 5.5.5-3 2.5-5.5 5-5.5 2.5 0 5 2 5 5.5 0 3.5-2 6.5-4.5 8-.9 1-2 1.6-3.5 1.6z"
+        d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24-.29-1.44.24-2.19.56-3.31-.17-3.22-2.11-3.02-7.07.51-9.21 1.33-.8 2.86-.86 4.1-.03.87.57 1.54.57 2.4.01 1.33-.89 3.16-.75 4.55.27 1.22.91 1.98 2.17 1.96 2.19-.02.03-2.26 1.1-2.23 3.82.03 2.99 2.57 3.97 2.57 3.99-.01.02-.77 2.14-2.63 1.45zM14.77 4.52c.16-1.76-.54-3.45-1.8-4.52-1.2 1.12-1.96 2.7-1.76 4.38.22 1.56 1.4 2.78 2.96 2.66.03-.85.25-1.66.6-2.52z"
         fill={color}
       />
     </G>

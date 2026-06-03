@@ -208,7 +208,6 @@
     "subtitle": "Tous les articles que vous avez mis en favori",
     "totalCount": "Total {count} articles mis en favori",
     "empty": "Pas encore d'articles favoris",
-    "emptyTitle": "Pas encore d'articles favoris",
     "emptyDescription": "Commencez à explorer les articles et ajoutez vos favoris",
     "browseArticles": "Parcourir les articles",
     "loadFailed": "Échec du chargement des favoris",

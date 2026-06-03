@@ -11,7 +11,7 @@
 		503EEE3A527D745F493C90D1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		8ECCD6FCCB6B4B5C31DD0084 /* Pods_FrontendBlogMobile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 88FDB8AFA85E42AFF670C76C /* Pods_FrontendBlogMobile.framework */; };
+		A8BB1DB36E17BCD351B0A8C8 /* Pods_FrontendBlogMobile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 942ACD51EFDF9C6699A6D591 /* Pods_FrontendBlogMobile.framework */; };
 		AABBCCDD3CA45674006654EE /* ASAuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDD2CA45674006654EE /* ASAuthSession.swift */; };
 		AABBCCDD5CA45674006654EE /* ASAuthSession.m in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDD4CA45674006654EE /* ASAuthSession.m */; };
 		D28772BF27BC447F87A0F1F4 /* BootSplash.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = E6E1E7A8E46C4B65B0CDC49D /* BootSplash.storyboard */; };
@@ -28,9 +28,9 @@
 		641C926452DBC200C40E7532 /* Pods-FrontendBlogMobile.debug-test.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FrontendBlogMobile.debug-test.xcconfig"; path = "Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile.debug-test.xcconfig"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FrontendBlogMobile/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = FrontendBlogMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		88FDB8AFA85E42AFF670C76C /* Pods_FrontendBlogMobile.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FrontendBlogMobile.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		942ACD51EFDF9C6699A6D591 /* Pods_FrontendBlogMobile.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FrontendBlogMobile.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		988E3BAC7A76A884447A3367 /* Pods-FrontendBlogMobile.debug-prod.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FrontendBlogMobile.debug-prod.xcconfig"; path = "Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile.debug-prod.xcconfig"; sourceTree = "<group>"; };
-		A003EFB99E794B79A6943147 /* Colors.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Colors.xcassets; path = FrontendBlogMobile/Colors.xcassets; sourceTree = "<group>"; };
+		A003EFB99E794B79A6943147 /* Colors.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Colors.xcassets; path = FrontendBlogMobile/Colors.xcassets; sourceTree = "<group>"; };
 		A8A0A7250FA7E2AE37400F31 /* Pods-FrontendBlogMobile.release-test.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FrontendBlogMobile.release-test.xcconfig"; path = "Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile.release-test.xcconfig"; sourceTree = "<group>"; };
 		AABBCCDD2CA45674006654EE /* ASAuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASAuthSession.swift; sourceTree = "<group>"; };
 		AABBCCDD4CA45674006654EE /* ASAuthSession.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ASAuthSession.m; sourceTree = "<group>"; };
@@ -44,7 +44,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8ECCD6FCCB6B4B5C31DD0084 /* Pods_FrontendBlogMobile.framework in Frameworks */,
+				A8BB1DB36E17BCD351B0A8C8 /* Pods_FrontendBlogMobile.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,7 +71,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				88FDB8AFA85E42AFF670C76C /* Pods_FrontendBlogMobile.framework */,
+				942ACD51EFDF9C6699A6D591 /* Pods_FrontendBlogMobile.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -110,7 +110,6 @@
 			isa = PBXGroup;
 			children = (
 			);
-			name = Config;
 			path = Config;
 			sourceTree = "<group>";
 		};
@@ -141,6 +140,7 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
+				ED8823AE3B1F9E23E6BE5AFC /* Generate dSYMs for prebuilt XCFrameworks */,
 			);
 			buildRules = (
 			);
@@ -270,6 +270,24 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		ED8823AE3B1F9E23E6BE5AFC /* Generate dSYMs for prebuilt XCFrameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Generate dSYMs for prebuilt XCFrameworks";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n# Only run for Release builds (including Release-Prod, Release-Test)\nif [ \"$CONFIGURATION\" != \"Release\" ] && [[ \"$CONFIGURATION\" != Release-* ]]; then\n  echo \"[dSYM] Skipping: non-Release build ($CONFIGURATION)\"\n  exit 0\nfi\n\necho \"[dSYM] Generating dSYM files for pre-built XCFrameworks...\"\n\nDSYM_OUTPUT_DIR=\"${DWARF_DSYM_FOLDER_PATH}\"\n\n# Use the already-embedded copies in BUILT_PRODUCTS_DIR so the dSYM UUID\n# matches the binary that is actually placed into the archive.\n# (Running dsymutil on the Pods source binary would give the pre-strip UUID,\n# which mismatches the stripped/processed binary App Store Connect validates.)\nFRAMEWORKS_DIR=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\n\nFRAMEWORK_NAMES=(\"hermesvm\" \"React\" \"ReactNativeDependencies\")\n\nfor NAME in \"${FRAMEWORK_NAMES[@]}\"; do\n  BINARY_PATH=\"${FRAMEWORKS_DIR}/${NAME}.framework/${NAME}\"\n\n  if [ ! -f \"$BINARY_PATH\" ]; then\n    echo \"[dSYM] Info: embedded binary not found at $BINARY_PATH — skipping $NAME (may be statically linked)\"\n    continue\n  fi\n\n  DSYM_DEST=\"${DSYM_OUTPUT_DIR}/${NAME}.framework.dSYM\"\n\n  # Always regenerate — never skip based on existence.\n  # A stale dSYM from a previous build would have a wrong UUID and shadow the correct one.\n  echo \"[dSYM] Generating dSYM for $NAME from embedded binary...\"\n  if xcrun dsymutil \"$BINARY_PATH\" -o \"$DSYM_DEST\" 2>/dev/null; then\n    echo \"[dSYM] ✓ Generated dSYM for $NAME\"\n  else\n    echo \"[dSYM] Note: dsymutil produced no output for $NAME (statically merged into app binary — OK)\"\n  fi\ndone\n\necho \"[dSYM] Done generating dSYM files\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -292,7 +310,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = PK28T343BP;
 				DISPLAY_NAME = Tarsier;
 				ENABLE_BITCODE = NO;
@@ -324,7 +342,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = PK28T343BP;
 				DISPLAY_NAME = Tarsier;
 				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
@@ -443,7 +461,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODEPUSH_DEPLOYMENT_KEY = "$(CODEPUSH_KEY_TEST)";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = PK28T343BP;
 				DISPLAY_NAME = "Tarsier(Test)";
 				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
@@ -943,7 +961,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODEPUSH_DEPLOYMENT_KEY = "$(CODEPUSH_KEY_PRODUCTION)";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = PK28T343BP;
 				DISPLAY_NAME = Tarsier;
 				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
@@ -974,7 +992,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODEPUSH_DEPLOYMENT_KEY = "$(CODEPUSH_KEY_TEST)";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = PK28T343BP;
 				DISPLAY_NAME = "Tarsier(Test)";
 				ENABLE_BITCODE = NO;
@@ -1007,7 +1025,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODEPUSH_DEPLOYMENT_KEY = "$(CODEPUSH_KEY_PRODUCTION)";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = PK28T343BP;
 				DISPLAY_NAME = Tarsier;
 				ENABLE_BITCODE = NO;

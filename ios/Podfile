@@ -58,5 +58,91 @@ target 'FrontendBlogMobile' do
         end
       end
     end
+
+    # Fix: Ensure all pod targets generate dSYM files for proper symbolication.
+    # Without this, React.framework and other pods may be missing dSYM files,
+    # causing App Store Connect validation warnings (missing dSYM for UUID).
+    Pod::UI.puts "  [dSYM Fix] Enabling dwarf-with-dsym for all pod targets".green
+
+    # Set DEBUG_INFORMATION_FORMAT at the Pods PROJECT level (inherited by all native targets)
+    installer.pods_project.build_configurations.each do |config|
+      config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
+    end
+
+    # Also set at the TARGET level for any targets that override project defaults.
+    # For hermes-related targets, also disable stripping so the embedded binary
+    # keeps the same UUID as the source — otherwise Xcode's STRIP_INSTALLED_PRODUCT
+    # changes the UUID during archive and the dSYM no longer matches.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['DEBUG_INFORMATION_FORMAT'] = 'dwarf-with-dsym'
+        if target.name.downcase.include?('hermes')
+          config.build_settings['COPY_PHASE_STRIP'] = 'NO'
+          config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
+        end
+      end
+    end
+
+    # Generate dSYM files for pre-built XCFrameworks that ship without dSYM bundles.
+    # These are binary-distributed frameworks (React.xcframework, ReactNativeDependencies.xcframework,
+    # hermesvm.xcframework) where DEBUG_INFORMATION_FORMAT has no effect because
+    # there's no source compilation step. We use dsymutil to extract debug info.
+    #
+    # IMPORTANT: We run dsymutil against the *embedded* binary in $BUILT_PRODUCTS_DIR
+    # (the copy Xcode has already processed), NOT the source binary in $PODS_ROOT.
+    # This guarantees the dSYM UUID matches the binary that lands in the archive,
+    # because any stripping/re-signing Xcode performs changes the UUID of the copy.
+    # We also never skip based on "dSYM already exists" — a stale dSYM from a
+    # previous build with an old UUID would silently shadow the correct one.
+    Pod::UI.puts "  [dSYM Fix] Adding/updating build phase to generate dSYMs for prebuilt XCFrameworks".green
+    main_target = installer.aggregate_targets.first.user_targets.first
+    phase_name = 'Generate dSYMs for prebuilt XCFrameworks'
+    # Find existing phase or create a new one — always overwrite the script so
+    # changes to the Podfile are reflected without manually editing the pbxproj.
+    phase = main_target.build_phases.find { |p| p.respond_to?(:name) && p.name == phase_name }
+    phase ||= main_target.new_shell_script_build_phase(phase_name)
+    phase.shell_script = <<-'SCRIPT'
+set -e
+# Only run for Release builds (including Release-Prod, Release-Test)
+if [ "$CONFIGURATION" != "Release" ] && [[ "$CONFIGURATION" != Release-* ]]; then
+  echo "[dSYM] Skipping: non-Release build ($CONFIGURATION)"
+  exit 0
+fi
+
+echo "[dSYM] Generating dSYM files for pre-built XCFrameworks..."
+
+DSYM_OUTPUT_DIR="${DWARF_DSYM_FOLDER_PATH}"
+
+# Use the already-embedded copies in BUILT_PRODUCTS_DIR so the dSYM UUID
+# matches the binary that is actually placed into the archive.
+# (Running dsymutil on the Pods source binary would give the pre-strip UUID,
+# which mismatches the stripped/processed binary App Store Connect validates.)
+FRAMEWORKS_DIR="${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}"
+
+FRAMEWORK_NAMES=("hermesvm" "React" "ReactNativeDependencies")
+
+for NAME in "${FRAMEWORK_NAMES[@]}"; do
+  BINARY_PATH="${FRAMEWORKS_DIR}/${NAME}.framework/${NAME}"
+
+  if [ ! -f "$BINARY_PATH" ]; then
+    echo "[dSYM] Info: embedded binary not found at $BINARY_PATH — skipping $NAME (may be statically linked)"
+    continue
+  fi
+
+  DSYM_DEST="${DSYM_OUTPUT_DIR}/${NAME}.framework.dSYM"
+
+  # Always regenerate — never skip based on existence.
+  # A stale dSYM from a previous build would have a wrong UUID and shadow the correct one.
+  echo "[dSYM] Generating dSYM for $NAME from embedded binary..."
+  if xcrun dsymutil "$BINARY_PATH" -o "$DSYM_DEST" 2>/dev/null; then
+    echo "[dSYM] ✓ Generated dSYM for $NAME"
+  else
+    echo "[dSYM] Note: dsymutil produced no output for $NAME (statically merged into app binary — OK)"
+  fi
+done
+
+echo "[dSYM] Done generating dSYM files"
+    SCRIPT
+    Pod::UI.puts "  [dSYM Fix] Updated build phase '#{phase_name}' on main target".green
   end
 end

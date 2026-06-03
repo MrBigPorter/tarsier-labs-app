@@ -51,7 +51,7 @@ const TEST_CONFIG: EnvConfig = {
 };
 
 const PROD_CONFIG: EnvConfig = {
-  API_URL: 'https://api.joyminis.com',
+  API_URL: 'https://tarsierlabs.app',
   WEB_URL: 'https://tarsierlabs.app',
   SENTRY_DSN:
     'https://59af1081c07587571c2ac0d27d2ac5bc@o4511086990524416.ingest.us.sentry.io/4511389161357312',

@@ -250,6 +250,54 @@ jobs:
                        CODE_SIGNING_ALLOWED=NO
           fi
 
+      - name: Verify & fix hermesvm dSYM in archive
+        run: |
+          ARCHIVE=$(ls ios/build/*.xcarchive | head -1)
+          echo "Checking archive: $ARCHIVE"
+
+          # Find the embedded hermesvm binary in the archive
+          EMBEDDED_BINARY=$(find "$ARCHIVE/Products" -path "*/Frameworks/hermesvm.framework/hermesvm" -type f | head -1)
+
+          if [ -z "$EMBEDDED_BINARY" ]; then
+            echo "hermesvm.framework not found in archive (statically linked — no separate dSYM needed)"
+            exit 0
+          fi
+
+          echo "Found embedded binary: $EMBEDDED_BINARY"
+
+          # Get UUID of the embedded (possibly stripped) binary
+          BINARY_UUID=$(xcrun dwarfdump --uuid "$EMBEDDED_BINARY" | grep arm64 | awk '{print $2}')
+          echo "hermesvm embedded binary UUID: $BINARY_UUID"
+
+          DSYM_DIR="$ARCHIVE/dSYMs/hermesvm.framework.dSYM"
+
+          if [ -d "$DSYM_DIR" ]; then
+            DSYM_UUID=$(xcrun dwarfdump --uuid "$DSYM_DIR" | grep arm64 | awk '{print $2}')
+            echo "hermesvm dSYM UUID:           $DSYM_UUID"
+            if [ "$BINARY_UUID" = "$DSYM_UUID" ]; then
+              echo "✓ UUID match confirmed — no action needed"
+              exit 0
+            else
+              echo "UUID mismatch detected — regenerating dSYM from embedded binary..."
+              rm -rf "$DSYM_DIR"
+            fi
+          else
+            echo "No dSYM found — generating from embedded binary..."
+          fi
+
+          mkdir -p "$ARCHIVE/dSYMs"
+          xcrun dsymutil "$EMBEDDED_BINARY" -o "$DSYM_DIR"
+
+          # Final verification
+          FINAL_UUID=$(xcrun dwarfdump --uuid "$DSYM_DIR" | grep arm64 | awk '{print $2}')
+          echo "Generated dSYM UUID: $FINAL_UUID"
+          if [ "$BINARY_UUID" = "$FINAL_UUID" ]; then
+            echo "✓ hermesvm dSYM UUID verified successfully"
+          else
+            echo "ERROR: UUID still mismatches after regeneration ($BINARY_UUID vs $FINAL_UUID)"
+            exit 1
+          fi
+
       - name: Upload Archive
         uses: actions/upload-artifact@v4
         with:
