@@ -94,3 +94,6 @@ study/
 
 # Planning documents (not for commit)
 plans/
+
+# Local CodePush environment setup (contains deployment keys)
+scripts/setup-local-env.sh

@@ -1,6 +1,7 @@
 // ios/Config/Test.xcconfig
 // Test flavor — bundle ID with .test suffix, display name with (Test)
+// CodePush deployment key is replaced by CI/CD via sed, or set via ./scripts/setup-local-env.sh
 
 PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test
 DISPLAY_NAME = Tarsier(Test)
-CODEPUSH_DEPLOYMENT_KEY = M2BSYLHORPs59cFQRU7voImqczkEf8EU92luy
+CODEPUSH_DEPLOYMENT_KEY = djKblDTcUfnteRkp2o53Rfg97dRuKdZ7nIL

@@ -76,7 +76,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	<key>CodePushServerURL</key>
-	<string>https://codepush.joyminis.com</string>
+	<string>https://cp.hyperpush.org/codepush</string>
 	<key>CodePushDeploymentKey</key>
 	<string>$(CODEPUSH_DEPLOYMENT_KEY)</string>
 </dict>

@@ -127,6 +127,8 @@ android {
             }
         }
     }
+
+    // ── CodePush Deployment Keys ────────────────────────────────────────────
     flavorDimensions "env"
     productFlavors {
         staging {
@@ -135,28 +137,26 @@ android {
             applicationIdSuffix ".test"
             versionNameSuffix "-test"
             resValue "string", "app_name", "Tarsier(Test)"
-            // Deep link host for staging
             manifestPlaceholders = [deepLinkHost: "blog-dev.joyminis.com"]
-            // CodePush deployment key — replace with actual key from self-hosted server
+            // CodePush deployment key — hardcoded (self-hosted server)
             // NOTE: Resource name must be "CodePushDeploymentKey" to match what
             // react-native-code-push's autolinking template generates in PackageList.java.
-            resValue "string", "CodePushDeploymentKey", "pjANOoRUuBu4PPgpyPwdzH51LVvvf8EU92luy"
+            resValue "string", "CodePushDeploymentKey", "FzTE3E9shjyGakZi8umsPZhslTtsKdZ7nIL"
             // ServerUrl — Android SDK natively reads this from string resources (CodePush.java:84-85)
-            resValue "string", "ServerUrl", "https://codepush.joyminis.com"
+            resValue "string", "ServerUrl", "https://cp.hyperpush.org/codepush"
         }
         production {
             dimension "env"
             missingDimensionStrategy 'env', 'production'
             applicationIdSuffix ""
             resValue "string", "app_name", "Tarsier"
-            // Deep link host for production
             manifestPlaceholders = [deepLinkHost: "tarsierlabs.app"]
-            // CodePush deployment key — replace with actual key from self-hosted server
+            // CodePush deployment key — hardcoded (self-hosted server)
             // NOTE: Resource name must be "CodePushDeploymentKey" to match what
             // react-native-code-push's autolinking template generates in PackageList.java.
-            resValue "string", "CodePushDeploymentKey", "NXYx4qDMGpw3yddONvlCMjBUcsief8EU92luy"
+            resValue "string", "CodePushDeploymentKey", "j7e9Wy3nzrTdaGaJWyUzKhmTv5ZRKdZ7nIL"
             // ServerUrl — Android SDK natively reads this from string resources (CodePush.java:84-85)
-            resValue "string", "ServerUrl", "https://codepush.joyminis.com"
+            resValue "string", "ServerUrl", "https://cp.hyperpush.org/codepush"
         }
     }
     buildTypes {

@@ -24,7 +24,8 @@ NODE_BIN := /Users/porter/.volta/tools/image/node/24.14.1/bin
         doctor rebuild-ios rebuild-android reset-all \
         port-ls port-kill port-kill-metro ports \
         android-generate-key android-delete-key android-key-info android-key-backup android-debug-key-info \
-        ios-cert-info ios-export-cert ios-profile-list ios-profile-info
+        ios-cert-info ios-export-cert ios-profile-list ios-profile-info \
+        setup-local-env
 
 # ── Help ──────────────────────────────────────────────────────────────────
 
@@ -386,7 +387,7 @@ build-prod-ios: ## Build iOS production archive (no codesign)
 
 # ── Hot Update (CodePush Self-Hosted) ──────────────────────────
 CODEPUSH_STANDALONE_CMD := $(NODE_BIN)/code-push-standalone
-CODEPUSH_SERVER_URL := https://codepush.joyminis.com
+CODEPUSH_SERVER_URL := https://cp.hyperpush.org/codepush
 
 codepush-login: ## Login to self-hosted CodePush. Usage: make codepush-login TOKEN=<access-key>
 	@if [ -z "$(TOKEN)" ]; then \

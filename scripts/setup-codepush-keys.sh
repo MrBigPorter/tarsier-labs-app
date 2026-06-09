@@ -1,20 +1,16 @@
 #!/bin/zsh
 # ============================================================================
-# setup-codepush-keys.sh — Interactive CodePush Key Setup
+# setup-codepush-keys.sh — CodePush Deployment Key Viewer
 # ============================================================================
-# Prompts for a CodePush access token, logs into the self-hosted server,
-# retrieves all 4 deployment keys, and auto-fills them into:
-#   - android/app/build.gradle (staging + production flavors)
-#   - ios/Config/Test.xcconfig  (TarsierTest-ios Staging key)
-#   - ios/Config/Prod.xcconfig  (Tarsier-ios Production key)
+# Logs into the self-hosted CodePush server and displays all deployment keys.
+# Keys are now hardcoded in source files, so this script is for reference only.
 #
 # Usage:
 #   ./scripts/setup-codepush-keys.sh
-#   make codepush-setup-keys        ← recommended
+#   make codepush-setup-keys
 #
 # Prerequisites:
 #   - code-push-standalone CLI installed globally
-#   - Self-hosted CodePush server running at https://codepush.joyminis.com
 #   - Access token (generate via: make codepush-create-key SSH_HOST=root@<vps-ip>)
 # ============================================================================
 
@@ -33,7 +29,7 @@ ANDROID_BUILD_GRADLE="$PROJECT_DIR/android/app/build.gradle"
 IOS_TEST_XCCONFIG="$PROJECT_DIR/ios/Config/Test.xcconfig"
 IOS_PROD_XCCONFIG="$PROJECT_DIR/ios/Config/Prod.xcconfig"
 
-CODEPUSH_SERVER_URL="https://codepush.joyminis.com"
+CODEPUSH_SERVER_URL="https://cp.hyperpush.org/codepush"
 
 # ── Colors ────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -121,8 +117,15 @@ ensure_app() {
     -H "Accept: application/json" \
     -d "{\"name\":\"${app}\",\"os\":\"${os}\",\"platform\":\"${platform}\"}" 2>&1)
   
-  if echo "$create_response" | grep -q "\"name\":\"${app}\""; then
+  # Success: response contains app name
+  if echo "$create_response" | grep -qi "\"name\":\"${app}\""; then
     ok "App '$app' created (os=$os, platform=$platform)"
+    return 0
+  fi
+  
+  # Also success: server says app already exists
+  if echo "$create_response" | grep -qi "exist"; then
+    ok "App '$app' already exists"
     return 0
   fi
   
@@ -238,94 +241,17 @@ mask() {
 }
 
 echo ""
-info "Deployment keys (masked):"
-echo "  TarsierTest-ios (Staging):    $(mask ${KEYS[IOS_TEST]})"
-echo "  TarsierTest-android (Staging): $(mask ${KEYS[ANDROID_TEST]})"
+info "Deployment keys (for reference — already hardcoded in source):"
 echo "  Tarsier-ios (Production):     $(mask ${KEYS[IOS_PROD]})"
+echo "  TarsierTest-ios (Staging):    $(mask ${KEYS[IOS_TEST]})"
 echo "  Tarsier-android (Production):  $(mask ${KEYS[ANDROID_PROD]})"
+echo "  TarsierTest-android (Staging): $(mask ${KEYS[ANDROID_TEST]})"
 echo ""
 
-# ── Backup original files ─────────────────────────────────────────────────
-
-info "Creating backups (.bak)..."
-cp "$ANDROID_BUILD_GRADLE" "${ANDROID_BUILD_GRADLE}.bak"
-cp "$IOS_TEST_XCCONFIG" "${IOS_TEST_XCCONFIG}.bak"
-cp "$IOS_PROD_XCCONFIG" "${IOS_PROD_XCCONFIG}.bak"
-ok "Backups created: *.bak"
-
-# ── Update android/app/build.gradle ────────────────────────────────────────
-
-info "Updating android/app/build.gradle..."
-
-# Staging flavor placeholder
-sed -i '' \
-  "s/\"CODEPUSH_KEY_TEST_PLACEHOLDER\"/\"${KEYS[ANDROID_TEST]}\"/" \
-  "$ANDROID_BUILD_GRADLE"
-
-# Production flavor placeholder
-sed -i '' \
-  "s/\"CODEPUSH_KEY_PRODUCTION_PLACEHOLDER\"/\"${KEYS[ANDROID_PROD]}\"/" \
-  "$ANDROID_BUILD_GRADLE"
-
-ok "android/app/build.gradle updated"
-
-# ── Update ios/Config/Test.xcconfig ────────────────────────────────────────
-
-info "Updating ios/Config/Test.xcconfig..."
-sed -i '' \
-  "s/\$(CODEPUSH_KEY_TEST)/${KEYS[IOS_TEST]}/g" \
-  "$IOS_TEST_XCCONFIG"
-ok "ios/Config/Test.xcconfig updated"
-
-# ── Update ios/Config/Prod.xcconfig ────────────────────────────────────────
-
-info "Updating ios/Config/Prod.xcconfig..."
-sed -i '' \
-  "s/\$(CODEPUSH_KEY_PRODUCTION)/${KEYS[IOS_PROD]}/g" \
-  "$IOS_PROD_XCCONFIG"
-ok "ios/Config/Prod.xcconfig updated"
-
-# ── Show diff ──────────────────────────────────────────────────────────────
-
+ok "Done! Keys are displayed above for reference."
 echo ""
-info "Changes made (vs original backups):"
+echo "NOTE: Deployment keys are now hardcoded in source files:"
+echo "  - ios/FrontendBlogMobile.xcodeproj/project.pbxproj (4 build configs)"
+echo "  - android/app/build.gradle (2 product flavors)"
+echo "This script is for viewing keys only — no files are modified."
 echo ""
-
-diff_files=(
-  "$ANDROID_BUILD_GRADLE"
-  "$IOS_TEST_XCCONFIG"
-  "$IOS_PROD_XCCONFIG"
-)
-
-for file in "${diff_files[@]}"; do
-  backup="${file}.bak"
-  if [ -f "$backup" ]; then
-    echo "━━━ ${file#$PROJECT_DIR/} ━━━"
-    diff_output=$(diff --unified=2 "$backup" "$file" 2>/dev/null || true)
-    if [ -n "$diff_output" ]; then
-      echo "$diff_output"
-    else
-      echo "  (no changes)"
-    fi
-    echo ""
-  fi
-done
-
-# ── Cleanup ────────────────────────────────────────────────────────────────
-
-echo ""
-info "Cleaning up backups..."
-rm -f "${ANDROID_BUILD_GRADLE}.bak" "${IOS_TEST_XCCONFIG}.bak" "${IOS_PROD_XCCONFIG}.bak"
-ok "Backups removed"
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-ok "CodePush keys configured successfully!"
-echo ""
-echo "  Next steps:"
-echo "    1. Build a test flavor to verify: make build-test-android"
-echo "    2. Release a test OTA update: make codepush-release-staging"
-echo "    3. Test on device: make run-test-android"
-echo ""
-echo "  To view deployment keys later: make codepush-keys"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

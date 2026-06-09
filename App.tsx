@@ -181,13 +181,25 @@ function AppComponent(): React.JSX.Element {
   );
 }
 
-// Wrap with CodePush HOC for hot updates — check for updates on app resume,
-// install silently on next app restart (no UI interruption)
+// Wrap with CodePush HOC for hot updates — check for updates only on app
+// start, NOT on every resume (ON_APP_RESUME). Android OAuth login sends
+// the app to background via Linking.openURL; on resume CodePush would
+// try to connect to cp.hyperpush.org which times out (10s+), blocking
+// the login flow. ON_APP_START avoids this entirely.
+//
+// In __DEV__ (Metro dev server), CodePush is disabled because:
+// 1. OTA updates are only meaningful for release/TestFlight builds
+// 2. The self-hosted server (cp.hyperpush.org) is behind Cloudflare,
+//    which returns a JS Challenge page that RN HTTP client can't
+//    execute, causing "[CodePush] Network request failed" warnings.
+//    See: plans/codepush-login-blocking-fix.md
+// 3. To test CodePush locally, build a release variant (stagingRelease
+//    on Android, Release-Test scheme on iOS).
 const codePushOptions = {
-  checkFrequency: codePush.CheckFrequency.ON_APP_RESUME,
+  checkFrequency: codePush.CheckFrequency.ON_APP_START,
   installMode: codePush.InstallMode.ON_NEXT_RESTART,
 };
-const App = codePush(codePushOptions)(AppComponent);
+const App = !__DEV__ ? codePush(codePushOptions)(AppComponent) : AppComponent;
 
 const styles = StyleSheet.create({
   root: {
