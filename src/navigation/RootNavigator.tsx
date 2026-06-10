@@ -89,6 +89,9 @@ const StatsScreen = React.lazy(() => import('@/screens/StatsScreen'));
 const PrivacyPolicyScreen = React.lazy(
   () => import('@/screens/PrivacyPolicyScreen'),
 );
+const TermsOfServiceScreen = React.lazy(
+  () => import('@/screens/TermsOfServiceScreen'),
+);
 
 // Components
 import TabBar, { type TabItem } from '@/components/layout/TabBar';
@@ -412,6 +415,13 @@ function RootNavigator(): React.JSX.Element {
         {(props: any) => (
           <Suspense fallback={null}>
             <PrivacyPolicyScreen {...props} />
+          </Suspense>
+        )}
+      </RootStack.Screen>
+      <RootStack.Screen name="TermsOfService">
+        {(props: any) => (
+          <Suspense fallback={null}>
+            <TermsOfServiceScreen {...props} />
           </Suspense>
         )}
       </RootStack.Screen>

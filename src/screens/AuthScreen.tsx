@@ -472,7 +472,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
             {t('auth.login.eula')}{' '}
             <Text
               style={[styles.eulaLink, { color: colors.primary }]}
-              onPress={() => navigation.navigate('PrivacyPolicy')}
+              onPress={() => navigation.navigate('TermsOfService')}
             >
               {t('auth.login.termsOfService')}
             </Text>{' '}

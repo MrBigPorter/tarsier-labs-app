@@ -33,6 +33,8 @@ export type RootStackParamList = {
   Stats: undefined;
   /** Privacy policy screen */
   PrivacyPolicy: undefined;
+  /** Terms of Service screen (Apple Guideline 1.2) */
+  TermsOfService: undefined;
 };
 
 // ─── Main Tab Navigator ──────────────────────────────────────────────────────
