@@ -132,7 +132,12 @@
       "facebook": "Facebook",
       "noAccount": "Don't have an account?",
       "register": "Register now",
-      "tip": "💡 Tip: New user? Login to register! First login will automatically create an account."
+      "tip": "💡 Tip: New user? Login to register! First login will automatically create an account.",
+      "eula": "I have read and agree to the",
+      "termsOfService": "Terms of Service",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "eulaRequired": "You must accept the Terms of Service to continue"
     },
     "register": {
       "title": "Register",
@@ -174,7 +179,16 @@
     "loadingComment": "Loading comment...",
     "commentPending": "Your comment is being reviewed...",
     "commentApproved": "Your comment has been published",
-    "commentRejected": "Comment does not meet community guidelines, automatically removed"
+    "commentRejected": "Comment does not meet community guidelines, automatically removed",
+    "flag": "Report",
+    "flagConfirm": "Report this comment?",
+    "flagSuccess": "Comment reported. We'll review it within 24 hours.",
+    "flagFailed": "Failed to report comment. Please try again.",
+    "block": "Block User",
+    "blockConfirmTitle": "Block User",
+    "blockConfirm": "Block this user? All their comments will be hidden from your view.",
+    "blockSuccess": "User blocked. Their comments have been hidden.",
+    "blockFailed": "Failed to block user. Please try again."
   },
   "search": {
     "title": "Search Articles",

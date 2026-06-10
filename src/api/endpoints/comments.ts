@@ -168,6 +168,31 @@ export const commentApi = blogApi.injectEndpoints({
       transformResponse: (response: ApiResponseWrapper<any>) =>
         unwrapData(response),
     }),
+
+    /**
+     * Flag a comment for review
+     * POST /api/v1/frontend/blog/comments/:commentId/flag
+     */
+    flagComment: builder.mutation<void, { commentId: string }>({
+      query: ({ commentId }) => ({
+        url: `/api/v1/frontend/blog/comments/${commentId}/flag`,
+        method: 'POST',
+      }),
+    }),
+
+    /**
+     * Block a user (via their comment)
+     * POST /api/v1/frontend/blog/comments/:commentId/block
+     */
+    blockUser: builder.mutation<
+      { blockedUserId: string },
+      { commentId: string }
+    >({
+      query: ({ commentId }) => ({
+        url: `/api/v1/frontend/blog/comments/${commentId}/block`,
+        method: 'POST',
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -180,4 +205,6 @@ export const {
   useLazyGetCommentStatusQuery,
   useGetCommentRepliesQuery,
   useLazyGetCommentRepliesQuery,
+  useFlagCommentMutation,
+  useBlockUserMutation,
 } = commentApi;

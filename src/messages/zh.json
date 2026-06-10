@@ -132,7 +132,12 @@
       "facebook": "Facebook",
       "noAccount": "还没有账户？",
       "register": "立即注册",
-      "tip": "💡 提示：新用户？登录即注册！首次登录将自动创建账户。"
+      "tip": "💡 提示：新用户？登录即注册！首次登录将自动创建账户。",
+      "eula": "我已阅读并同意",
+      "termsOfService": "服务条款",
+      "and": "和",
+      "privacyPolicy": "隐私政策",
+      "eulaRequired": "请先接受服务条款"
     },
     "register": {
       "title": "注册",
@@ -174,7 +179,16 @@
     "loadingComment": "评论加载中...",
     "commentPending": "您的评论正在审核中...",
     "commentApproved": "您的评论已成功发布",
-    "commentRejected": "评论内容不符合社区规范，已自动移除"
+    "commentRejected": "评论内容不符合社区规范，已自动移除",
+    "flag": "举报",
+    "flagConfirm": "举报这条评论？",
+    "flagSuccess": "举报已提交，我们将在24小时内审核。",
+    "flagFailed": "举报失败，请重试。",
+    "block": "屏蔽用户",
+    "blockConfirmTitle": "屏蔽用户",
+    "blockConfirm": "屏蔽该用户？该用户的所有评论将从你的视图中隐藏。",
+    "blockSuccess": "用户已屏蔽，其评论已隐藏。",
+    "blockFailed": "屏蔽失败，请重试。"
   },
   "search": {
     "title": "搜索文章",

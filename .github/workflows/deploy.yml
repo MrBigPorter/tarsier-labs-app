@@ -17,6 +17,8 @@ on:
         options:
           - test
           - production
+  repository_dispatch:
+    types: [codepush-hotfix, codepush-staging]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,6 +45,15 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             FLAVOR="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            if [ "${{ github.event.action }}" = "codepush-hotfix" ]; then
+              FLAVOR="production"
+            elif [ "${{ github.event.action }}" = "codepush-staging" ]; then
+              FLAVOR="test"
+            else
+              echo "❌ Unknown repository_dispatch action: ${{ github.event.action }}"
+              exit 1
+            fi
           elif [[ "${{ github.ref }}" == "refs/heads/test" ]]; then
             FLAVOR="test"
           elif [[ "${{ github.ref }}" == "refs/heads/hotfix" ]]; then
@@ -362,7 +373,7 @@ jobs:
   codepush-production:
     name: CodePush Production (Hotfix)
     needs: [resolve-flavor]
-    if: ${{ github.ref == 'refs/heads/hotfix' }}
+    if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production

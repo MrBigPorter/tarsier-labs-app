@@ -66,7 +66,9 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [eulaTip, setEulaTip] = useState<string | null>(null);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const [eulaAccepted, setEulaAccepted] = useState(false);
 
   const emailRef = useRef<TextInput>(null);
   const codeRef = useRef<TextInput>(null);
@@ -159,6 +161,12 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
     Keyboard.dismiss();
     setError(null);
 
+    // Check EULA
+    if (!eulaAccepted) {
+      setEulaTip(t('auth.login.eulaRequired'));
+      return;
+    }
+
     // Validate email
     const emailError = validateEmail();
     if (emailError) {
@@ -226,6 +234,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
     dispatch,
     t,
     navigation,
+    eulaAccepted,
   ]);
 
   const handleGoogleLogin = useCallback(async () => {
@@ -438,8 +447,43 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
           />
         </View>
 
+        {/* ─── EULA Agreement ────────────────────────────────────── */}
+        <TouchableOpacity
+          style={styles.eulaRow}
+          onPress={() => {
+            setEulaAccepted(!eulaAccepted);
+            setEulaTip(null);
+          }}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              styles.eulaCheckbox,
+              eulaAccepted && styles.eulaCheckboxActive,
+            ]}
+          >
+            {eulaAccepted && <Text style={styles.eulaCheckmark}>✓</Text>}
+          </View>
+          <Text style={[styles.eulaText, { color: colors.textSecondary }]}>
+            {t('auth.login.eula')}{' '}
+            <Text
+              style={[styles.eulaLink, { color: colors.primary }]}
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+            >
+              {t('auth.login.termsOfService')}
+            </Text>{' '}
+            {t('auth.login.and')}{' '}
+            <Text
+              style={[styles.eulaLink, { color: colors.primary }]}
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+            >
+              {t('auth.login.privacyPolicy')}
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
         {/* Error Message */}
-        {error && (
+        {(error || eulaTip) && (
           <View style={styles.errorContainer}>
             <SvgIcon
               name="alert-circle"
@@ -449,7 +493,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
             <Text
               style={[styles.errorText, { color: colors.textErrorPrimary }]}
             >
-              {error}
+              {error || eulaTip}
             </Text>
           </View>
         )}
@@ -496,7 +540,13 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
 
         {/* Google */}
         <TouchableOpacity
-          onPress={handleGoogleLogin}
+          onPress={() => {
+            if (!eulaAccepted) {
+              setEulaTip(t('auth.login.eulaRequired'));
+              return;
+            }
+            handleGoogleLogin();
+          }}
           disabled={isOAuthLoading}
           style={[
             styles.oauthButton,
@@ -515,7 +565,13 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
 
         {/* Facebook */}
         <TouchableOpacity
-          onPress={handleFacebookLogin}
+          onPress={() => {
+            if (!eulaAccepted) {
+              setEulaTip(t('auth.login.eulaRequired'));
+              return;
+            }
+            handleFacebookLogin();
+          }}
           disabled={isOAuthLoading}
           style={[
             styles.oauthButton,
@@ -535,7 +591,13 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
         {/* Apple (iOS only) */}
         {Platform.OS === 'ios' && (
           <TouchableOpacity
-            onPress={handleAppleLogin}
+            onPress={() => {
+              if (!eulaAccepted) {
+                setEulaTip(t('auth.login.eulaRequired'));
+                return;
+              }
+              handleAppleLogin();
+            }}
             disabled={isOAuthLoading}
             style={[
               styles.oauthButton,
@@ -660,6 +722,43 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     flex: 1,
+  },
+
+  // ─── EULA ─────────────────────────────────────────────────────────
+  eulaRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  eulaCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  eulaCheckboxActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  eulaCheckmark: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  eulaText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  eulaLink: {
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 
   // ─── Submit Button ─────────────────────────────────────────────────

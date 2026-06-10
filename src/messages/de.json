@@ -132,7 +132,12 @@
       "facebook": "Facebook",
       "noAccount": "Noch kein Konto?",
       "register": "Jetzt registrieren",
-      "tip": "💡 Tipp: Neuer Benutzer? Melden Sie sich an, um sich zu registrieren! Die erste Anmeldung erstellt automatisch ein Konto."
+      "tip": "💡 Tipp: Neuer Benutzer? Melden Sie sich an, um sich zu registrieren! Die erste Anmeldung erstellt automatisch ein Konto.",
+      "eula": "Ich habe die",
+      "termsOfService": "Nutzungsbedingungen",
+      "and": "und",
+      "privacyPolicy": "Datenschutzerklärung",
+      "eulaRequired": "Sie müssen den Nutzungsbedingungen zustimmen, um fortzufahren"
     },
     "register": {
       "title": "Registrieren",
@@ -174,7 +179,16 @@
     "loadingComment": "Kommentar wird geladen...",
     "commentPending": "Ihr Kommentar wird überprüft...",
     "commentApproved": "Ihr Kommentar wurde veröffentlicht",
-    "commentRejected": "Der Kommentar entspricht nicht den Community-Richtlinien und wurde automatisch entfernt"
+    "commentRejected": "Der Kommentar entspricht nicht den Community-Richtlinien und wurde automatisch entfernt",
+    "flag": "Melden",
+    "flagConfirm": "Diesen Kommentar melden?",
+    "flagSuccess": "Kommentar gemeldet. Wir prüfen ihn innerhalb von 24 Stunden.",
+    "flagFailed": "Melden fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "block": "Benutzer blockieren",
+    "blockConfirmTitle": "Benutzer blockieren",
+    "blockConfirm": "Diesen Benutzer blockieren? Alle seine Kommentare werden ausgeblendet.",
+    "blockSuccess": "Benutzer blockiert. Seine Kommentare wurden ausgeblendet.",
+    "blockFailed": "Blockieren fehlgeschlagen. Bitte versuchen Sie es erneut."
   },
   "search": {
     "title": "Artikel suchen",

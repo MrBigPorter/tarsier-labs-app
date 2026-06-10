@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useModeColors } from '@/lib/theme/ThemeContext';
 import { spacing, borderRadius } from '@/lib/theme/spacing';
 import { typography } from '@/lib/theme/typography';
@@ -22,6 +22,10 @@ interface CommentItemProps {
   articleId?: string;
   /** Navigate to auth screen */
   onNavigateToAuth?: () => void;
+  /** Flag/report handler */
+  onFlag?: (comment: Comment) => void;
+  /** Block user handler */
+  onBlock?: (comment: Comment) => void;
 }
 
 /**
@@ -43,6 +47,8 @@ export function CommentItem({
   isAuthenticated = false,
   articleId,
   onNavigateToAuth,
+  onFlag,
+  onBlock,
 }: CommentItemProps) {
   const colors = useModeColors();
   const { t } = useTranslation();
@@ -165,6 +171,60 @@ export function CommentItem({
               </Text>
             </TouchableOpacity>
           )}
+
+          {/* Three-dot menu: flag & block */}
+          {isAuthenticated && (onFlag || onBlock) && (
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert('', '', [
+                  ...(onFlag
+                    ? [
+                        {
+                          text: t('comment.flag'),
+                          onPress: () => {
+                            Alert.alert(t('comment.flagConfirm'), '', [
+                              { text: t('common.cancel') },
+                              {
+                                text: t('comment.flag'),
+                                onPress: () => onFlag(comment),
+                              },
+                            ]);
+                          },
+                        },
+                      ]
+                    : []),
+                  ...(onBlock
+                    ? [
+                        {
+                          text: t('comment.block'),
+                          style: 'destructive' as const,
+                          onPress: () => {
+                            Alert.alert(
+                              t('comment.blockConfirmTitle'),
+                              t('comment.blockConfirm'),
+                              [
+                                { text: t('common.cancel') },
+                                {
+                                  text: t('comment.block'),
+                                  style: 'destructive',
+                                  onPress: () => onBlock(comment),
+                                },
+                              ],
+                            );
+                          },
+                        },
+                      ]
+                    : []),
+                  { text: t('common.cancel') },
+                ]);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.moreButton, { color: colors.textTertiary }]}>
+                ···
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -182,6 +242,8 @@ export function CommentItem({
               isAuthenticated={isAuthenticated}
               articleId={articleId}
               onNavigateToAuth={onNavigateToAuth}
+              onFlag={onFlag}
+              onBlock={onBlock}
             />
           ))}
         </View>
@@ -271,6 +333,12 @@ const styles = StyleSheet.create({
   },
   replyButtonDisabled: {
     opacity: 0.5,
+  },
+  moreButton: {
+    fontSize: typography.xs.fontSize,
+    fontWeight: '700',
+    letterSpacing: 1,
+    paddingHorizontal: 4,
   },
   showRepliesButton: {
     paddingVertical: spacing.xs,

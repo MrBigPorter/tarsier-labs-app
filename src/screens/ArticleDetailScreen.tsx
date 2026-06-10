@@ -34,6 +34,7 @@ import {
   TextInput,
   Animated,
   InteractionManager,
+  Alert,
 } from 'react-native';
 import {
   KeyboardAwareScrollView,
@@ -46,7 +47,11 @@ import {
   useGetArticleBySlugQuery,
   useGetRelatedArticlesQuery,
 } from '@/api/endpoints/articles';
-import { useCreateCommentMutation } from '@/api/endpoints/comments';
+import {
+  useCreateCommentMutation,
+  useFlagCommentMutation,
+  useBlockUserMutation,
+} from '@/api/endpoints/comments';
 import { useCommentsInfiniteQuery } from '@/lib/hooks/useCommentsInfiniteQuery';
 import { useCommentSSE } from '@/lib/hooks/useCommentSSE';
 import { useAppSelector, useAppDispatch } from '@/store';
@@ -136,6 +141,8 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
 
   const [createComment, { isLoading: isSubmittingComment }] =
     useCreateCommentMutation();
+  const [flagComment] = useFlagCommentMutation();
+  const [blockUser] = useBlockUserMutation();
 
   // ─── Local state ────────────────────────────────────────────────────
   const [isBookmarked, setIsBookmarked] = useState(
@@ -305,6 +312,34 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     slug,
     commentsQuery,
   ]);
+
+  // ─── Flag & Block handlers ────────────────────────────────────────
+
+  const handleFlagComment = useCallback(
+    async (comment: Comment) => {
+      try {
+        await flagComment({ commentId: comment.id }).unwrap();
+        Alert.alert(t('common.success'), t('comment.flagSuccess'));
+      } catch {
+        Alert.alert(t('common.error'), t('comment.flagFailed'));
+      }
+    },
+    [flagComment, t],
+  );
+
+  const handleBlockUser = useCallback(
+    async (comment: Comment) => {
+      try {
+        await blockUser({ commentId: comment.id }).unwrap();
+        // Instantly remove all comments by this author from UI
+        commentsQuery.removeCommentsByAuthor(comment.author);
+        Alert.alert(t('common.success'), t('comment.blockSuccess'));
+      } catch {
+        Alert.alert(t('common.error'), t('comment.blockFailed'));
+      }
+    },
+    [blockUser, commentsQuery, t],
+  );
 
   const handleRelatedArticlePress = useCallback(
     (relatedArticle: FrontendArticle) => {
@@ -579,6 +614,8 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
                   key={comment.id}
                   comment={comment}
                   onReply={handleReply}
+                  onFlag={handleFlagComment}
+                  onBlock={handleBlockUser}
                   isAuthenticated={!!user}
                   articleId={slug}
                   onNavigateToAuth={() => navigation.navigate('Auth')}

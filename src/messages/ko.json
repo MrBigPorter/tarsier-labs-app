@@ -132,7 +132,12 @@
       "facebook": "Facebook",
       "noAccount": "계정이 없으신가요?",
       "register": "지금 등록",
-      "tip": "💡 팁: 새 사용자이신가요? 로그인하여 등록하세요! 첫 로그인 시 자동으로 계정이 생성됩니다."
+      "tip": "💡 팁: 새 사용자이신가요? 로그인하여 등록하세요! 첫 로그인 시 자동으로 계정이 생성됩니다.",
+      "eula": "이용약관을 읽고 동의합니다",
+      "termsOfService": "이용약관",
+      "and": "및",
+      "privacyPolicy": "개인정보처리방침",
+      "eulaRequired": "계속하려면 이용약관에 동의해야 합니다"
     },
     "register": {
       "title": "등록",
@@ -174,7 +179,16 @@
     "loadingComment": "댓글을 불러오는 중...",
     "commentPending": "댓글이 검토 중입니다...",
     "commentApproved": "댓글이 성공적으로 게시되었습니다",
-    "commentRejected": "댓글이 커뮤니티 가이드라인을 위반하여 자동으로 제거되었습니다"
+    "commentRejected": "댓글이 커뮤니티 가이드라인을 위반하여 자동으로 제거되었습니다",
+    "flag": "신고",
+    "flagConfirm": "이 댓글을 신고하시겠습니까?",
+    "flagSuccess": "댓글이 신고되었습니다. 24시간 이내에 검토하겠습니다.",
+    "flagFailed": "댓글 신고에 실패했습니다. 다시 시도해 주세요.",
+    "block": "사용자 차단",
+    "blockConfirmTitle": "사용자 차단",
+    "blockConfirm": "이 사용자를 차단하시겠습니까? 모든 댓글이 보이지 않게 숨겨집니다.",
+    "blockSuccess": "사용자가 차단되었습니다. 댓글이 숨겨졌습니다.",
+    "blockFailed": "사용자 차단에 실패했습니다. 다시 시도해 주세요."
   },
   "search": {
     "title": "글 검색",

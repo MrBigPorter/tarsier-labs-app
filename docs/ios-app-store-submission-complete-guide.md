@@ -746,3 +746,171 @@ const App = AppComponent; // Remove CodePush temporarily
 ```
 
 Server deployment guide: [`docs/self-hosted-codepush-implementation.md`](self-hosted-codepush-implementation.md)
+
+---
+
+## 12. Real Rejection Case Study: Build 7 — Guideline 1.2 & 2.5.4
+
+> **Date:** June 10, 2026
+> **Submission ID:** 416702f5-7479-471c-a758-7e65132beff9
+> **Review Device:** iPad Air 11-inch M3
+> **Build:** 1.0 (7)
+> **Result:** Rejected — two violations
+
+### 12.1 What Happened
+
+Build 7 was rejected with two guideline violations identified during a single review session:
+
+| Guideline                                    | Issue                                                 | Severity            |
+| -------------------------------------------- | ----------------------------------------------------- | ------------------- |
+| **1.2 Safety: User-Generated Content**       | Comments feature lacks flag/report, block, and EULA   | Critical — blocking |
+| **2.5.4 Performance: Software Requirements** | `UIBackgroundModes audio` declared but not functional | Minor — blocking    |
+
+### 12.2 Root Cause Analysis
+
+#### Guideline 1.2 — UGC Safety
+
+**Why it happened:** The app has a fully functional comment system where any authenticated user can write and publish comments under articles. Apple reviewers saw "Anonymous" and "P\*\*\*r" posting public comments in the article detail screen. However, the comment feature was built with only a "Reply" button — the safety mechanisms (flag, block, EULA) were never implemented because they were overlooked during initial development.
+
+**Apple's logic chain:**
+
+```
+User can type text → text is publicly displayed → this is a UGC platform
+→ UGC platforms MUST have: flag + block + instant removal + EULA
+→ Your app has NONE of these → Rejection
+```
+
+**What Apple specifically requires for Guideline 1.2:**
+
+1. **Method for filtering objectionable content** — Content moderation pipeline (backend responsibility)
+2. **Mechanism for users to flag objectionable content** — Report button on each comment
+3. **Mechanism for users to block abusive users** — Block button that:
+   - Notifies the developer of the inappropriate content
+   - Removes the blocked user's content from the reporter's feed **instantly**
+4. **Developer must act on reports within 24 hours** — Remove content + eject offending user
+5. **EULA/Terms of Use** — Must be presented to users **before** registering or logging in
+
+#### Guideline 2.5.4 — Background Audio
+
+**Why it happened:** The [`Info.plist`](../ios/FrontendBlogMobile/Info.plist) had `UIBackgroundModes → audio` enabled. This was likely a default from a template or added during early development without a clear purpose. The app is a blog reader with video content on the home page — there is no music player or streaming audio feature that requires background playback.
+
+**Apple's logic chain:**
+
+```
+Info.plist says: "I need background audio"
+→ Reviewer plays video → locks screen → audio stops
+→ App doesn't actually support background audio
+→ This is a misdeclared capability → Rejection
+```
+
+### 12.3 Fix Plan
+
+#### Issue 1: UGC Safety (Guideline 1.2)
+
+| #   | Change                 | File                                                                                        | Description                                                                                                |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | Add EULA checkbox      | [`src/screens/AuthScreen.tsx`](../src/screens/AuthScreen.tsx)                               | Checkbox "I agree to Terms of Service and Privacy Policy" above login button; disable submit until checked |
+| 2   | Add flag/report button | [`src/components/blog/CommentItem.tsx`](../src/components/blog/CommentItem.tsx)             | Three-dot `...` menu on each comment with "Report" option                                                  |
+| 3   | Add block button       | [`src/components/blog/CommentItem.tsx`](../src/components/blog/CommentItem.tsx)             | "Block User" option in the same three-dot menu                                                             |
+| 4   | Instant UI removal     | [`src/lib/hooks/useCommentsInfiniteQuery.ts`](../src/lib/hooks/useCommentsInfiniteQuery.ts) | New `removeCommentsByAuthor(author)` method recursively removes all comments by blocked author             |
+| 5   | Wire up handlers       | [`src/screens/ArticleDetailScreen.tsx`](../src/screens/ArticleDetailScreen.tsx)             | Pass `onFlag` and `onBlock` callbacks to CommentItem; handle API calls + UI removal                        |
+| 6   | API endpoints          | [`src/api/endpoints/comments.ts`](../src/api/endpoints/comments.ts)                         | Add `flagComment` and `blockUser` mutations                                                                |
+| 7   | Backend endpoints      | Backend repo                                                                                | `POST /api/v1/frontend/blog/comments/:id/flag` and `POST /api/v1/frontend/blog/comments/:id/block`         |
+| 8   | i18n keys              | [`src/messages/en.json`](../src/messages/en.json)                                           | Add flag/block/EULA translation keys                                                                       |
+| 9   | Terms of Service       | New file: `src/lib/privacy/termsOfServiceContent.ts`                                        | EULA markdown content in all 6 languages                                                                   |
+
+#### Issue 2: Background Audio (Guideline 2.5.4)
+
+| #   | Change                       | File                                                                        | Description                                             |
+| --- | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 1   | Remove audio background mode | [`ios/FrontendBlogMobile/Info.plist`](../ios/FrontendBlogMobile/Info.plist) | Delete lines 55-58 (the entire `UIBackgroundModes` key) |
+
+### 12.4 Verify Before Resubmitting
+
+Apple requires a **screen recording on a physical device** demonstrating all three safety mechanisms:
+
+1. **Show EULA:** Open app → navigate to login → show the Terms of Service checkbox → tap the links to show ToS and Privacy Policy content
+2. **Show flag:** Go to an article with comments → tap `...` on a comment → tap "Report" → show confirmation
+3. **Show block:** Tap `...` on a comment → tap "Block User" → show the comment **immediately disappearing** from the screen
+
+Record this video and attach it in App Store Connect → App Review Information → Notes field.
+
+### 12.5 Lessons Learned
+
+#### Lesson 1: If your app has ANY text input that becomes public, you ARE a UGC platform
+
+This is the most important takeaway. Even a simple blog comment section triggers Guideline 1.2. Apple does not distinguish between "a blog with comments" and "a full social network" — the same rules apply to both.
+
+**Checklist: UGC Safety Minimum Requirements**
+
+```
+- [ ] EULA/Terms of Service shown BEFORE login/registration
+- [ ] Report/Flag button on every piece of user content
+- [ ] Block user button on every piece of user content
+- [ ] Blocking instantly hides that user's content from the blocker's view
+- [ ] Backend has moderation pipeline (24-hour response SLA)
+- [ ] Privacy Policy is accessible from both login screen and settings
+```
+
+#### Lesson 2: Never declare capabilities you don't actually use
+
+The `UIBackgroundModes` key in Info.plist is not a "nice to have" — it's a contract with Apple. If you declare `audio`, Apple WILL test that audio continues when the app is backgrounded. If it doesn't, you get rejected.
+
+**Checklist: Info.plist Capability Audit**
+
+```
+- [ ] UIBackgroundModes audio — only if you have a music player / streaming audio
+- [ ] UIBackgroundModes location — only if you need background GPS
+- [ ] UIBackgroundModes voip — only if you're a VoIP app
+- [ ] UIBackgroundModes fetch — only if you do background data refresh
+```
+
+#### Lesson 3: Reviewers test on iPad
+
+Build 7 was reviewed on an **iPad Air 11-inch (M3)**, not an iPhone. This means:
+
+- Your iPad layout must work correctly (landscape + portrait)
+- Comments section must be usable on a tablet-sized screen
+- Video playback must work on iPad
+
+#### Lesson 4: The review feedback is cumulative
+
+This was a **resubmission** — the first submission had different issues. Apple reviewers keep notes, and each resubmission gets more scrutiny. If you fix only what they asked last time without doing a comprehensive self-audit, you risk new issues being found.
+
+---
+
+## Appendix C: UGC Safety Implementation Checklist
+
+Use this checklist for any app that has user-generated content (comments, reviews, posts, messages):
+
+```markdown
+## Before First Submission
+
+### EULA & Legal
+
+- [ ] Terms of Service document exists (markdown, all supported languages)
+- [ ] EULA checkbox on registration/login screen
+- [ ] Privacy Policy accessible from login screen
+- [ ] Links to ToS and Privacy Policy are tappable and open in-app
+
+### Content Moderation (Frontend)
+
+- [ ] Report/Flag button on every user-generated content item
+- [ ] Block User button on every user-generated content item
+- [ ] Block action instantly removes that user's content from the UI
+- [ ] Confirmation dialog before flag/block actions
+- [ ] Success toast/feedback after flag/block
+
+### Content Moderation (Backend)
+
+- [ ] POST /comments/:id/flag endpoint — records report, notifies developer
+- [ ] POST /comments/:id/block endpoint — records block, returns blocked user info
+- [ ] Moderation dashboard or notification system for developer
+- [ ] Ability to remove content within 24 hours of report
+- [ ] Ability to eject/ban users who post offending content
+
+### Verification
+
+- [ ] Screen recording showing EULA → flag → block → instant removal
+- [ ] Demo account provided in Review Notes for testing
+```

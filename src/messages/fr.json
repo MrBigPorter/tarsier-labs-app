@@ -132,7 +132,12 @@
       "facebook": "Facebook",
       "noAccount": "Vous n'avez pas de compte ?",
       "register": "S'inscrire maintenant",
-      "tip": "💡 Astuce : Nouvel utilisateur ? Connectez-vous pour vous inscrire ! La première connexion créera automatiquement un compte."
+      "tip": "💡 Astuce : Nouvel utilisateur ? Connectez-vous pour vous inscrire ! La première connexion créera automatiquement un compte.",
+      "eula": "J'ai lu et j'accepte les",
+      "termsOfService": "Conditions d'utilisation",
+      "and": "et",
+      "privacyPolicy": "Politique de confidentialité",
+      "eulaRequired": "Vous devez accepter les Conditions d'utilisation pour continuer"
     },
     "register": {
       "title": "Inscription",
@@ -174,7 +179,16 @@
     "loadingComment": "Chargement du commentaire...",
     "commentPending": "Votre commentaire est en cours de révision...",
     "commentApproved": "Votre commentaire a été publié",
-    "commentRejected": "Le commentaire ne respecte pas les directives de la communauté, supprimé automatiquement"
+    "commentRejected": "Le commentaire ne respecte pas les directives de la communauté, supprimé automatiquement",
+    "flag": "Signaler",
+    "flagConfirm": "Signaler ce commentaire ?",
+    "flagSuccess": "Commentaire signalé. Nous le vérifierons sous 24 heures.",
+    "flagFailed": "Échec du signalement. Veuillez réessayer.",
+    "block": "Bloquer l'utilisateur",
+    "blockConfirmTitle": "Bloquer l'utilisateur",
+    "blockConfirm": "Bloquer cet utilisateur ? Tous ses commentaires seront masqués.",
+    "blockSuccess": "Utilisateur bloqué. Ses commentaires ont été masqués.",
+    "blockFailed": "Échec du blocage. Veuillez réessayer."
   },
   "search": {
     "title": "Rechercher des articles",

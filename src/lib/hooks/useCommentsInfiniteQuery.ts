@@ -33,6 +33,8 @@ interface UseCommentsInfiniteQueryResult {
   prependComment: (comment: Comment) => void;
   /** Insert a reply into a parent comment's children array */
   addReply: (parentId: string, reply: Comment) => void;
+  /** Remove all comments by a specific author (for block) */
+  removeCommentsByAuthor: (author: string) => void;
 }
 
 export function useCommentsInfiniteQuery(
@@ -172,6 +174,27 @@ export function useCommentsInfiniteQuery(
     // Replies don't change the total top-level comment count
   }, []);
 
+  /**
+   * Recursively remove all comments by a specific author from local state.
+   * Used for instant UI feedback when a user blocks another user.
+   * Operates on local state only — does not make an API call.
+   */
+  const removeCommentsByAuthor = useCallback((author: string) => {
+    setAllItems(prev => {
+      function filterAuthor(comments: Comment[]): Comment[] {
+        return comments
+          .filter(comment => comment.author !== author)
+          .map(comment => ({
+            ...comment,
+            children: comment.children
+              ? filterAuthor(comment.children)
+              : undefined,
+          }));
+      }
+      return filterAuthor(prev);
+    });
+  }, []);
+
   return {
     items: allItems,
     total,
@@ -183,5 +206,6 @@ export function useCommentsInfiniteQuery(
     reload,
     prependComment,
     addReply,
+    removeCommentsByAuthor,
   };
 }
