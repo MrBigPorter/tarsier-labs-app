@@ -70,6 +70,15 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   const [eulaAccepted, setEulaAccepted] = useState(false);
 
+  // ─── Dynamic styles (depends on state + theme) ─────────────────────
+  const eulaCheckboxStyle = React.useMemo(
+    () => ({
+      borderColor: eulaAccepted ? colors.primary : colors.border,
+      backgroundColor: eulaAccepted ? colors.primary : 'transparent',
+    }),
+    [eulaAccepted, colors],
+  );
+
   const emailRef = useRef<TextInput>(null);
   const codeRef = useRef<TextInput>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -456,12 +465,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
           }}
           activeOpacity={0.7}
         >
-          <View
-            style={[
-              styles.eulaCheckbox,
-              eulaAccepted && styles.eulaCheckboxActive,
-            ]}
-          >
+          <View style={[styles.eulaCheckbox, eulaCheckboxStyle]}>
             {eulaAccepted && <Text style={styles.eulaCheckmark}>✓</Text>}
           </View>
           <Text style={[styles.eulaText, { color: colors.textSecondary }]}>
@@ -736,15 +740,9 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-  },
-  eulaCheckboxActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
   },
   eulaCheckmark: {
     color: '#FFFFFF',
