@@ -56,3 +56,22 @@ index 244ad6d..f7d3b2a 100644
                                          @Override
                                          public void doFrame(long frameTimeNanos) {
                                              if (!latestDownloadProgress.isCompleted()) {
+diff --git a/node_modules/react-native-code-push/CodePush.js b/node_modules/react-native-code-push/CodePush.js
+index a674cf2..38a7217 100644
+--- a/node_modules/react-native-code-push/CodePush.js
++++ b/node_modules/react-native-code-push/CodePush.js
+@@ -559,12 +559,12 @@ function codePushify(options = {}) {
+             handleBinaryVersionMismatchCallback = rootComponentInstance.codePushOnBinaryVersionMismatch.bind(rootComponentInstance);
+           }
+ 
+-          CodePush.sync(options, syncStatusCallback, downloadProgressCallback, handleBinaryVersionMismatchCallback);
++          CodePush.sync(options, syncStatusCallback, downloadProgressCallback, handleBinaryVersionMismatchCallback).catch(() => {});
+ 
+           if (options.checkFrequency === CodePush.CheckFrequency.ON_APP_RESUME) {
+             ReactNative.AppState.addEventListener("change", (newState) => {
+               if (newState === "active") {
+-                CodePush.sync(options, syncStatusCallback, downloadProgressCallback);
++                CodePush.sync(options, syncStatusCallback, downloadProgressCallback).catch(() => {});
+               }
+             });
+           }

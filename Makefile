@@ -10,7 +10,7 @@ SHELL := /bin/zsh
 # Volta installs global binaries outside the default PATH.
 # code-push-standalone resolves from this path.
 NODE_BIN := /Users/porter/.volta/tools/image/node/24.14.1/bin
-.PHONY: help dev dev-ios dev-ios-device deploy-prod-ios deploy-prod-android dev-android dev-android-device staging staging-ios staging-android \
+.PHONY: help dev dev-ios dev-ios-device deploy-test-ios deploy-prod-ios deploy-prod-android dev-android dev-android-device staging staging-ios staging-android \
         release release-ios release-android release-android-aab \
         build build-ios build-android \
         build-test-android build-prod-aab build-prod-apk \
@@ -117,6 +117,57 @@ deploy-prod-ios: env-prod ## Build & run on iOS Device (Release/production mode)
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "  ✅  Production app deployed to iPhone!"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "  🔍 To view console logs:"
+	@echo "     In the Metro terminal, press ${BOLD}j${NC} → Fusebox DevTools"
+	@echo ""
+
+deploy-test-ios: env-staging ## Build & run on iOS Device (Test/Staging mode, CodePush Staging key)
+	@echo "🏗️  Deploying \033[36mtest\033[0m build to connected iOS device..."
+	@echo ""
+	@echo "━━━ Step 1 — Metro Bundler ━━━"
+	@if curl -s http://localhost:8081/status > /dev/null 2>&1; then \
+		echo "  ✅ Metro bundler is already running"; \
+	else \
+		echo "  ⚠️  Metro bundler not running. Starting..."; \
+		yarn start > /tmp/metro-bundler.log 2>&1 & \
+		METRO_PID=$$!; \
+		echo "  🔄 Metro PID: $$METRO_PID — waiting for ready..."; \
+		for i in $$(seq 1 30); do \
+			if curl -s http://localhost:8081/status > /dev/null 2>&1; then \
+				echo "  ✅ Metro is ready!"; \
+				break; \
+			fi; \
+			if [ "$$i" = "30" ]; then \
+				echo "  ❌ Metro did not start. Check /tmp/metro-bundler.log"; \
+				exit 1; \
+			fi; \
+			sleep 1; \
+		done; \
+	fi
+	@echo ""
+	@echo "━━━ Step 2 — Build & Install ━━━"
+	@echo "  📱 Building Release-Test and installing to first connected device..."
+	@echo "     (Scheme: FrontendBlogMobile-Test, uses Test.xcconfig → CodePush Staging)"
+	@echo ""
+	cd ios && npx react-native run-ios --device --mode Release-Test 2>&1; \
+	RC=$$?; \
+	if [ $$RC -ne 0 ]; then \
+		echo ""; \
+		echo "  ❌ Deployment failed."; \
+		echo "     Possible causes:"; \
+		echo "     • Device is locked (unlock it)"; \
+		echo "     • Device not trusted (tap 'Trust' on device)"; \
+		echo "     • No connected device found"; \
+		echo "     • Ensure iPhone is USB-connected or wirelessly paired"; \
+		echo ""; \
+		echo "     Check with: xcrun devicectl list devices"; \
+		exit $$RC; \
+	fi
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  ✅  Test app deployed to iPhone!"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@echo "  🔍 To view console logs:"
@@ -472,6 +523,15 @@ codepush-history: ## Show deployment history
 	@echo ""
 	@echo "━━━ Tarsier-ios Production ─────"
 	$(CODEPUSH_STANDALONE_CMD) deployment history Tarsier-ios Production
+
+codepush-rollback: ## Rollback Production to previous release (both platforms)
+	@echo "⏪ Rolling back Tarsier-ios Production..."
+	$(CODEPUSH_STANDALONE_CMD) rollback Tarsier-ios Production
+	@echo "✅ Tarsier-ios Production rolled back"
+	@echo "⏪ Rolling back Tarsier-android Production..."
+	$(CODEPUSH_STANDALONE_CMD) rollback Tarsier-android Production
+	@echo "✅ Tarsier-android Production rolled back"
+	@echo "✅ All Production deployments rolled back"
 
 # ── Key Management (Android & iOS) ─────────────────────────────────────────
 

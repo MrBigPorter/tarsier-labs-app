@@ -181,25 +181,93 @@ function AppComponent(): React.JSX.Element {
   );
 }
 
-// Wrap with CodePush HOC for hot updates — check for updates only on app
-// start, NOT on every resume (ON_APP_RESUME). Android OAuth login sends
-// the app to background via Linking.openURL; on resume CodePush would
-// try to connect to cp.hyperpush.org which times out (10s+), blocking
-// the login flow. ON_APP_START avoids this entirely.
-//
-// In __DEV__ (Metro dev server), CodePush is disabled because:
-// 1. OTA updates are only meaningful for release/TestFlight builds
-// 2. The self-hosted server (cp.hyperpush.org) is behind Cloudflare,
-//    which returns a JS Challenge page that RN HTTP client can't
-//    execute, causing "[CodePush] Network request failed" warnings.
-//    See: plans/codepush-login-blocking-fix.md
-// 3. To test CodePush locally, build a release variant (stagingRelease
-//    on Android, Release-Test scheme on iOS).
-const codePushOptions = {
-  checkFrequency: codePush.CheckFrequency.ON_APP_START,
-  installMode: codePush.InstallMode.ON_NEXT_RESTART,
-};
-const App = !__DEV__ ? codePush(codePushOptions)(AppComponent) : AppComponent;
+/**
+ * Safe CodePush wrapper — replaces the default HOC to prevent Release-mode
+ * crashes from unhandled promise rejections.
+ *
+ * The default HOC (codePush() at CodePush.js:562) calls CodePush.sync()
+ * without .catch(), causing unhandled promise rejections that crash the app
+ * in Release mode (Hermes treats unhandled rejections as fatal errors).
+ *
+ * This wrapper:
+ * 1. Calls codePush.notifyAppReady() to mark the current bundle as good
+ * 2. Calls codePush.sync() with .catch() to handle network/API errors gracefully
+ * 3. Uses a small startup delay so sync doesn't compete with critical init
+ *
+ * CodePush is still disabled in __DEV__ because:
+ * - The Metro dev server serves the JS bundle, making OTA updates meaningless
+ * - The self-hosted server (cp.hyperpush.org) behind Cloudflare returns
+ *   JS Challenge pages that can't be parsed, causing network errors
+ * - See: plans/codepush-login-blocking-fix.md
+ */
+function CodePushSafeWrapper({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (__DEV__) {return;}
+
+    let cancelled = false;
+
+    // Notify CodePush that the current bundle is running successfully.
+    // This is REQUIRED — without it CodePush thinks the update failed and
+    // may roll back a previously installed update on the next check.
+    codePush
+      .notifyAppReady()
+      .then(() => {
+        logger.info('[CodePush] App ready notified');
+      })
+      .catch((err: unknown) => {
+        logger.warn('[CodePush] notifyAppReady failed (non-fatal):', err);
+      });
+
+    // Defer sync to avoid blocking critical startup path (Sentry, auth restore).
+    // CodePush sync makes HTTP requests to the self-hosted server which may
+    // be slow or blocked by Cloudflare JS challenges — don't let that delay
+    // the first paint.
+    const syncTimer = setTimeout(() => {
+      if (cancelled) {return;}
+
+      codePush
+        .sync({
+          installMode: codePush.InstallMode.ON_NEXT_RESUME,
+          // Install on next app resume — user goes to background and comes back
+          mandatoryInstallMode: codePush.InstallMode.ON_NEXT_RESUME,
+        })
+        .then(() => {
+          logger.info('[CodePush] Sync completed');
+        })
+        .catch((err: unknown) => {
+          logger.warn('[CodePush] Sync failed (non-fatal):', err);
+          if (err instanceof Error) {
+            addBreadcrumb('[CodePush] Sync failed: ' + err.message, 'error');
+          }
+        });
+    }, 1000); // 1s delay — let first paint complete, then check for updates
+
+    return () => {
+      cancelled = true;
+      clearTimeout(syncTimer);
+    };
+  }, []);
+
+  return <>{children}</>;
+}
+
+/**
+ * CodePush-enabled root — wraps AppComponent with CodePush in non-__DEV__ mode.
+ * In __DEV__ mode, CodePush is skipped and AppComponent renders directly.
+ */
+function AppWithCodePush(): React.JSX.Element {
+  if (__DEV__) {
+    return <AppComponent />;
+  }
+
+  return (
+    <CodePushSafeWrapper>
+      <AppComponent />
+    </CodePushSafeWrapper>
+  );
+}
+
+const App = AppWithCodePush;
 
 const styles = StyleSheet.create({
   root: {
