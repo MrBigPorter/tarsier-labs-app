@@ -220,7 +220,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --immutable --ignore-scripts
+        run: yarn install --immutable
 
       - name: Apply patches
         run: npx patch-package
@@ -229,8 +229,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ios/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock') }}
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'yarn.lock') }}
           restore-keys: pods-${{ runner.os }}
+
+      - name: Clean Pods (force fresh install to avoid stale cache)
+        run: rm -rf ios/Pods
 
       - name: Install Pods
         run: cd ios && USE_FRAMEWORKS=static pod install && cd ..
