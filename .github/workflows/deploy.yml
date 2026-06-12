@@ -74,6 +74,65 @@ jobs:
           fi
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # Pre-flight validation gate — fast checks on ubuntu (free) before macOS builds
+  # ─────────────────────────────────────────────────────────────────────────────
+  validate-env:
+    name: Validate Environment
+    needs: [resolve-flavor]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      reanimated_version: ${{ steps.extract.outputs.reanimated_version }}
+      worklets_version: ${{ steps.extract.outputs.worklets_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check lockfiles for merge conflicts
+        run: |
+          FAILED=false
+          for f in yarn.lock ios/Podfile.lock; do
+            if [ -f "$f" ] && grep -q -E '<<<<<<< |=======|>>>>>>> ' "$f" 2>/dev/null; then
+              echo "::error::Merge conflict detected in $f — resolve before building"
+              FAILED=true
+            fi
+          done
+          if [ "$FAILED" = "true" ]; then exit 1; fi
+          echo "::notice::Lockfiles are clean (no merge conflicts)"
+
+      - name: Extract critical package versions from yarn.lock
+        id: extract
+        run: |
+          REANIMATED=$(grep -A 2 'react-native-reanimated@npm:' yarn.lock | grep ' version:' | awk '{print $2}')
+          WORKLETS=$(grep -A 2 'react-native-worklets@npm:' yarn.lock | grep ' version:' | awk '{print $2}')
+          echo "📋 Expected versions from yarn.lock:"
+          echo "  react-native-reanimated: $REANIMATED"
+          echo "  react-native-worklets:   $WORKLETS"
+          if [ -z "$REANIMATED" ] || [ -z "$WORKLETS" ]; then
+            echo "::error::Failed to extract critical package versions from yarn.lock"
+            exit 1
+          fi
+          echo "reanimated_version=$REANIMATED" >> $GITHUB_OUTPUT
+          echo "worklets_version=$WORKLETS" >> $GITHUB_OUTPUT
+
+      - name: Validate required secrets exist
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          MISSING=false
+          for secret in APP_STORE_CONNECT_KEY_ID MATCH_PASSWORD APPLE_ID TEAM_ID; do
+            if [ -z "${!secret}" ]; then
+              echo "::error::Missing required secret: $secret"
+              MISSING=true
+            fi
+          done
+          if [ "$MISSING" = "true" ]; then exit 1; fi
+          echo "::notice::All required secrets are configured"
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # Build Android
   # ─────────────────────────────────────────────────────────────────────────────
   build-android:
@@ -204,7 +263,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   build-ios:
     name: Build iOS (${{ needs.resolve-flavor.outputs.flavor_label }})
-    needs: [resolve-flavor]
+    needs: [resolve-flavor, validate-env]
     runs-on: macos-latest
     timeout-minutes: 60
     environment: ${{ needs.resolve-flavor.outputs.flavor }}
@@ -220,12 +279,44 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
+        timeout-minutes: 10
         run: |
+          set -e
+          echo "::group::Cleaning cache for critical packages..."
+          yarn cache clean react-native-reanimated react-native-worklets 2>&1 || true
+          echo "::endgroup::"
+
           echo "::group::Installing JS dependencies..."
-          # --check-cache verifies cached packages match yarn.lock checksums.
-          # Prevents stale cache from a prior branch causing version mismatches
-          # (e.g. reanimated 4.4.1 in cache vs 4.3.1 in yarn.lock).
-          yarn install --immutable --check-cache 2>&1 || { echo "::error::yarn install failed"; exit 1; }
+          yarn install --immutable --check-cache 2>&1 || {
+            echo "::error::yarn install failed — dependency mismatch detected"
+            exit 1
+          }
+          echo "::endgroup::"
+
+          echo "::group::Validating installed versions vs yarn.lock..."
+          REANIMATED_EXPECTED=$(grep -A 2 'react-native-reanimated@npm:' yarn.lock | grep ' version:' | awk '{print $2}')
+          WORKLETS_EXPECTED=$(grep -A 2 'react-native-worklets@npm:' yarn.lock | grep ' version:' | awk '{print $2}')
+          REANIMATED_ACTUAL=$(node -e "console.log(require('react-native-reanimated/package.json').version)")
+          WORKLETS_ACTUAL=$(node -e "console.log(require('react-native-worklets/package.json').version)")
+
+          echo "📋 Package version audit:"
+          echo "  react-native-reanimated: expected=$REANIMATED_EXPECTED actual=$REANIMATED_ACTUAL"
+          echo "  react-native-worklets:   expected=$WORKLETS_EXPECTED actual=$WORKLETS_ACTUAL"
+
+          HAS_ERROR=false
+          if [ "$REANIMATED_EXPECTED" != "$REANIMATED_ACTUAL" ]; then
+            echo "::error::VERSION MISMATCH: react-native-reanimated expected=$REANIMATED_EXPECTED actual=$REANIMATED_ACTUAL"
+            HAS_ERROR=true
+          fi
+          if [ "$WORKLETS_EXPECTED" != "$WORKLETS_ACTUAL" ]; then
+            echo "::error::VERSION MISMATCH: react-native-worklets expected=$WORKLETS_EXPECTED actual=$WORKLETS_ACTUAL"
+            HAS_ERROR=true
+          fi
+          if [ "$HAS_ERROR" = "true" ]; then
+            echo "::error::Dependency versions do not match yarn.lock. Cache may be polluted."
+            exit 1
+          fi
+          echo "::notice::All critical package versions match yarn.lock"
           echo "::endgroup::"
 
       - name: Apply patches
@@ -242,14 +333,33 @@ jobs:
           restore-keys: pods-${{ runner.os }}
 
       - name: Install Pods (clean + fresh install)
+        timeout-minutes: 15
         run: |
           set -e
           echo "::group::Cleaning old Pods..."
           rm -rf ios/Pods
           echo "::endgroup::"
-          echo "::group::Running pod install..."
-          cd ios && USE_FRAMEWORKS=static pod install 2>&1 || { echo "::error::pod install failed"; exit 1; }
+
+          echo "::group::Running pod install (verbose)..."
+          cd ios && USE_FRAMEWORKS=static pod install --verbose 2>&1 || {
+            echo "::error::pod install failed"
+            cat Podfile.lock 2>/dev/null || true
+            exit 1
+          }
           cd ..
+          echo "::endgroup::"
+
+          echo "::group::Verifying Podfile.lock consistency..."
+          if [ -f ios/Pods/Manifest.lock ]; then
+            if ! diff -q ios/Podfile.lock ios/Pods/Manifest.lock >/dev/null 2>&1; then
+              echo "::error::Podfile.lock and Manifest.lock differ — pod install may have issues"
+              diff ios/Podfile.lock ios/Pods/Manifest.lock || true
+              exit 1
+            fi
+            echo "::notice::Podfile.lock and Manifest.lock are consistent"
+          else
+            echo "::warning::Manifest.lock not found (Pods directory may be empty)"
+          fi
           echo "::endgroup::"
 
       - name: Setup Ruby
@@ -274,6 +384,7 @@ jobs:
 
       - name: Build Archive (Test config)
         if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
+        timeout-minutes: 30
         run: |
           echo "::group::Building iOS archive (staging)..."
           cd ios && bundle exec fastlane build_staging 2>&1 || { echo "::error::Fastlane build_staging failed"; exit 1; }
@@ -281,9 +392,28 @@ jobs:
 
       - name: Build Archive (Production config)
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
+        timeout-minutes: 30
         run: |
           echo "::group::Building iOS archive (production)..."
           cd ios && bundle exec fastlane build_production 2>&1 || { echo "::error::Fastlane build_production failed"; exit 1; }
+          echo "::endgroup::"
+
+      - name: Verify IPA artifact
+        run: |
+          echo "::group::Verifying IPA artifact..."
+          IPA_PATH=$(ls ios/build/*.ipa 2>/dev/null | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "::error::No IPA file found in ios/build/"
+            exit 1
+          fi
+          IPA_SIZE=$(stat -f%z "$IPA_PATH" 2>/dev/null || stat -c%s "$IPA_PATH" 2>/dev/null)
+          echo "IPA: $IPA_PATH"
+          echo "Size: $((IPA_SIZE / 1024 / 1024)) MB"
+          if [ "$IPA_SIZE" -lt 1000000 ]; then
+            echo "::error::IPA file suspiciously small: $IPA_SIZE bytes"
+            exit 1
+          fi
+          echo "::notice::IPA artifact verified: $((IPA_SIZE / 1024 / 1024)) MB"
           echo "::endgroup::"
 
       - name: Upload IPA Artifact
@@ -292,6 +422,37 @@ jobs:
           name: ios-${{ needs.resolve-flavor.outputs.flavor }}-ipa
           path: ios/build/*.ipa
           retention-days: 7
+
+      - name: Collect failure logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          echo "::group::Collecting failure logs..."
+          mkdir -p /tmp/failure-logs
+
+          # yarn-error.log
+          [ -f yarn-error.log ] && cp yarn-error.log /tmp/failure-logs/ || true
+
+          # Fastlane/gym build logs
+          find ~/Library/Logs/gym -name "*.log" -exec cp {} /tmp/failure-logs/ \; 2>/dev/null || true
+
+          # Xcode DerivedData logs
+          find ~/Library/Developer/Xcode/DerivedData -path "*/Logs/*.log" -exec cp {} /tmp/failure-logs/ \; 2>/dev/null || true
+
+          # Podfile.lock + Manifest.lock for debugging
+          [ -f ios/Podfile.lock ] && cp ios/Podfile.lock /tmp/failure-logs/ || true
+          [ -f ios/Pods/Manifest.lock ] && cp ios/Pods/Manifest.lock /tmp/failure-logs/ || true
+
+          ls -la /tmp/failure-logs/
+          echo "::endgroup::"
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-failure-logs-${{ github.run_id }}
+          path: /tmp/failure-logs/
+          retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Deploy iOS to TestFlight — Step 2: Upload IPA (only if build succeeded)
@@ -331,13 +492,17 @@ jobs:
           path: ios/build
 
       - name: Upload to TestFlight
+        timeout-minutes: 15
         run: |
           set -e
           echo "::group::Uploading IPA to TestFlight..."
           cd ios
           bundle exec fastlane run pilot upload \
             ipa:"./build/$(ls build/*.ipa | xargs basename)" \
-            skip_waiting_for_build_processing:true 2>&1 || { echo "::error::TestFlight upload failed"; exit 1; }
+            skip_waiting_for_build_processing:true 2>&1 || {
+              echo "::error::TestFlight upload failed"
+              exit 1
+            }
           echo "::endgroup::"
 
   # ─────────────────────────────────────────────────────────────────────────────
