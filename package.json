@@ -2,6 +2,7 @@
   "name": "frontend-blog-mobile",
   "version": "0.0.1",
   "private": true,
+  "packageManager": "yarn@4.9.2",
   "scripts": {
     "android": "react-native run-android",
     "android:device": "./scripts/deploy-android-device.sh",
