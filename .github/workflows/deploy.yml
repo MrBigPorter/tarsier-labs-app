@@ -280,6 +280,7 @@ jobs:
       MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       TEAM_ID: ${{ secrets.TEAM_ID }}
+      SPACESHIP_CONNECT_API_IN_HOUSE: 'false'
 
     steps:
       - name: Checkout

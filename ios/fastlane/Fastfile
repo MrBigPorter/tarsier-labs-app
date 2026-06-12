@@ -20,7 +20,8 @@ platform :ios do
       key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
       issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
       key: ENV['APP_STORE_CONNECT_KEY_CONTENT'],
-      is_key_content_base64: true
+      is_key_content_base64: true,
+      in_house: false
     }
     match(type: 'appstore', readonly: false, api_key: api_key)
     increment_build_number(
@@ -43,7 +44,8 @@ platform :ios do
       key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
       issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
       key: ENV['APP_STORE_CONNECT_KEY_CONTENT'],
-      is_key_content_base64: true
+      is_key_content_base64: true,
+      in_house: false
     }
     increment_build_number(
       build_number: app_store_build_number(api_key: api_key) + 1
