@@ -220,10 +220,16 @@ jobs:
           cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --immutable
+        run: |
+          echo "::group::Installing JS dependencies..."
+          yarn install --immutable 2>&1 || { echo "::error::yarn install failed"; exit 1; }
+          echo "::endgroup::"
 
       - name: Apply patches
-        run: npx patch-package
+        run: |
+          echo "::group::Applying patches..."
+          npx patch-package 2>&1 || { echo "::error::patch-package failed"; exit 1; }
+          echo "::endgroup::"
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
@@ -232,11 +238,16 @@ jobs:
           key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'yarn.lock') }}
           restore-keys: pods-${{ runner.os }}
 
-      - name: Clean Pods (force fresh install to avoid stale cache)
-        run: rm -rf ios/Pods
-
-      - name: Install Pods
-        run: cd ios && USE_FRAMEWORKS=static pod install && cd ..
+      - name: Install Pods (clean + fresh install)
+        run: |
+          set -e
+          echo "::group::Cleaning old Pods..."
+          rm -rf ios/Pods
+          echo "::endgroup::"
+          echo "::group::Running pod install..."
+          cd ios && USE_FRAMEWORKS=static pod install 2>&1 || { echo "::error::pod install failed"; exit 1; }
+          cd ..
+          echo "::endgroup::"
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -247,6 +258,8 @@ jobs:
 
       - name: Configure Code Signing & API Auth
         run: |
+          set -e
+          echo "::group::Configuring code signing & API auth..."
           echo "APP_STORE_CONNECT_KEY_ID=${{ secrets.APP_STORE_CONNECT_KEY_ID }}" >> $GITHUB_ENV
           echo "APP_STORE_CONNECT_ISSUER_ID=${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" >> $GITHUB_ENV
           echo "APP_STORE_CONNECT_KEY_CONTENT=${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}" >> $GITHUB_ENV
@@ -254,14 +267,21 @@ jobs:
           echo "MATCH_GIT_BASIC_AUTHORIZATION=${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}" >> $GITHUB_ENV
           echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> $GITHUB_ENV
           echo "TEAM_ID=${{ secrets.TEAM_ID }}" >> $GITHUB_ENV
+          echo "::endgroup::"
 
       - name: Build Archive (Test config)
         if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
-        run: cd ios && bundle exec fastlane build_staging
+        run: |
+          echo "::group::Building iOS archive (staging)..."
+          cd ios && bundle exec fastlane build_staging 2>&1 || { echo "::error::Fastlane build_staging failed"; exit 1; }
+          echo "::endgroup::"
 
       - name: Build Archive (Production config)
         if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
-        run: cd ios && bundle exec fastlane build_production
+        run: |
+          echo "::group::Building iOS archive (production)..."
+          cd ios && bundle exec fastlane build_production 2>&1 || { echo "::error::Fastlane build_production failed"; exit 1; }
+          echo "::endgroup::"
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
@@ -294,9 +314,12 @@ jobs:
 
       - name: Configure API Auth
         run: |
+          set -e
+          echo "::group::Configuring API auth for TestFlight..."
           echo "APP_STORE_CONNECT_KEY_ID=${{ secrets.APP_STORE_CONNECT_KEY_ID }}" >> $GITHUB_ENV
           echo "APP_STORE_CONNECT_ISSUER_ID=${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" >> $GITHUB_ENV
           echo "APP_STORE_CONNECT_KEY_CONTENT=${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}" >> $GITHUB_ENV
+          echo "::endgroup::"
 
       - name: Download IPA Artifact
         uses: actions/download-artifact@v4
@@ -306,10 +329,13 @@ jobs:
 
       - name: Upload to TestFlight
         run: |
+          set -e
+          echo "::group::Uploading IPA to TestFlight..."
           cd ios
           bundle exec fastlane run pilot upload \
             ipa:"./build/$(ls build/*.ipa | xargs basename)" \
-            skip_waiting_for_build_processing:true
+            skip_waiting_for_build_processing:true 2>&1 || { echo "::error::TestFlight upload failed"; exit 1; }
+          echo "::endgroup::"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # CodePush (hot update) — only for test branch pushes
