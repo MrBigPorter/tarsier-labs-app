@@ -15,7 +15,7 @@
 
 A production-grade **React Native** mobile blog application featuring clean architecture, Redux Toolkit with RTK Query caching, smooth Reanimated animations, OTA hot updates via self-hosted CodePush, and full internationalization across 6 languages.
 
-> Available on [App Store](https://apps.apple.com/app/id6775716781) · [Google Play]() _(pending review)_ · [Web](https://blog.joyminis.com)
+> Available on [App Store](https://apps.apple.com/app/id6775716781) · [Google Play]() _(pending review)_ · [Web](https://tarsierlabs.app)
 
 ---
 
@@ -29,20 +29,6 @@ Key engineering challenges solved during development:
 - **Optimistic updates with offline resilience** — Bookmarks and likes use RTK Query optimistic updates for instant UI feedback, with automatic rollback on failure and persisted Redux state via MMKV
 - **Real-time comments via SSE** — Server-Sent Events connection using `react-native-sse` for live comment push, with automatic reconnection and scroll-to-new-comment UX
 - **Design token system** — Complete theme architecture with typed design tokens, dark/light mode with animated transitions, and MMKV-persisted preference
-
----
-
-## 📱 Screenshots
-
-<!--
-| Home Feed | Article Detail | Search |
-|-----------|---------------|--------|
-| ![](assets/screenshots/home.png) | ![](assets/screenshots/article.png) | ![](assets/screenshots/search.png) |
-| **Dark Mode** | **Categories** | **Auth** |
-| ![](assets/screenshots/dark.png) | ![](assets/screenshots/categories.png) | ![](assets/screenshots/auth.png) |
--->
-
-> Screenshots coming soon
 
 ---
 
@@ -254,7 +240,7 @@ Built by **Porter** — a Full Stack Engineer specializing in React Native, Type
 | **GitHub**   | [MrBigPorter](https://github.com/MrBigPorter)                                                              |
 | **Email**    | mrporterdev@gmail.com                                                                                      |
 | **Backend**  | [JoyMini_Nest_Monorepo](https://github.com/MrBigPorter/JoyMini_Nest_Monorepo/tree/main/apps/frontend-blog) |
-| **Live App** | [blog.joyminis.com](https://blog.joyminis.com/)                                                            |
+| **Live App** | [tarsierlabs.app](https://tarsierlabs.app/)                                                                |
 
 **Key competencies demonstrated in this project:**
 
