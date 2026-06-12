@@ -200,7 +200,7 @@ jobs:
             --status completed
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Build iOS
+  # Build iOS — Step 1: Build + Export IPA with proper code signing via Fastlane
   # ─────────────────────────────────────────────────────────────────────────────
   build-ios:
     name: Build iOS (${{ needs.resolve-flavor.outputs.flavor_label }})
@@ -235,86 +235,78 @@ jobs:
       - name: Install Pods
         run: cd ios && USE_FRAMEWORKS=static pod install && cd ..
 
-      - name: Build iOS (${{ needs.resolve-flavor.outputs.flavor_label }})
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Configure Code Signing & API Auth
         run: |
-          if [ "${{ needs.resolve-flavor.outputs.flavor }}" = "test" ]; then
-            cd ios
-            xcodebuild -workspace FrontendBlogMobile.xcworkspace \
-                       -scheme FrontendBlogMobile-Test \
-                       -configuration Release-Test \
-                       -sdk iphoneos \
-                       -archivePath ./build/Test.xcarchive \
-                       archive \
-                       CODE_SIGN_STYLE=Manual \
-                       CODE_SIGNING_REQUIRED=NO \
-                       CODE_SIGNING_ALLOWED=NO
-          else
-            cd ios
-            xcodebuild -workspace FrontendBlogMobile.xcworkspace \
-                       -scheme FrontendBlogMobile \
-                       -configuration Release \
-                       -sdk iphoneos \
-                       -archivePath ./build/Prod.xcarchive \
-                       archive \
-                       CODE_SIGN_STYLE=Manual \
-                       CODE_SIGNING_REQUIRED=NO \
-                       CODE_SIGNING_ALLOWED=NO
-          fi
+          echo "APP_STORE_CONNECT_KEY_ID=${{ secrets.APP_STORE_CONNECT_KEY_ID }}" >> $GITHUB_ENV
+          echo "APP_STORE_CONNECT_ISSUER_ID=${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" >> $GITHUB_ENV
+          echo "APP_STORE_CONNECT_KEY_CONTENT=${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}" >> $GITHUB_ENV
+          echo "MATCH_PASSWORD=${{ secrets.MATCH_PASSWORD }}" >> $GITHUB_ENV
+          echo "MATCH_GIT_BASIC_AUTHORIZATION=${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}" >> $GITHUB_ENV
+          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> $GITHUB_ENV
+          echo "TEAM_ID=${{ secrets.TEAM_ID }}" >> $GITHUB_ENV
 
-      - name: Verify & fix hermesvm dSYM in archive
-        run: |
-          ARCHIVE=$(ls ios/build/*.xcarchive | head -1)
-          echo "Checking archive: $ARCHIVE"
+      - name: Build Archive (Test config)
+        if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
+        run: cd ios && bundle exec fastlane build_staging
 
-          # Find the embedded hermesvm binary in the archive
-          EMBEDDED_BINARY=$(find "$ARCHIVE/Products" -path "*/Frameworks/hermesvm.framework/hermesvm" -type f | head -1)
+      - name: Build Archive (Production config)
+        if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
+        run: cd ios && bundle exec fastlane build_production
 
-          if [ -z "$EMBEDDED_BINARY" ]; then
-            echo "hermesvm.framework not found in archive (statically linked — no separate dSYM needed)"
-            exit 0
-          fi
-
-          echo "Found embedded binary: $EMBEDDED_BINARY"
-
-          # Get UUID of the embedded (possibly stripped) binary
-          BINARY_UUID=$(xcrun dwarfdump --uuid "$EMBEDDED_BINARY" | grep arm64 | awk '{print $2}')
-          echo "hermesvm embedded binary UUID: $BINARY_UUID"
-
-          DSYM_DIR="$ARCHIVE/dSYMs/hermesvm.framework.dSYM"
-
-          if [ -d "$DSYM_DIR" ]; then
-            DSYM_UUID=$(xcrun dwarfdump --uuid "$DSYM_DIR" | grep arm64 | awk '{print $2}')
-            echo "hermesvm dSYM UUID:           $DSYM_UUID"
-            if [ "$BINARY_UUID" = "$DSYM_UUID" ]; then
-              echo "✓ UUID match confirmed — no action needed"
-              exit 0
-            else
-              echo "UUID mismatch detected — regenerating dSYM from embedded binary..."
-              rm -rf "$DSYM_DIR"
-            fi
-          else
-            echo "No dSYM found — generating from embedded binary..."
-          fi
-
-          mkdir -p "$ARCHIVE/dSYMs"
-          xcrun dsymutil "$EMBEDDED_BINARY" -o "$DSYM_DIR"
-
-          # Final verification
-          FINAL_UUID=$(xcrun dwarfdump --uuid "$DSYM_DIR" | grep arm64 | awk '{print $2}')
-          echo "Generated dSYM UUID: $FINAL_UUID"
-          if [ "$BINARY_UUID" = "$FINAL_UUID" ]; then
-            echo "✓ hermesvm dSYM UUID verified successfully"
-          else
-            echo "ERROR: UUID still mismatches after regeneration ($BINARY_UUID vs $FINAL_UUID)"
-            exit 1
-          fi
-
-      - name: Upload Archive
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-${{ needs.resolve-flavor.outputs.flavor }}
-          path: ios/build/*.xcarchive
-          retention-days: 30
+          name: ios-${{ needs.resolve-flavor.outputs.flavor }}-ipa
+          path: ios/build/*.ipa
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Deploy iOS to TestFlight — Step 2: Upload IPA (only if build succeeded)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-ios-testflight:
+    name: Deploy iOS to TestFlight (${{ needs.resolve-flavor.outputs.flavor_label }})
+    needs: [resolve-flavor, build-ios]
+    if: ${{ !cancelled() && needs.build-ios.result == 'success' }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    environment: ${{ needs.resolve-flavor.outputs.flavor }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Configure API Auth
+        run: |
+          echo "APP_STORE_CONNECT_KEY_ID=${{ secrets.APP_STORE_CONNECT_KEY_ID }}" >> $GITHUB_ENV
+          echo "APP_STORE_CONNECT_ISSUER_ID=${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" >> $GITHUB_ENV
+          echo "APP_STORE_CONNECT_KEY_CONTENT=${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}" >> $GITHUB_ENV
+
+      - name: Download IPA Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-${{ needs.resolve-flavor.outputs.flavor }}-ipa
+          path: ios/build
+
+      - name: Upload to TestFlight
+        run: |
+          cd ios
+          bundle exec fastlane run pilot upload \
+            ipa:"./build/$(ls build/*.ipa | xargs basename)" \
+            skip_waiting_for_build_processing:true
 
   # ─────────────────────────────────────────────────────────────────────────────
   # CodePush (hot update) — only for test branch pushes

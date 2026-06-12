@@ -87,6 +87,7 @@ keystore.properties
 .env.development
 .env.production
 .env.staging
+ios/.env.local
 testers.csv
 
 # Study materials (interview prep, not for commit)
