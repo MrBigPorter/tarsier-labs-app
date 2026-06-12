@@ -4,6 +4,30 @@
 
 default_platform(:ios)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper Methods
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Generate changelog from recent git commits
+def latest_changelog
+  log = `git log --format='- %s' -5 2>/dev/null`
+  log.strip.empty? ? 'Automated build via CI' : log
+end
+
+# Build standard App Store Connect API key hash from environment variables
+# Expects: APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_CONTENT
+def app_store_connect_api_key
+  {
+    key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
+    issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+    key: ENV['APP_STORE_CONNECT_KEY_CONTENT'],
+    is_key_content_base64: true,
+    in_house: false
+  }
+end
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 platform :ios do
   before_all do
     setup_ci if ENV['CI']
@@ -16,13 +40,7 @@ platform :ios do
 
   desc "Build Staging (Test flavor) — TestFlight Internal"
   lane :build_staging do
-    api_key = {
-      key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
-      issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
-      key: ENV['APP_STORE_CONNECT_KEY_CONTENT'],
-      is_key_content_base64: true,
-      in_house: false
-    }
+    api_key = app_store_connect_api_key
     match(type: 'appstore', readonly: false, api_key: api_key)
     increment_build_number(
       build_number: app_store_build_number(api_key: api_key) + 1
@@ -41,14 +59,8 @@ platform :ios do
 
   desc "Build Production — App Store or TestFlight External"
   lane :build_production do
-    match(type: 'appstore', readonly: true)
-    api_key = {
-      key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
-      issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
-      key: ENV['APP_STORE_CONNECT_KEY_CONTENT'],
-      is_key_content_base64: true,
-      in_house: false
-    }
+    api_key = app_store_connect_api_key
+    match(type: 'appstore', readonly: true, api_key: api_key)
     increment_build_number(
       build_number: app_store_build_number(api_key: api_key) + 1
     )
@@ -66,20 +78,21 @@ platform :ios do
 
   desc "Upload to TestFlight Internal (company testers)"
   lane :deploy_testflight_internal do |options|
-    ipa = options[:ipa] || 'TarsierBlog-Test.ipa'
+    ipa = options[:ipa] || './build/TarsierBlog-Test.ipa'
     pilot(
       ipa: ipa,
       app_identifier: 'com.tarsier.labs',
       distribute_external: false,
       groups: ['Internal Testers'],
       skip_waiting_for_build_processing: true,
-      changelog: latest_changelog
+      changelog: latest_changelog,
+      api_key: app_store_connect_api_key
     )
   end
 
   desc "Upload to TestFlight External Beta (invited testers)"
   lane :deploy_testflight_external do |options|
-    ipa = options[:ipa] || 'TarsierBlog.ipa'
+    ipa = options[:ipa] || './build/TarsierBlog.ipa'
     pilot(
       ipa: ipa,
       app_identifier: 'com.tarsier.labs',
@@ -95,13 +108,14 @@ platform :ios do
         demo_account_name: 'review@tarsierlabs.app',
         demo_account_password: get_review_account_password,
         notes: 'App requires internet connection. Demo account has sample articles.'
-      }
+      },
+      api_key: app_store_connect_api_key
     )
   end
 
   desc "Upload to App Store (human must submit for review manually)"
   lane :deploy_app_store do
-    ipa = 'TarsierBlog.ipa'
+    ipa = './build/TarsierBlog.ipa'
     deliver(
       ipa: ipa,
       submit_for_review: false,
@@ -109,7 +123,8 @@ platform :ios do
       phased_release: true,
       skip_metadata: true,
       skip_screenshots: true,
-      force: true
+      force: true,
+      api_key: app_store_connect_api_key
     )
   end
 

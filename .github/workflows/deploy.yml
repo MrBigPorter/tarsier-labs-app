@@ -462,12 +462,10 @@ jobs:
           set -e
           echo "::group::Uploading IPA to TestFlight..."
           cd ios
-          bundle exec fastlane run pilot upload \
-            ipa:"./build/$(ls build/*.ipa | xargs basename)" \
-            skip_waiting_for_build_processing:true 2>&1 || {
-              echo "::error::TestFlight upload failed"
-              exit 1
-            }
+          bundle exec fastlane deploy_testflight_internal 2>&1 || {
+            echo "::error::TestFlight upload failed"
+            exit 1
+          }
           echo "::endgroup::"
 
   # ─────────────────────────────────────────────────────────────────────────────
