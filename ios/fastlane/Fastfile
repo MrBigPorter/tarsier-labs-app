@@ -16,13 +16,13 @@ platform :ios do
 
   desc "Build Staging (Test flavor) — TestFlight Internal"
   lane :build_staging do
-    match(type: 'appstore', readonly: false)
     api_key = {
       key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
       issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
       key: ENV['APP_STORE_CONNECT_KEY_CONTENT'],
       is_key_content_base64: true
     }
+    match(type: 'appstore', readonly: false, api_key: api_key)
     increment_build_number(
       build_number: app_store_build_number(api_key: api_key) + 1
     )
