@@ -3,7 +3,9 @@
 > **Project:** Tarsier Blog (frontend-blog-mobile)
 > **Apple ID:** 6775716781
 > **Framework:** React Native 0.79+
-> **CodePush:** Integrated (server TBD)
+> **CodePush:** Integrated (server deployed)
+>
+> ✅ **Status:** App successfully published on the App Store (Build 8, June 2026)
 
 ---
 
@@ -168,7 +170,7 @@ Key values to verify:
 | -------------------------------- | ------------------------------- | ----------------------------- |
 | `CFBundleDisplayName`            | `$(DISPLAY_NAME)`               | App name shown on Home Screen |
 | `CFBundleShortVersionString`     | `$(MARKETING_VERSION)`          | e.g. 1.0                      |
-| `CFBundleVersion`                | `$(CURRENT_PROJECT_VERSION)`    | Build number, e.g. 7          |
+| `CFBundleVersion`                | `$(CURRENT_PROJECT_VERSION)`    | Build number, e.g. 8          |
 | `NSPhotoLibraryUsageDescription` | Set (see below)                 | Required for ITMS-90683       |
 | `CodePushServerURL`              | `https://codepush.joyminis.com` | CodePush server               |
 | `CodePushDeploymentKey`          | `$(CODEPUSH_DEPLOYMENT_KEY)`    | Xcode build variable          |
@@ -278,7 +280,7 @@ This is the **Version page** where you configure the current version being submi
 ### 5.2 Select Build
 
 1. Scroll to the **Build** section
-2. Click **Select Build** → choose the processed build (e.g., Build 7)
+2. Click **Select Build** → choose the processed build (e.g., Build 8)
 3. Wait for green checkmark
 
 ### 5.3 Set Category
@@ -735,7 +737,7 @@ Use this checklist for future submissions:
 
 ## Appendix B: CodePush Quick Reference
 
-> **Status:** Code is integrated but server not yet deployed.
+> ✅ **Status:** Server deployed and operational at [`https://cp.hyperpush.org/codepush`](../ios/FrontendBlogMobile/Info.plist:75). CodePush is fully active for OTA updates.
 
 If you need to temporarily disable CodePush (e.g., for testing without server):
 
@@ -876,6 +878,19 @@ Build 7 was reviewed on an **iPad Air 11-inch (M3)**, not an iPhone. This means:
 #### Lesson 4: The review feedback is cumulative
 
 This was a **resubmission** — the first submission had different issues. Apple reviewers keep notes, and each resubmission gets more scrutiny. If you fix only what they asked last time without doing a comprehensive self-audit, you risk new issues being found.
+
+---
+
+### 12.6 Resolution: Build 8 Approved ✅
+
+> **Update (June 2026):** All issues from Build 7 were resolved in **Build 8**:
+>
+> - **Guideline 1.2 (UGC Safety):** EULA checkbox, comment flag/report, and user block functionality were implemented across the frontend and backend.
+> - **Guideline 2.5.4 (Background Audio):** `UIBackgroundModes → audio` was removed from [`Info.plist`](../ios/FrontendBlogMobile/Info.plist).
+>
+> Build 8 was submitted with a detailed reply in the Resolution Center (see [`plans/app-store-connect-reply-build8.md`](../plans/app-store-connect-reply-build8.md)). The app was approved and published on the App Store.
+>
+> **Key takeaway:** The rejection was a necessary quality gate — it forced the implementation of critical UGC safety features that would have been a compliance risk if left unaddressed.
 
 ---
 

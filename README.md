@@ -1,5 +1,6 @@
 # 🐵 Tarsier — React Native Blog App
 
+[![App Store](https://img.shields.io/badge/App_Store-000000?logo=apple&logoColor=white)](https://apps.apple.com/app/id6775716781)
 [![Google Play](https://img.shields.io/badge/Google_Play-414141?logo=google-play&logoColor=white)]()
 [![React Native](https://img.shields.io/badge/React_Native-0.85-61DAFB?logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org)
@@ -14,7 +15,7 @@
 
 A production-grade **React Native** mobile blog application featuring clean architecture, Redux Toolkit with RTK Query caching, smooth Reanimated animations, OTA hot updates via self-hosted CodePush, and full internationalization across 6 languages.
 
-> Available on [Google Play]() · [App Store]() · [Web](https://blog.joyminis.com)
+> Available on [App Store](https://apps.apple.com/app/id6775716781) · [Google Play]() _(pending review)_ · [Web](https://blog.joyminis.com)
 
 ---
 
