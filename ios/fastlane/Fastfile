@@ -34,7 +34,7 @@ platform :ios do
       output_name: 'TarsierBlog-Test.ipa',
       include_symbols: false,
       clean: true,
-      xcargs: "PROVISIONING_PROFILE_SPECIFIER='match AppStore com.tarsier.labs.test'"
+      xcargs: "PROVISIONING_PROFILE_SPECIFIER='match AppStore com.tarsier.labs.test' CODE_SIGN_IDENTITY='iPhone Distribution'"
     )
   end
 
@@ -58,7 +58,7 @@ platform :ios do
       output_name: 'TarsierBlog.ipa',
       include_symbols: false,
       clean: true,
-      xcargs: "PROVISIONING_PROFILE_SPECIFIER='match AppStore com.tarsier.labs'"
+      xcargs: "PROVISIONING_PROFILE_SPECIFIER='match AppStore com.tarsier.labs' CODE_SIGN_IDENTITY='iPhone Distribution'"
     )
   end
 
