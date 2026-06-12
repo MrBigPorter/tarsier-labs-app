@@ -32,6 +32,7 @@ platform :ios do
       configuration: 'Release-Test',
       export_method: 'app-store',
       output_name: 'TarsierBlog-Test.ipa',
+      output_directory: './build',
       include_symbols: false,
       clean: true,
       xcargs: "PROVISIONING_PROFILE_SPECIFIER='match AppStore com.tarsier.labs.test' CODE_SIGN_IDENTITY='iPhone Distribution'"
@@ -56,6 +57,7 @@ platform :ios do
       configuration: 'Release',
       export_method: 'app-store',
       output_name: 'TarsierBlog.ipa',
+      output_directory: './build',
       include_symbols: false,
       clean: true,
       xcargs: "PROVISIONING_PROFILE_SPECIFIER='match AppStore com.tarsier.labs' CODE_SIGN_IDENTITY='iPhone Distribution'"
