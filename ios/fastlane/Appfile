@@ -1,0 +1,7 @@
+# ios/fastlane/Appfile
+# App identity configuration
+# See plans/enterprise-ios-ci-cd-plan.md for setup instructions
+
+app_identifier('com.tarsier.labs')
+apple_id(ENV['APPLE_ID'])  # Your Apple Developer email
+team_id(ENV['TEAM_ID'])

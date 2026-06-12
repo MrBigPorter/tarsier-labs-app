@@ -1,0 +1,12 @@
+# ios/fastlane/Matchfile
+# Code signing configuration — certificates stored in encrypted git repo
+# See plans/enterprise-ios-ci-cd-plan.md for setup instructions
+
+git_url('https://github.com/MrBigPorter/ios-certs.git')
+type('appstore')
+app_identifier(['com.tarsier.labs'])
+username(ENV['APPLE_ID'])
+# Set to false for initial setup (needs to create & push certs to git repo).
+# After first run, change back to true for CI and subsequent runs.
+readonly(true)
+

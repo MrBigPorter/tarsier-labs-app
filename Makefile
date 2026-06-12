@@ -709,6 +709,42 @@ ios-profile-info: ## Show details of a provisioning profile. Usage: make ios-pro
 	fi; \
 	security cms -D -i "$(FILE)" 2>/dev/null | plutil -p - 2>/dev/null | head -80
 
+# ── Fastlane ─────────────────────────────────────────────────────────────────
+
+# Fastlane is installed via Homebrew Ruby 3.4.1's gem at this path.
+# bundle exec is NOT used because system Ruby 2.6.10 is incompatible.
+FASTLANE := cd ios && /Users/porter/.gem/ruby/3.4.0/bin/fastlane
+
+fastlane-match-appstore: ## [ONE-TIME SETUP] Initialize Match code signing (run on Mac)
+	cd ios && MATCH_PASSWORD="TarsierLabs2024!" /Users/porter/.gem/ruby/3.4.0/bin/fastlane match appstore
+
+fastlane-lanes: ## List all available Fastlane lanes
+	$(FASTLANE) lanes
+
+fastlane-build-staging: ## Build staging (Test flavor) IPA via Fastlane
+	$(FASTLANE) ios build_staging
+
+fastlane-build-production: ## Build production IPA via Fastlane
+	$(FASTLANE) ios build_production
+
+fastlane-deploy-testflight-internal: ## Build + upload to TestFlight Internal
+	$(FASTLANE) ios staging_pipeline
+
+fastlane-deploy-testflight-external: ## Build + upload to TestFlight External
+	$(FASTLANE) ios deploy_testflight_external
+
+fastlane-deploy-app-store: ## Upload existing IPA to App Store (manual review)
+	$(FASTLANE) ios deploy_app_store
+
+fastlane-upload-dsyms: ## Upload dSYM files to Sentry
+	$(FASTLANE) ios upload_dsyms
+
+fastlane-run-production: ## Full production pipeline: build → App Store → dSYM → Slack
+	$(FASTLANE) ios production_pipeline
+
+fastlane-run-staging: ## Full staging pipeline: build → TestFlight → dSYM → Slack
+	$(FASTLANE) ios staging_pipeline
+
 # ── Cleanup & Reset ───────────────────────────────────────────────────────
 
 clean: ## Clean ALL build artifacts + caches (combines old clean + purge + clear-cache)

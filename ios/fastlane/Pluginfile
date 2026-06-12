@@ -1,0 +1,5 @@
+# ios/fastlane/Pluginfile
+# Fastlane plugins
+# See plans/enterprise-ios-ci-cd-plan.md for details
+
+gem 'fastlane-plugin-sentry'

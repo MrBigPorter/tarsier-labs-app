@@ -1,0 +1,140 @@
+# ios/fastlane/Fastfile
+# Enterprise-level iOS CI/CD automation
+# See plans/enterprise-ios-ci-cd-plan.md for full architecture
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_ci if ENV['CI']
+  end
+
+  desc "Run all tests"
+  lane :test do
+    run_tests(scheme: 'FrontendBlogMobile')
+  end
+
+  desc "Build Staging (Test flavor) — TestFlight Internal"
+  lane :build_staging do
+    match(type: 'appstore', readonly: true)
+    increment_build_number(
+      build_number: app_store_build_number + 1
+    )
+    gym(
+      scheme: 'FrontendBlogMobile-Test',
+      configuration: 'Release-Test',
+      export_method: 'app-store',
+      output_name: 'TarsierBlog-Test.ipa',
+      include_symbols: false,
+      clean: true
+    )
+  end
+
+  desc "Build Production — App Store or TestFlight External"
+  lane :build_production do
+    match(type: 'appstore', readonly: true)
+    increment_build_number(
+      build_number: app_store_build_number + 1
+    )
+    gym(
+      scheme: 'FrontendBlogMobile',
+      configuration: 'Release',
+      export_method: 'app-store',
+      output_name: 'TarsierBlog.ipa',
+      include_symbols: false,
+      clean: true
+    )
+  end
+
+  desc "Upload to TestFlight Internal (company testers)"
+  lane :deploy_testflight_internal do |options|
+    ipa = options[:ipa] || 'TarsierBlog-Test.ipa'
+    pilot(
+      ipa: ipa,
+      app_identifier: 'com.tarsier.labs',
+      distribute_external: false,
+      groups: ['Internal Testers'],
+      skip_waiting_for_build_processing: true,
+      changelog: latest_changelog
+    )
+  end
+
+  desc "Upload to TestFlight External Beta (invited testers)"
+  lane :deploy_testflight_external do |options|
+    ipa = options[:ipa] || 'TarsierBlog.ipa'
+    pilot(
+      ipa: ipa,
+      app_identifier: 'com.tarsier.labs',
+      distribute_external: true,
+      groups: ['Beta Testers'],
+      notify_external_testers: true,
+      changelog: latest_changelog,
+      beta_app_review_info: {
+        contact_email: 'developer@tarsierlabs.app',
+        contact_first_name: 'Tarsier',
+        contact_last_name: 'Labs',
+        contact_phone: '+639123456789',
+        demo_account_name: 'review@tarsierlabs.app',
+        demo_account_password: get_review_account_password,
+        notes: 'App requires internet connection. Demo account has sample articles.'
+      }
+    )
+  end
+
+  desc "Upload to App Store (human must submit for review manually)"
+  lane :deploy_app_store do
+    ipa = 'TarsierBlog.ipa'
+    deliver(
+      ipa: ipa,
+      submit_for_review: false,
+      automatic_release: false,
+      phased_release: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+
+  desc "Upload dSYMs to Sentry for crash symbolication"
+  lane :upload_dsyms do
+    sentry_upload_dsym(
+      auth_token: ENV['SENTRY_AUTH_TOKEN'],
+      org_slug: 'tarsier',
+      project_slug: 'frontend-blog-mobile',
+      dsym_path: './build/*.xcarchive/dSYMs/'
+    )
+  end
+
+  desc "Full production pipeline: build → App Store → dSYM → Slack"
+  lane :production_pipeline do
+    build_production
+    deploy_app_store
+    upload_dsyms
+    slack(
+      message: "iOS Production build #{get_version_number} uploaded to App Store",
+      success: true
+    )
+  end
+
+  desc "Full staging pipeline: build → TestFlight Internal → dSYM → Slack"
+  lane :staging_pipeline do
+    build_staging
+    deploy_testflight_internal
+    upload_dsyms
+    slack(
+      message: "iOS Staging build #{get_version_number} on TestFlight Internal",
+      success: true
+    )
+  end
+
+  after_all do |lane|
+    # Common cleanup — runs after every lane
+  end
+
+  error do |lane, exception|
+    slack(
+      message: "iOS pipeline failed: #{exception.message}",
+      success: false
+    )
+  end
+end
