@@ -81,7 +81,7 @@ platform :ios do
     ipa = options[:ipa] || './build/TarsierBlog-Test.ipa'
     pilot(
       ipa: ipa,
-      app_identifier: 'com.tarsier.labs',
+      app_identifier: 'com.tarsier.labs.test',
       distribute_external: false,
       groups: ['Internal Testers'],
       skip_waiting_for_build_processing: true,
