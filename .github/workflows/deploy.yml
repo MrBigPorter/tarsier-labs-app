@@ -352,6 +352,19 @@ jobs:
           bundler-cache: true
           working-directory: ios
 
+      - name: Select latest Xcode
+        run: |
+          echo "::group::Selecting latest Xcode..."
+          LATEST_XCODE=$(ls /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$LATEST_XCODE" ]; then
+            echo "::error::No Xcode found in /Applications"
+            exit 1
+          fi
+          echo "Selected: $LATEST_XCODE"
+          sudo xcode-select -s "$LATEST_XCODE"
+          xcodebuild -version
+          echo "::endgroup::"
+
       - name: Build Archive (Test config)
         if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
         timeout-minutes: 30
@@ -455,6 +468,19 @@ jobs:
         with:
           name: ios-${{ needs.resolve-flavor.outputs.flavor }}-ipa
           path: ios/build
+
+      - name: Select latest Xcode
+        run: |
+          echo "::group::Selecting latest Xcode..."
+          LATEST_XCODE=$(ls /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$LATEST_XCODE" ]; then
+            echo "::error::No Xcode found in /Applications"
+            exit 1
+          fi
+          echo "Selected: $LATEST_XCODE"
+          sudo xcode-select -s "$LATEST_XCODE"
+          xcodebuild -version
+          echo "::endgroup::"
 
       - name: Upload to TestFlight
         timeout-minutes: 15
