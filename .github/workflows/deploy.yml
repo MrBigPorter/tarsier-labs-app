@@ -291,7 +291,6 @@ jobs:
       - name: Install dependencies
         timeout-minutes: 10
         run: |
-          yarn config set discardUnusedConfigValues true
           yarn install --immutable --check-cache
 
       - name: Apply patches
