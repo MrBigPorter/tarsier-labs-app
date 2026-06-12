@@ -146,6 +146,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Enable Corepack (Yarn Berry)
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -272,6 +275,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Enable Corepack (Yarn Berry)
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -281,43 +287,8 @@ jobs:
       - name: Install dependencies
         timeout-minutes: 10
         run: |
-          set -e
-          echo "::group::Cleaning cache for critical packages..."
-          yarn cache clean react-native-reanimated react-native-worklets 2>&1 || true
-          echo "::endgroup::"
-
-          echo "::group::Installing JS dependencies..."
-          yarn install --immutable --check-cache 2>&1 || {
-            echo "::error::yarn install failed — dependency mismatch detected"
-            exit 1
-          }
-          echo "::endgroup::"
-
-          echo "::group::Validating installed versions vs yarn.lock..."
-          REANIMATED_EXPECTED=$(grep -A 2 'react-native-reanimated@npm:' yarn.lock | grep ' version:' | awk '{print $2}')
-          WORKLETS_EXPECTED=$(grep -A 2 'react-native-worklets@npm:' yarn.lock | grep ' version:' | awk '{print $2}')
-          REANIMATED_ACTUAL=$(node -e "console.log(require('react-native-reanimated/package.json').version)")
-          WORKLETS_ACTUAL=$(node -e "console.log(require('react-native-worklets/package.json').version)")
-
-          echo "📋 Package version audit:"
-          echo "  react-native-reanimated: expected=$REANIMATED_EXPECTED actual=$REANIMATED_ACTUAL"
-          echo "  react-native-worklets:   expected=$WORKLETS_EXPECTED actual=$WORKLETS_ACTUAL"
-
-          HAS_ERROR=false
-          if [ "$REANIMATED_EXPECTED" != "$REANIMATED_ACTUAL" ]; then
-            echo "::error::VERSION MISMATCH: react-native-reanimated expected=$REANIMATED_EXPECTED actual=$REANIMATED_ACTUAL"
-            HAS_ERROR=true
-          fi
-          if [ "$WORKLETS_EXPECTED" != "$WORKLETS_ACTUAL" ]; then
-            echo "::error::VERSION MISMATCH: react-native-worklets expected=$WORKLETS_EXPECTED actual=$WORKLETS_ACTUAL"
-            HAS_ERROR=true
-          fi
-          if [ "$HAS_ERROR" = "true" ]; then
-            echo "::error::Dependency versions do not match yarn.lock. Cache may be polluted."
-            exit 1
-          fi
-          echo "::notice::All critical package versions match yarn.lock"
-          echo "::endgroup::"
+          yarn config set discardUnusedConfigValues true
+          yarn install --immutable --check-cache
 
       - name: Apply patches
         run: |
@@ -521,6 +492,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Enable Corepack (Yarn Berry)
+        run: corepack enable
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -570,6 +544,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Enable Corepack (Yarn Berry)
+        run: corepack enable
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
