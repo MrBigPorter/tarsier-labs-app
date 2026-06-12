@@ -272,6 +272,14 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     environment: ${{ needs.resolve-flavor.outputs.flavor }}
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      TEAM_ID: ${{ secrets.TEAM_ID }}
 
     steps:
       - name: Checkout
@@ -342,23 +350,6 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
           working-directory: ios
-
-      - name: Configure Code Signing & API Auth
-        run: |
-          set -e
-          echo "::group::Configuring code signing & API auth..."
-          echo "APP_STORE_CONNECT_KEY_ID=${{ secrets.APP_STORE_CONNECT_KEY_ID }}" >> $GITHUB_ENV
-          echo "APP_STORE_CONNECT_ISSUER_ID=${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" >> $GITHUB_ENV
-          # Use heredoc delimiter for multiline p8 private key content
-          DELIMITER_KEY=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "APP_STORE_CONNECT_KEY_CONTENT<<$DELIMITER_KEY" >> $GITHUB_ENV
-          echo "${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}" >> $GITHUB_ENV
-          echo "$DELIMITER_KEY" >> $GITHUB_ENV
-          echo "MATCH_PASSWORD=${{ secrets.MATCH_PASSWORD }}" >> $GITHUB_ENV
-          echo "MATCH_GIT_BASIC_AUTHORIZATION=${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}" >> $GITHUB_ENV
-          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> $GITHUB_ENV
-          echo "TEAM_ID=${{ secrets.TEAM_ID }}" >> $GITHUB_ENV
-          echo "::endgroup::"
 
       - name: Build Archive (Test config)
         if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
@@ -442,6 +433,10 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     environment: ${{ needs.resolve-flavor.outputs.flavor }}
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
 
     steps:
       - name: Checkout
@@ -453,19 +448,6 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
           working-directory: ios
-
-      - name: Configure API Auth
-        run: |
-          set -e
-          echo "::group::Configuring API auth for TestFlight..."
-          echo "APP_STORE_CONNECT_KEY_ID=${{ secrets.APP_STORE_CONNECT_KEY_ID }}" >> $GITHUB_ENV
-          echo "APP_STORE_CONNECT_ISSUER_ID=${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" >> $GITHUB_ENV
-          # Use heredoc delimiter for multiline p8 private key content
-          DELIMITER_KEY=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "APP_STORE_CONNECT_KEY_CONTENT<<$DELIMITER_KEY" >> $GITHUB_ENV
-          echo "${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}" >> $GITHUB_ENV
-          echo "$DELIMITER_KEY" >> $GITHUB_ENV
-          echo "::endgroup::"
 
       - name: Download IPA Artifact
         uses: actions/download-artifact@v4
