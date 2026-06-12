@@ -1,0 +1,86 @@
+name: Test ASC API Auth
+on:
+  push:
+    branches: [test-auth]
+
+jobs:
+  test-asc-auth:
+    runs-on: macos-latest
+    environment: test
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4
+          bundler-cache: true
+          working-directory: ios
+      - name: Test Apple API Auth
+        run: |
+          cd ios && bundle exec ruby -e '
+          require "jwt"
+          require "base64"
+          require "openssl"
+          require "net/http"
+          require "json"
+          require "uri"
+
+          key_id = ENV["APP_STORE_CONNECT_KEY_ID"]
+          issuer_id = ENV["APP_STORE_CONNECT_ISSUER_ID"]
+          key_b64 = ENV["APP_STORE_CONNECT_KEY_CONTENT"]
+
+          puts "=== Env Vars ==="
+          puts "KEY_ID length: #{key_id&.length}"
+          puts "ISSUER_ID length: #{issuer_id&.length}"
+          puts "KEY_CONTENT length: #{key_b64&.length}"
+
+          if key_id.nil? || issuer_id.nil? || key_b64.nil?
+            puts "ERROR: One or more env vars are nil!"
+            exit 1
+          end
+
+          key_raw = Base64.decode64(key_b64)
+          puts "Decoded key size: #{key_raw.bytesize} bytes"
+
+          begin
+            key = OpenSSL::PKey::EC.new(key_raw)
+            puts "EC key check: #{key.check_key}"
+          rescue => e
+            puts "EC key error: #{e.class}: #{e.message}"
+            exit 1
+          end
+
+          now = Time.now
+          header = { kid: key_id, typ: "JWT" }
+          payload = {
+            iat: now.to_i - 60,
+            exp: (now + 500).to_i,
+            aud: "appstoreconnect-v1",
+            iss: issuer_id
+          }
+          token = JWT.encode(payload, key, "ES256", header)
+          puts "JWT generated successfully"
+
+          uri = URI("https://api.appstoreconnect.apple.com/v1/apps")
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          http.open_timeout = 10
+          http.read_timeout = 30
+          request = Net::HTTP::Get.new(uri)
+          request["Authorization"] = "Bearer #{token}"
+          request["Content-Type"] = "application/json"
+          response = http.request(request)
+          puts "API response: #{response.code}"
+          if response.code.to_i == 200
+            data = JSON.parse(response.body)
+            puts "SUCCESS! Found #{data["data"]&.length} apps"
+            data["data"]&.each { |a| puts "  - #{a["id"]}: #{a["attributes"]&.dig("name")}" }
+          else
+            puts "FAILED: #{response.body[0..300]}"
+            exit 1
+          end
+          '
