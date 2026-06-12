@@ -222,7 +222,10 @@ jobs:
       - name: Install dependencies
         run: |
           echo "::group::Installing JS dependencies..."
-          yarn install --immutable 2>&1 || { echo "::error::yarn install failed"; exit 1; }
+          # --check-cache verifies cached packages match yarn.lock checksums.
+          # Prevents stale cache from a prior branch causing version mismatches
+          # (e.g. reanimated 4.4.1 in cache vs 4.3.1 in yarn.lock).
+          yarn install --immutable --check-cache 2>&1 || { echo "::error::yarn install failed"; exit 1; }
           echo "::endgroup::"
 
       - name: Apply patches
