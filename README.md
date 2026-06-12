@@ -1,4 +1,4 @@
-# 🐵 Tarsier — React Native Blog App
+# <img src="https://tarsierlabs.app/logo.png" width="32" height="32" style="vertical-align: middle;"/> Tarsier — React Native Blog App
 
 [![App Store](https://img.shields.io/badge/App_Store-000000?logo=apple&logoColor=white)](https://apps.apple.com/app/id6775716781)
 [![Google Play](https://img.shields.io/badge/Google_Play-414141?logo=google-play&logoColor=white)]()
