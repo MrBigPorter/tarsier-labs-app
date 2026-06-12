@@ -2,6 +2,6 @@
 // Test flavor — bundle ID with .test suffix, display name with (Test)
 // CodePush deployment key is replaced by CI/CD via sed, or set via ./scripts/setup-local-env.sh
 
-PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs
+PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test
 DISPLAY_NAME = Tarsier(Test)
 CODEPUSH_DEPLOYMENT_KEY = djKblDTcUfnteRkp2o53Rfg97dRuKdZ7nIL

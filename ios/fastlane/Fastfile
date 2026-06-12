@@ -16,7 +16,7 @@ platform :ios do
 
   desc "Build Staging (Test flavor) — TestFlight Internal"
   lane :build_staging do
-    match(type: 'appstore', readonly: true)
+    match(type: 'appstore', readonly: false)
     api_key = {
       key_id: ENV['APP_STORE_CONNECT_KEY_ID'],
       issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
