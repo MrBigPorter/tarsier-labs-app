@@ -584,7 +584,7 @@ jobs:
   codepush-test:
     name: CodePush Test (Hot Update)
     needs: [resolve-flavor]
-    if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
+    if: ${{ needs.resolve-flavor.outputs.flavor == 'test' && github.event_name == 'repository_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: test
@@ -615,8 +615,11 @@ jobs:
 
       - name: Login to self-hosted CodePush
         run: |
+          echo "🔑 Logging in to CodePush server..."
           code-push-standalone login ${{ secrets.CODEPUSH_SERVER_URL }} \
             --accessKey "${{ secrets.CODEPUSH_ACCESS_KEY }}"
+          echo "✅ Login successful — verifying..."
+          code-push-standalone app list
 
       - name: CodePush Staging (Android)
         run: |
@@ -639,7 +642,7 @@ jobs:
   codepush-production:
     name: CodePush Production (Hotfix)
     needs: [resolve-flavor]
-    if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
+    if: ${{ needs.resolve-flavor.outputs.flavor == 'production' && github.event_name == 'repository_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -676,8 +679,11 @@ jobs:
 
       - name: Login to self-hosted CodePush
         run: |
+          echo "🔑 Logging in to CodePush server..."
           code-push-standalone login ${{ secrets.CODEPUSH_SERVER_URL }} \
             --accessKey "${{ secrets.CODEPUSH_ACCESS_KEY }}"
+          echo "✅ Login successful — verifying..."
+          code-push-standalone app list
 
       - name: CodePush Production (Android)
         run: |
