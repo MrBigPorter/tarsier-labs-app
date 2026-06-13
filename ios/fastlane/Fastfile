@@ -142,22 +142,26 @@ platform :ios do
   lane :production_pipeline do
     build_production
     deploy_app_store
-    upload_dsyms
-    slack(
-      message: "iOS Production build #{get_version_number} uploaded to App Store",
-      success: true
-    )
+    upload_dsyms if ENV['SENTRY_AUTH_TOKEN']
+    if ENV['SLACK_URL']
+      slack(
+        message: "iOS Production build #{get_version_number} uploaded to App Store",
+        success: true
+      )
+    end
   end
 
   desc "Full staging pipeline: build → TestFlight Internal → dSYM → Slack"
   lane :staging_pipeline do
     build_staging
     deploy_testflight_internal
-    upload_dsyms
-    slack(
-      message: "iOS Staging build #{get_version_number} on TestFlight Internal",
-      success: true
-    )
+    upload_dsyms if ENV['SENTRY_AUTH_TOKEN']
+    if ENV['SLACK_URL']
+      slack(
+        message: "iOS Staging build #{get_version_number} on TestFlight Internal",
+        success: true
+      )
+    end
   end
 
   after_all do |lane|
@@ -165,9 +169,12 @@ platform :ios do
   end
 
   error do |lane, exception|
-    slack(
-      message: "iOS pipeline failed: #{exception.message}",
-      success: false
-    )
+    UI.error("iOS pipeline failed: #{exception.message}")
+    if ENV['SLACK_URL']
+      slack(
+        message: "iOS pipeline failed: #{exception.message}",
+        success: false
+      )
+    end
   end
 end

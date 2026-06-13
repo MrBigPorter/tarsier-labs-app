@@ -264,10 +264,11 @@ jobs:
             --status completed
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Build iOS — Step 1: Build + Export IPA with proper code signing via Fastlane
+  # Build iOS (Production) — Build + Export IPA for App Store submission
   # ─────────────────────────────────────────────────────────────────────────────
   build-ios:
-    name: Build iOS (${{ needs.resolve-flavor.outputs.flavor_label }})
+    name: Build iOS (Production)
+    if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
     needs: [resolve-flavor, validate-env]
     runs-on: macos-latest
     timeout-minutes: 60
@@ -365,16 +366,7 @@ jobs:
           xcodebuild -version
           echo "::endgroup::"
 
-      - name: Build Archive (Test config)
-        if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
-        timeout-minutes: 30
-        run: |
-          echo "::group::Building iOS archive (staging)..."
-          cd ios && bundle exec fastlane build_staging 2>&1 || { echo "::error::Fastlane build_staging failed"; exit 1; }
-          echo "::endgroup::"
-
       - name: Build Archive (Production config)
-        if: ${{ needs.resolve-flavor.outputs.flavor == 'production' }}
         timeout-minutes: 30
         run: |
           echo "::group::Building iOS archive (production)..."
@@ -402,7 +394,7 @@ jobs:
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-${{ needs.resolve-flavor.outputs.flavor }}-ipa
+          name: ios-production-ipa
           path: ios/build/*.ipa
           retention-days: 7
 
@@ -438,23 +430,90 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Deploy iOS to TestFlight — Step 2: Upload IPA (only if build succeeded)
+  # Deploy iOS Staging (Test) — Build + Deploy to TestFlight in one job
+  # Uses fastlane staging_pipeline for consistent build number management
   # ─────────────────────────────────────────────────────────────────────────────
-  deploy-ios-testflight:
-    name: Deploy iOS to TestFlight (${{ needs.resolve-flavor.outputs.flavor_label }})
-    needs: [resolve-flavor, build-ios]
-    if: ${{ !cancelled() && needs.build-ios.result == 'success' }}
+  deploy-ios-staging:
+    name: Deploy iOS Staging (TestFlight)
+    if: ${{ needs.resolve-flavor.outputs.flavor == 'test' }}
+    needs: [resolve-flavor]
     runs-on: macos-latest
-    timeout-minutes: 30
-    environment: ${{ needs.resolve-flavor.outputs.flavor }}
+    timeout-minutes: 60
+    environment: test
     env:
       APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_KEY_CONTENT }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      SPACESHIP_CONNECT_API_IN_HOUSE: 'false'
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SLACK_URL: ${{ secrets.SLACK_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Enable Corepack (Yarn Berry)
+        run: |
+          corepack enable
+          echo "Yarn version: $(yarn --version)"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        timeout-minutes: 10
+        run: |
+          yarn install --immutable --check-cache
+
+      - name: Apply patches
+        run: |
+          echo "::group::Applying patches..."
+          npx patch-package 2>&1 || { echo "::error::patch-package failed"; exit 1; }
+          echo "::endgroup::"
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: pods-${{ runner.os }}-${{ hashFiles('ios/Podfile.lock', 'yarn.lock') }}
+          restore-keys: pods-${{ runner.os }}
+
+      - name: Install Pods (clean + fresh install)
+        timeout-minutes: 15
+        run: |
+          set -e
+          echo "::group::Cleaning old Pods..."
+          rm -rf ios/Pods
+          echo "::endgroup::"
+
+          echo "::group::Running pod install (verbose)..."
+          cd ios && USE_FRAMEWORKS=static pod install --verbose 2>&1 || {
+            echo "::error::pod install failed"
+            cat Podfile.lock 2>/dev/null || true
+            exit 1
+          }
+          cd ..
+          echo "::endgroup::"
+
+          echo "::group::Verifying Podfile.lock consistency..."
+          if [ -f ios/Pods/Manifest.lock ]; then
+            if ! diff -q ios/Podfile.lock ios/Pods/Manifest.lock >/dev/null 2>&1; then
+              echo "::error::Podfile.lock and Manifest.lock differ — pod install may have issues"
+              diff ios/Podfile.lock ios/Pods/Manifest.lock || true
+              exit 1
+            fi
+            echo "::notice::Podfile.lock and Manifest.lock are consistent"
+          else
+            echo "::warning::Manifest.lock not found (Pods directory may be empty)"
+          fi
+          echo "::endgroup::"
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -462,12 +521,6 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
           working-directory: ios
-
-      - name: Download IPA Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-${{ needs.resolve-flavor.outputs.flavor }}-ipa
-          path: ios/build
 
       - name: Select latest Xcode
         run: |
@@ -482,17 +535,47 @@ jobs:
           xcodebuild -version
           echo "::endgroup::"
 
-      - name: Upload to TestFlight
-        timeout-minutes: 15
+      - name: 🚀 Build & Deploy to TestFlight (staging_pipeline)
+        timeout-minutes: 45
         run: |
           set -e
-          echo "::group::Uploading IPA to TestFlight..."
-          cd ios
-          bundle exec fastlane deploy_testflight_internal 2>&1 || {
-            echo "::error::TestFlight upload failed"
+          echo "::group::Running fastlane staging_pipeline (build → TestFlight → dSYM → Slack)..."
+          cd ios && bundle exec fastlane staging_pipeline 2>&1 || {
+            echo "::error::staging_pipeline failed"
             exit 1
           }
           echo "::endgroup::"
+
+      - name: Collect failure logs
+        if: failure()
+        continue-on-error: true
+        run: |
+          echo "::group::Collecting failure logs..."
+          mkdir -p /tmp/failure-logs
+
+          # yarn-error.log
+          [ -f yarn-error.log ] && cp yarn-error.log /tmp/failure-logs/ || true
+
+          # Fastlane/gym build logs
+          find ~/Library/Logs/gym -name "*.log" -exec cp {} /tmp/failure-logs/ \; 2>/dev/null || true
+
+          # Xcode DerivedData logs
+          find ~/Library/Developer/Xcode/DerivedData -path "*/Logs/*.log" -exec cp {} /tmp/failure-logs/ \; 2>/dev/null || true
+
+          # Podfile.lock + Manifest.lock for debugging
+          [ -f ios/Podfile.lock ] && cp ios/Podfile.lock /tmp/failure-logs/ || true
+          [ -f ios/Pods/Manifest.lock ] && cp ios/Pods/Manifest.lock /tmp/failure-logs/ || true
+
+          ls -la /tmp/failure-logs/
+          echo "::endgroup::"
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-staging-failure-logs-${{ github.run_id }}
+          path: /tmp/failure-logs/
+          retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────────────
   # CodePush (hot update) — only for test branch pushes
