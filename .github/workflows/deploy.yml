@@ -355,7 +355,7 @@ jobs:
       - name: Select latest Xcode
         run: |
           echo "::group::Selecting latest Xcode..."
-          LATEST_XCODE=$(ls /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          LATEST_XCODE=$(ls /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1 | tr -d '[:space:]:')
           if [ -z "$LATEST_XCODE" ]; then
             echo "::error::No Xcode found in /Applications"
             exit 1
@@ -472,7 +472,7 @@ jobs:
       - name: Select latest Xcode
         run: |
           echo "::group::Selecting latest Xcode..."
-          LATEST_XCODE=$(ls /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          LATEST_XCODE=$(ls /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1 | tr -d '[:space:]:')
           if [ -z "$LATEST_XCODE" ]; then
             echo "::error::No Xcode found in /Applications"
             exit 1
