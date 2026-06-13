@@ -128,7 +128,7 @@ platform :ios do
 
   desc "Upload dSYMs to Sentry for crash symbolication"
   lane :upload_dsyms do
-    sentry_upload_dsym(
+    sentry_debug_files_upload(
       auth_token: ENV['SENTRY_AUTH_TOKEN'],
       org_slug: 'tarsier',
       project_slug: 'frontend-blog-mobile',
@@ -140,8 +140,8 @@ platform :ios do
   lane :production_pipeline do
     build_production
     deploy_app_store
-    upload_dsyms if ENV['SENTRY_AUTH_TOKEN']
-    if ENV['SLACK_URL']
+    upload_dsyms if ENV['SENTRY_AUTH_TOKEN'] && !ENV['SENTRY_AUTH_TOKEN'].empty?
+    if ENV['SLACK_URL'] && !ENV['SLACK_URL'].empty?
       slack(
         message: "iOS Production build #{get_version_number} uploaded to App Store",
         success: true
@@ -153,8 +153,8 @@ platform :ios do
   lane :staging_pipeline do
     build_staging
     deploy_testflight_internal
-    upload_dsyms if ENV['SENTRY_AUTH_TOKEN']
-    if ENV['SLACK_URL']
+    upload_dsyms if ENV['SENTRY_AUTH_TOKEN'] && !ENV['SENTRY_AUTH_TOKEN'].empty?
+    if ENV['SLACK_URL'] && !ENV['SLACK_URL'].empty?
       slack(
         message: "iOS Staging build #{get_version_number} on TestFlight Internal",
         success: true
@@ -168,7 +168,7 @@ platform :ios do
 
   error do |lane, exception|
     UI.error("iOS pipeline failed: #{exception.message}")
-    if ENV['SLACK_URL']
+    if ENV['SLACK_URL'] && !ENV['SLACK_URL'].empty?
       slack(
         message: "iOS pipeline failed: #{exception.message}",
         success: false
