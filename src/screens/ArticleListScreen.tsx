@@ -18,7 +18,13 @@
  * Data:
  * - getArticles with pagination params (RTK Query)
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   FlatList,
@@ -38,11 +44,31 @@ import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
+import { useImagePrefetch } from '@/lib/hooks/useImagePrefetch';
+import { getArticleImageUrl, isVideoUrl } from '@/lib/utils/image';
 import { loadArticleList, saveArticleList } from '@/lib/cache/articleListCache';
 import type { HomeTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
+/**
+ * Resolve the best image URL for prefetching from an article.
+ * Matches the logic in AppImage's getArticleImageUrl.
+ */
+function getPrefetchUrl(article: FrontendArticle): string | null {
+  if (article.coverImage && isVideoUrl(article.coverImage)) {
+    return null;
+  }
+  return getArticleImageUrl({
+    images: article.meta?.images,
+    coverImage: article.coverImage,
+    size: 'medium',
+  });
+}
+
 const PAGE_SIZE = 15;
+
+/** Number of visible items that should get high-priority image loading */
+const PRIORITY_COUNT = 2;
 
 const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   navigation,
@@ -77,8 +103,11 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   }, [lang, cacheKey]);
 
   // FlatList data source: accumulated articles from pagination, or cache fallback
-  const dataSource =
-    allArticles.length > 0 ? allArticles : (cachedData?.items ?? []);
+  // Memoized to prevent the useEffect dependencies from changing on every render.
+  const dataSource = useMemo(
+    () => (allArticles.length > 0 ? allArticles : (cachedData?.items ?? [])),
+    [allArticles, cachedData],
+  );
 
   // Data fetching
   // _refreshKey is a cache-busting parameter: on refresh(), the key increments,
@@ -139,6 +168,53 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
 
   const prefetchArticle = useArticlePrefetch();
 
+  // ─── Image prefetch ────────────────────────────────────────────────
+  const { prefetchMany } = useImagePrefetch();
+
+  // Predictive prefetch: when displayed articles change (initial load or pagination),
+  // prefetch cover images for all non-priority items.
+  useEffect(() => {
+    if (dataSource.length === 0) {
+      return;
+    }
+
+    const urlsToPrefetch = dataSource
+      .slice(PRIORITY_COUNT)
+      .map(getPrefetchUrl)
+      .filter(Boolean) as string[];
+
+    if (urlsToPrefetch.length > 0) {
+      prefetchMany(urlsToPrefetch).catch(() => {});
+    }
+  }, [dataSource, prefetchMany]);
+
+  // Viewability-based prefetch: prefetch images as items become visible
+  const viewabilityConfig = React.useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 200,
+  }).current;
+
+  const onViewableItemsChanged = React.useRef(
+    ({
+      changed,
+    }: {
+      changed: Array<{ item: FrontendArticle; isViewable: boolean }>;
+    }) => {
+      const toPrefetch: string[] = [];
+      changed.forEach(({ item, isViewable }) => {
+        if (isViewable) {
+          const url = getPrefetchUrl(item);
+          if (url) {
+            toPrefetch.push(url);
+          }
+        }
+      });
+      if (toPrefetch.length > 0) {
+        prefetchMany(toPrefetch).catch(() => {});
+      }
+    },
+  ).current;
+
   const handleLoadMore = useCallback(() => {
     if (!isFetching && hasMore) {
       setPage(prev => prev + 1);
@@ -162,12 +238,13 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   // ─── Render item ────────────────────────────────────────────────────
 
   const renderItem = useCallback(
-    ({ item }: { item: FrontendArticle }) => (
+    ({ item, index }: { item: FrontendArticle; index: number }) => (
       <View style={styles.articleItem}>
         <ArticleCard
           article={item}
           onPress={handleArticlePress}
           onPrefetch={prefetchArticle}
+          priority={index < PRIORITY_COUNT}
           showExcerpt
         />
       </View>
@@ -270,6 +347,8 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
           ListFooterComponent={renderFooter}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={onViewableItemsChanged}
           showsVerticalScrollIndicator={false}
           initialNumToRender={8}
           maxToRenderPerBatch={10}

@@ -89,7 +89,7 @@ export function usePaginatedQuery<TData, TItem>(
   },
   params: Record<string, unknown>,
   config: UsePaginatedQueryConfig<TData, TItem>,
-): UsePaginatedQueryResult<TItem> {
+): UsePaginatedQueryResult<TItem, TData> {
   const {
     selectItems,
     selectTotalPages,

@@ -75,7 +75,11 @@ import {
 import { useNetworkQuality } from '@/lib/hooks/useNetworkQuality';
 import { useImagePrefetch } from '@/lib/hooks/useImagePrefetch';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
-import { getArticleImageUrl, isVideoUrl } from '@/lib/utils/image';
+import {
+  getArticleImageUrl,
+  getOptimizedImageUrl,
+  isVideoUrl,
+} from '@/lib/utils/image';
 import type { HomeTabScreenProps } from '@/navigation/types';
 import type {
   FrontendArticle,
@@ -125,11 +129,17 @@ function getPrefetchUrl(article: FrontendArticle): string | null {
     return null;
   }
 
-  return getArticleImageUrl({
+  const raw = getArticleImageUrl({
     images: article.meta?.images,
     coverImage: article.coverImage,
     size: 'medium',
   });
+  if (!raw) {return null;}
+
+  // Apply the same Cloudflare optimization that AppImage uses.
+  // Without this, the prefetched URL (raw medium.webp) differs from the
+  // display URL (cdn-cgi/image/...), causing SDWebImage/Glide native cache miss.
+  return getOptimizedImageUrl({ src: raw, width: 480, quality: 75 });
 }
 
 const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
