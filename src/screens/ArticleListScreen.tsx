@@ -6,7 +6,8 @@
  * - Pull-to-refresh
  * - Filter by category or tag via route params
  * - Sorting: newest first (default), popular, trending
- * - Skeleton loading state
+ * - MMKV cold-start cache: synchronous load on render, save on API response
+ * - Skeleton loading state (skipped when cached data available)
  * - Empty state when no articles match
  * - Error state with retry
  *
@@ -17,7 +18,7 @@
  * Data:
  * - getArticles with pagination params (RTK Query)
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -37,6 +38,7 @@ import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
+import { loadArticleList, saveArticleList } from '@/lib/cache/articleListCache';
 import type { HomeTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
@@ -55,10 +57,28 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
   const categorySlug = route.params?.categorySlug;
   const tagSlug = route.params?.tagSlug;
 
+  // Cache key: use categorySlug or tagSlug as the MMKV cache key
+  // This mirrors the HomeScreen pattern where categoryId identifies the cache entry
+  const cacheKey = categorySlug ?? tagSlug ?? null;
+
   // State
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // ─── MMKV cold-start cache ──────────────────────────────────────────
+  // Synchronous read from MMKV during render — no useEffect delay
+  const cachedData = useMemo(() => {
+    const entry = loadArticleList(lang, cacheKey);
+    if (entry && entry.items.length > 0) {
+      return entry;
+    }
+    return null;
+  }, [lang, cacheKey]);
+
+  // FlatList data source: accumulated articles from pagination, or cache fallback
+  const dataSource =
+    allArticles.length > 0 ? allArticles : (cachedData?.items ?? []);
 
   // Data fetching
   // _refreshKey is a cache-busting parameter: on refresh(), the key increments,
@@ -84,6 +104,15 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
       }
     }
   }, [data, page]);
+
+  // Save page 1 to MMKV cache when fresh data arrives from API
+  const prevDataRef = useRef(data);
+  React.useEffect(() => {
+    if (data?.items && page === 1 && data !== prevDataRef.current) {
+      saveArticleList(lang, cacheKey, data);
+      prevDataRef.current = data;
+    }
+  }, [data, lang, cacheKey, page]);
 
   // Reset when params or language change
   React.useEffect(() => {
@@ -203,9 +232,9 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
     );
   };
 
-  // ─── Loading state ──────────────────────────────────────────────────
+  // ─── Loading state (skip if cached data available) ────────────────
 
-  if (isLoading && page === 1) {
+  if (isLoading && page === 1 && dataSource.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
         <Header title={title} hideSearch hideSettings />
@@ -229,7 +258,7 @@ const ArticleListScreen: React.FC<HomeTabScreenProps<'ArticleList'>> = ({
         spinnerColor={colors.primary}
       >
         <FlatList
-          data={allArticles}
+          data={dataSource}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           contentContainerStyle={[

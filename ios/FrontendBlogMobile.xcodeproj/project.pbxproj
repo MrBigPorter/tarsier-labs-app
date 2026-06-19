@@ -222,13 +222,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -265,13 +261,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-FrontendBlogMobile/Pods-FrontendBlogMobile-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -316,67 +308,67 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-FrontendBlogMobile.debug.xcconfig */;
 			buildSettings = {
-							ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-							CLANG_ENABLE_MODULES = YES;
-							CODE_SIGN_STYLE = Manual;
-							CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
-							CURRENT_PROJECT_VERSION = 8;
-							DEVELOPMENT_TEAM = PK28T343BP;
-							DISPLAY_NAME = Tarsier;
-							ENABLE_BITCODE = NO;
-							INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
-							IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-							LD_RUNPATH_SEARCH_PATHS = (
-								"$(inherited)",
-								"@executable_path/Frameworks",
-							);
-							MARKETING_VERSION = 1.0;
-							OTHER_LDFLAGS = (
-								"$(inherited)",
-								"-ObjC",
-								"-lc++",
-							);
-							PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
-							PRODUCT_NAME = FrontendBlogMobile;
-							SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-							SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-							SWIFT_VERSION = 5.0;
-							TARGETED_DEVICE_FAMILY = "1,2";
-							VERSIONING_SYSTEM = "apple-generic";
-						};
-						name = Debug;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = PK28T343BP;
+				DISPLAY_NAME = Tarsier;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
+				PRODUCT_NAME = FrontendBlogMobile;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 5709B34CF0A7D63546082F79 /* Pods-FrontendBlogMobile.release.xcconfig */;
 			buildSettings = {
-							ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-							CLANG_ENABLE_MODULES = YES;
-							CODE_SIGN_STYLE = Manual;
-							CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
-							CURRENT_PROJECT_VERSION = 8;
-							DEVELOPMENT_TEAM = PK28T343BP;
-							DISPLAY_NAME = Tarsier;
-							INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
-							IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-							LD_RUNPATH_SEARCH_PATHS = (
-								"$(inherited)",
-								"@executable_path/Frameworks",
-							);
-							MARKETING_VERSION = 1.0;
-							OTHER_LDFLAGS = (
-								"$(inherited)",
-								"-ObjC",
-								"-lc++",
-							);
-							PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
-							PRODUCT_NAME = FrontendBlogMobile;
-							SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-							SWIFT_VERSION = 5.0;
-							TARGETED_DEVICE_FAMILY = "1,2";
-							VERSIONING_SYSTEM = "apple-generic";
-						};
-						name = Release;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = PK28T343BP;
+				DISPLAY_NAME = Tarsier;
+				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
+				PRODUCT_NAME = FrontendBlogMobile;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
 		};
 		54AD880DE8F4D7A2D2A73308 /* Release-Test */ = {
 			isa = XCBuildConfiguration;
@@ -470,33 +462,33 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A8A0A7250FA7E2AE37400F31 /* Pods-FrontendBlogMobile.release-test.xcconfig */;
 			buildSettings = {
-							ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-							CLANG_ENABLE_MODULES = YES;
-							CODE_SIGN_STYLE = Manual;
-							CODEPUSH_DEPLOYMENT_KEY = djKblDTcUfnteRkp2o53Rfg97dRuKdZ7nIL;
-							CURRENT_PROJECT_VERSION = 8;
-							DEVELOPMENT_TEAM = PK28T343BP;
-							DISPLAY_NAME = "Tarsier(Test)";
-							INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
-							IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-							LD_RUNPATH_SEARCH_PATHS = (
-								"$(inherited)",
-								"@executable_path/Frameworks",
-							);
-							MARKETING_VERSION = 1.0;
-							OTHER_LDFLAGS = (
-								"$(inherited)",
-								"-ObjC",
-								"-lc++",
-							);
-							PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test;
-							PRODUCT_NAME = FrontendBlogMobile;
-							SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-							SWIFT_VERSION = 5.0;
-							TARGETED_DEVICE_FAMILY = "1,2";
-							VERSIONING_SYSTEM = "apple-generic";
-						};
-						name = "Release-Test";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODEPUSH_DEPLOYMENT_KEY = djKblDTcUfnteRkp2o53Rfg97dRuKdZ7nIL;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = PK28T343BP;
+				DISPLAY_NAME = "Tarsier(Test)";
+				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test;
+				PRODUCT_NAME = FrontendBlogMobile;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "Release-Test";
 		};
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -971,101 +963,101 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = C7A0D9623B3A0D58920E3FB7 /* Pods-FrontendBlogMobile.release-prod.xcconfig */;
 			buildSettings = {
-							ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-							CLANG_ENABLE_MODULES = YES;
-							CODE_SIGN_STYLE = Manual;
-							CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
-							CURRENT_PROJECT_VERSION = 8;
-							DEVELOPMENT_TEAM = PK28T343BP;
-							DISPLAY_NAME = Tarsier;
-							INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
-							IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-							LD_RUNPATH_SEARCH_PATHS = (
-								"$(inherited)",
-								"@executable_path/Frameworks",
-							);
-							MARKETING_VERSION = 1.0;
-							OTHER_LDFLAGS = (
-								"$(inherited)",
-								"-ObjC",
-								"-lc++",
-							);
-							PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
-							PRODUCT_NAME = FrontendBlogMobile;
-							SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-							SWIFT_VERSION = 5.0;
-							TARGETED_DEVICE_FAMILY = "1,2";
-							VERSIONING_SYSTEM = "apple-generic";
-						};
-						name = "Release-Prod";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = PK28T343BP;
+				DISPLAY_NAME = Tarsier;
+				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
+				PRODUCT_NAME = FrontendBlogMobile;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "Release-Prod";
 		};
 		E99159C5A21A11B0D4B4F886 /* Debug-Test */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 641C926452DBC200C40E7532 /* Pods-FrontendBlogMobile.debug-test.xcconfig */;
 			buildSettings = {
-							ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-							CLANG_ENABLE_MODULES = YES;
-							CODE_SIGN_STYLE = Manual;
-							CODEPUSH_DEPLOYMENT_KEY = djKblDTcUfnteRkp2o53Rfg97dRuKdZ7nIL;
-							CURRENT_PROJECT_VERSION = 8;
-							DEVELOPMENT_TEAM = PK28T343BP;
-							DISPLAY_NAME = "Tarsier(Test)";
-							ENABLE_BITCODE = NO;
-							INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
-							IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-							LD_RUNPATH_SEARCH_PATHS = (
-								"$(inherited)",
-								"@executable_path/Frameworks",
-							);
-							MARKETING_VERSION = 1.0;
-							OTHER_LDFLAGS = (
-								"$(inherited)",
-								"-ObjC",
-								"-lc++",
-							);
-							PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test;
-							PRODUCT_NAME = FrontendBlogMobile;
-							SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-							SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-							SWIFT_VERSION = 5.0;
-							TARGETED_DEVICE_FAMILY = "1,2";
-							VERSIONING_SYSTEM = "apple-generic";
-						};
-						name = "Debug-Test";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODEPUSH_DEPLOYMENT_KEY = djKblDTcUfnteRkp2o53Rfg97dRuKdZ7nIL;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = PK28T343BP;
+				DISPLAY_NAME = "Tarsier(Test)";
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs.test;
+				PRODUCT_NAME = FrontendBlogMobile;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "Debug-Test";
 		};
 		FD22A2E4E3A91EEC63E4776D /* Debug-Prod */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 988E3BAC7A76A884447A3367 /* Pods-FrontendBlogMobile.debug-prod.xcconfig */;
 			buildSettings = {
-							ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-							CLANG_ENABLE_MODULES = YES;
-							CODE_SIGN_STYLE = Manual;
-							CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
-							CURRENT_PROJECT_VERSION = 8;
-							DEVELOPMENT_TEAM = PK28T343BP;
-							DISPLAY_NAME = Tarsier;
-							ENABLE_BITCODE = NO;
-							INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
-							IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-							LD_RUNPATH_SEARCH_PATHS = (
-								"$(inherited)",
-								"@executable_path/Frameworks",
-							);
-							MARKETING_VERSION = 1.0;
-							OTHER_LDFLAGS = (
-								"$(inherited)",
-								"-ObjC",
-								"-lc++",
-							);
-							PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
-							PRODUCT_NAME = FrontendBlogMobile;
-							SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-							SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-							SWIFT_VERSION = 5.0;
-							TARGETED_DEVICE_FAMILY = "1,2";
-							VERSIONING_SYSTEM = "apple-generic";
-						};
-						name = "Debug-Prod";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODEPUSH_DEPLOYMENT_KEY = nTlnVVMLlBJ73y39q6g9xkJo5rTSKdZ7nIL;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = PK28T343BP;
+				DISPLAY_NAME = Tarsier;
+				ENABLE_BITCODE = NO;
+				INFOPLIST_FILE = FrontendBlogMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tarsier.labs;
+				PRODUCT_NAME = FrontendBlogMobile;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = "Debug-Prod";
 		};
 /* End XCBuildConfiguration section */
 

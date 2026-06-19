@@ -20,6 +20,7 @@ import { store } from '@/store';
 import { clearCache } from '@/store/slices/bookmarksSlice';
 import { logout } from '@/store/slices/authSlice';
 import { authApi } from '@/api/endpoints/auth';
+import { clearAllArticleCache } from '@/lib/cache/articleListCache';
 
 /** Response shape from the server-side clear data endpoint */
 export interface ClearDataResult {
@@ -91,6 +92,13 @@ export async function clearAppCache(options?: {
     store.dispatch(clearCache());
   } catch (error) {
     console.warn('[clearAppCache] Redux cache clear failed:', error);
+  }
+
+  // ── 3.5 Article list cache (MMKV) ──────────────────────────────
+  try {
+    clearAllArticleCache();
+  } catch (error) {
+    console.warn('[clearAppCache] Article list cache clear failed:', error);
   }
 
   // ── 4. MMKV storage (auth tokens, settings, i18n, cached data) ──

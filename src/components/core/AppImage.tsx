@@ -55,11 +55,23 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import FastImage from 'react-native-fast-image';
+import {
+  useSharedValue,
+  withTiming,
+  createAnimatedComponent,
+} from 'react-native-reanimated';
 import { Blurhash } from 'react-native-blurhash';
 import SvgIcon from '@/components/core/SvgIcon';
 import { getOptimizedImageUrl, getArticleImageUrl } from '@/lib/utils/image';
 import type { ArticleMeta } from '@/types/frontend-blog';
 import type { NetworkQuality } from '@/lib/hooks/useNetworkQuality';
+
+// ─── Animated FastImage wrapper ─────────────────────────────────────────
+// Reanimated's createAnimatedComponent is required for FastImage because
+// RN's Animated.createAnimatedComponent + useNativeDriver doesn't work
+// with third-party native components.
+const AnimatedFastImage = createAnimatedComponent(FastImage);
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -182,7 +194,10 @@ export function AppImage({
   // These are refs (not state) to avoid re-renders — Animated drives
   // the native animation thread directly via useNativeDriver.
 
-  const imageOpacity = useRef(new Animated.Value(blurhash ? 0 : 1)).current;
+  // imageOpacity uses Reanimated shared value so it works with FastImage
+  // on the UI thread. placeholderOpacity keeps RN Animated.Value for the
+  // placeholder layers (Animated.View) — no third-party component needed.
+  const imageOpacity = useSharedValue(blurhash ? 0 : 1);
   const placeholderOpacity = useRef(new Animated.Value(1)).current;
 
   /**
@@ -195,11 +210,11 @@ export function AppImage({
   useEffect(() => {
     if (blurhash) {
       // New blurhash available — show placeholder, hide image
-      imageOpacity.setValue(0);
+      imageOpacity.value = 0;
       placeholderOpacity.setValue(1);
     } else {
       // No blurhash — image visible immediately, no placeholder needed
-      imageOpacity.setValue(1);
+      imageOpacity.value = 1;
       placeholderOpacity.setValue(0);
     }
     // Reset error state for new image
@@ -224,18 +239,16 @@ export function AppImage({
    * cause a "both hidden" frame.
    */
   const handleLoad = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(imageOpacity, {
-        toValue: 1,
-        duration: CROSS_FADE_DURATION_MS,
-        useNativeDriver: true,
-      }),
-      Animated.timing(placeholderOpacity, {
-        toValue: 0,
-        duration: CROSS_FADE_DURATION_MS,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Cross-fade: image fades in (Reanimated, UI thread) while
+    // placeholder fades out (RN Animated, native driver).
+    // These run concurrently — no need for Animated.parallel since
+    // both are non-blocking.
+    imageOpacity.value = withTiming(1, { duration: CROSS_FADE_DURATION_MS });
+    Animated.timing(placeholderOpacity, {
+      toValue: 0,
+      duration: CROSS_FADE_DURATION_MS,
+      useNativeDriver: true,
+    }).start();
     onLoad?.();
   }, [imageOpacity, placeholderOpacity, onLoad]);
 
@@ -281,14 +294,20 @@ export function AppImage({
            Always rendered. Opacity animated 0→1 during cross-fade.
            Hidden behind blurhash/skeleton until animation completes. */}
       {!hasError && (
-        <Animated.Image
+        <AnimatedFastImage
           source={{ uri: optimizedUrl }}
-          // Use priority hint for LCP images
-          {...(priority ? { accessibilityHint: 'priority-image' } : {})}
-          style={[style as ImageStyle, { opacity: imageOpacity }]}
+          // FastImage native priority support (replaces RN accessibilityHint hack)
+          priority={
+            priority ? FastImage.priority.high : FastImage.priority.normal
+          }
+          // FastImage.resizeMode.cover is the enum value
+          resizeMode={'cover'}
+          // style uses Reanimated shared value for opacity; cast needed because
+          // Reanimated's AnimatedStyle<ImageStyle> differs from RN ImageStyle
+          style={[{ opacity: imageOpacity }, style]}
           onLoad={handleLoad}
           onError={handleError}
-          {...imageProps}
+          {...(imageProps as any)}
         />
       )}
 

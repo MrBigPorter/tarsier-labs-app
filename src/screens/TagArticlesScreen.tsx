@@ -9,8 +9,9 @@
  * - tagName: string (optional, for display)
  *
  * Data: useGetTagBySlugQuery
+ * Cache: MMKV cold-start cache via tagSlug key
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -30,6 +31,7 @@ import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import { loadArticleList, saveArticleList } from '@/lib/cache/articleListCache';
 import type { TagsTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
@@ -44,9 +46,26 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
   const lang = useAppLanguage();
   const prevLangRef = React.useRef(lang);
 
+  // Cache key: use tagSlug as the MMKV cache identifier
+  const cacheKey = tagSlug;
+
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // ─── MMKV cold-start cache ──────────────────────────────────────────
+  // Synchronous read from MMKV during render — no useEffect delay
+  const cachedData = useMemo(() => {
+    const entry = loadArticleList(lang, cacheKey);
+    if (entry && entry.items.length > 0) {
+      return entry;
+    }
+    return null;
+  }, [lang, cacheKey]);
+
+  // FlatList data source: accumulated articles from pagination, or cache fallback
+  const dataSource =
+    allArticles.length > 0 ? allArticles : (cachedData?.items ?? []);
 
   const {
     data: tagData,
@@ -93,6 +112,20 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
       }
     }
   }, [tagData, page]);
+
+  // Save page 1 to MMKV cache when fresh data arrives from API
+  const prevDataRef = useRef(tagData);
+  React.useEffect(() => {
+    // tagData.articles is the FrontendPaginatedResponse that saveArticleList expects
+    if (
+      tagData?.articles?.items &&
+      page === 1 &&
+      tagData !== prevDataRef.current
+    ) {
+      saveArticleList(lang, cacheKey, tagData.articles);
+      prevDataRef.current = tagData;
+    }
+  }, [tagData, lang, cacheKey, page]);
 
   const tag = tagData
     ? {
@@ -196,9 +229,9 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
     </View>
   );
 
-  // ─── Loading state ──────────────────────────────────────────────────
+  // ─── Loading state (skip if cached data available) ────────────────
 
-  if (isLoading && page === 1) {
+  if (isLoading && page === 1 && dataSource.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
         <Header
@@ -227,7 +260,7 @@ const TagArticlesScreen: React.FC<TagsTabScreenProps<'TagArticles'>> = ({
         spinnerColor={colors.primary}
       >
         <FlatList
-          data={allArticles}
+          data={dataSource}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           contentContainerStyle={[

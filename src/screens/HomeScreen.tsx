@@ -24,9 +24,28 @@
  * - Priority: first 2 items get priority prop for LCP optimization
  * - Network quality: useNetworkQuality at screen level, passes down to ArticleCard
  */
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
 import { usePaginatedQuery } from '@/lib/hooks/usePaginatedQuery';
-import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Platform,
+  AppState,
+  AppStateStatus,
+} from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import {
+  loadArticleList,
+  saveArticleList,
+  clearLanguageCache,
+} from '@/lib/cache/articleListCache';
 import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useAppSelector, useAppDispatch } from '@/store';
 import Animated, {
@@ -58,7 +77,10 @@ import { useImagePrefetch } from '@/lib/hooks/useImagePrefetch';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import { getArticleImageUrl, isVideoUrl } from '@/lib/utils/image';
 import type { HomeTabScreenProps } from '@/navigation/types';
-import type { FrontendArticle } from '@/types/frontend-blog';
+import type {
+  FrontendArticle,
+  FrontendPaginatedResponse,
+} from '@/types/frontend-blog';
 
 const PAGE_SIZE = 10;
 const DEBOUNCE_MS = 300;
@@ -150,6 +172,23 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
 
   const lang = useAppLanguage();
 
+  // ─── MMKV Cache for cold start display ──────────────────────────────
+  // Synchronous initialization: loadArticleList() is a sync MMKV read (~0.01ms),
+  // so useMemo reads the cache directly during render — no 1-frame skeleton flash.
+  const cachedData = useMemo(() => {
+    const entry = loadArticleList(lang, selectedCategoryId);
+    if (entry && entry.items.length > 0) {
+      return {
+        items: entry.items,
+        total: entry.total,
+        totalPages: entry.totalPages,
+        page: 1,
+        pageSize: entry.pageSize,
+      };
+    }
+    return null;
+  }, [lang, selectedCategoryId]);
+
   // ─── Paginated data fetching (replaces manual allArticles + page) ────
   const queryParams = selectedCategoryId
     ? { categoryId: selectedCategoryId, lang }
@@ -163,22 +202,76 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     hasMore,
     loadMore,
     refresh,
+    rawData,
   } = usePaginatedQuery(useGetArticlesQuery, queryParams, {
     pageSize: PAGE_SIZE,
     selectItems: data => data.items,
     selectTotalPages: data => data.totalPages,
+    initialCacheData: cachedData ?? undefined,
   });
+
+  // ─── Save API response to MMKV cache ────────────────────────────────
+  // Only saves when real API data arrives (not the cache seed).
+  // This keeps the cache fresh after every successful fetch.
+  const prevRawDataRef = useRef(rawData);
+  useEffect(() => {
+    if (rawData && rawData !== prevRawDataRef.current) {
+      saveArticleList(
+        lang,
+        selectedCategoryId,
+        rawData as FrontendPaginatedResponse<FrontendArticle>,
+      );
+    }
+    prevRawDataRef.current = rawData;
+  }, [rawData, lang, selectedCategoryId]);
 
   // ─── Track language changes — reset to page 1 ────────────────────────
   const prevLangRef = useRef(lang);
 
   useEffect(() => {
     if (prevLangRef.current !== lang) {
+      // Clear cached data for the previous language
+      clearLanguageCache(prevLangRef.current);
       prevLangRef.current = lang;
       setSelectedCategoryId(null);
       refresh();
     }
   }, [lang, refresh]);
+
+  // ─── AppState listener: refresh on foreground ──────────────────────
+  // When user switches back to the app, immediately refresh to get latest data.
+  // This minimizes the window where cached data could be stale.
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextState: AppStateStatus) => {
+        if (
+          appStateRef.current.match(/inactive|background/) &&
+          nextState === 'active'
+        ) {
+          refresh();
+        }
+        appStateRef.current = nextState;
+      },
+    );
+    return () => {
+      subscription.remove();
+    };
+  }, [refresh]);
+
+  // ─── NetInfo listener: refresh on connectivity restore ────────────
+  // When the device regains network access, refresh to update stale cache.
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected && state.isInternetReachable !== false) {
+        refresh();
+      }
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [refresh]);
 
   // ─── Auto-clear manual refreshing flag when fetch completes ────────
   // Only clear when isFetching transitions to false — not on initial mount.
@@ -422,8 +515,11 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   // ─── Empty / error states ─────────────────────────────────────────
 
   const renderEmpty = useCallback(() => {
-    // Loading state: skeleton (only during initial load, no items yet)
-    if (isLoading && displayArticles.length === 0) {
+    // Loading state: skeleton only when there's NO cached data to display.
+    // If cachedData exists, we skip the skeleton entirely — the FlatList
+    // renders the cached items immediately (via initialCacheData), giving
+    // the user instant content instead of a loading placeholder.
+    if (isLoading && displayArticles.length === 0 && !cachedData) {
       return (
         <View style={styles.sectionContainer}>
           <ArticleListSkeleton count={5} />
@@ -474,6 +570,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     t,
     refresh,
     selectedCategoryId,
+    cachedData,
   ]);
 
   // ─── Main render ─────────────────────────────────────────────────

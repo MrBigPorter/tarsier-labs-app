@@ -1,10 +1,12 @@
 /**
  * useImagePrefetch — Image prefetching hook
  *
- * Wraps React Native's built-in `Image.prefetch()` with:
- * - Batch prefetch (parallel, auto-skip null/undefined)
- * - Dedup via internal Set (avoids re-prefetching same URL)
- * - Loading status tracking
+ * Uses FastImage.preload() for native disk-level caching via
+ * SDWebImage (iOS) / Glide (Android) with LRU auto-eviction.
+ *
+ * Note: FastImage.preload() is fire-and-forget (returns void).
+ * Unlike RN's Image.prefetch() which returns Promise<boolean>,
+ * we treat any non-throwing call as success.
  *
  * Usage:
  * ```tsx
@@ -19,7 +21,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { Image } from 'react-native';
+import FastImage from 'react-native-fast-image';
 
 const LOG_PREFIX = '[useImagePrefetch]';
 
@@ -35,7 +37,11 @@ export interface UseImagePrefetchReturn {
 }
 
 /**
- * Hook wrapping RN's Image.prefetch() with dedup and batch support.
+ * Hook wrapping FastImage.preload() with dedup and batch support.
+ *
+ * FastImage.preload() is fire-and-forget — it returns void and caches
+ * images on the native side (SDWebImage/Glide LRU cache). This differs
+ * from RN's Image.prefetch() which returns Promise<boolean>.
  *
  * Uses a ref-based Set for O(1) dedup across renders.
  * The `prefetched` set is exposed as readonly for consumers to check.
@@ -53,11 +59,11 @@ export function useImagePrefetch(): UseImagePrefetchReturn {
 
     isPrefetchingRef.current = true;
     try {
-      const result = await Image.prefetch(url);
-      if (result) {
-        prefetchedRef.current.add(url);
-      }
-      return result;
+      // FastImage.preload() is fire-and-forget — caches to native disk
+      // No boolean return to check, so we optimistically mark as prefetched.
+      FastImage.preload([{ uri: url }]);
+      prefetchedRef.current.add(url);
+      return true;
     } catch (error) {
       console.warn(
         `${LOG_PREFIX} prefetch failed for "${url.slice(0, 60)}"`,
@@ -86,20 +92,13 @@ export function useImagePrefetch(): UseImagePrefetchReturn {
 
       isPrefetchingRef.current = true;
       try {
-        const results = await Promise.allSettled(
-          newUrls.map(url => Image.prefetch(url)),
-        );
-
-        const outcomes: boolean[] = [];
-        results.forEach((result, i) => {
-          if (result.status === 'fulfilled' && result.value) {
-            prefetchedRef.current.add(newUrls[i]);
-            outcomes.push(true);
-          } else {
-            outcomes.push(false);
-          }
-        });
-        return outcomes;
+        // FastImage.preload() handles parallel preloading natively
+        FastImage.preload(newUrls.map(url => ({ uri: url })));
+        newUrls.forEach(url => prefetchedRef.current.add(url));
+        return newUrls.map(() => true);
+      } catch (error) {
+        console.warn(`${LOG_PREFIX} batch prefetch failed`, error);
+        return newUrls.map(() => false);
       } finally {
         isPrefetchingRef.current = false;
       }

@@ -9,8 +9,9 @@
  * - categoryName: string (optional, for display)
  *
  * Data: useGetCategoryBySlugQuery + articles filtered via route param
+ * Cache: MMKV cold-start cache via categorySlug key
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   View,
@@ -30,6 +31,7 @@ import { ArticleListSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
+import { loadArticleList, saveArticleList } from '@/lib/cache/articleListCache';
 import type { CategoriesTabScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
@@ -42,9 +44,26 @@ const CategoryArticlesScreen: React.FC<
   const { t } = useTranslation();
   const lang = useAppLanguage();
 
+  // Cache key: use categorySlug as the MMKV cache identifier
+  const cacheKey = categorySlug;
+
   const [page, setPage] = useState(1);
   const [allArticles, setAllArticles] = useState<FrontendArticle[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // ─── MMKV cold-start cache ──────────────────────────────────────────
+  // Synchronous read from MMKV during render — no useEffect delay
+  const cachedData = useMemo(() => {
+    const entry = loadArticleList(lang, cacheKey);
+    if (entry && entry.items.length > 0) {
+      return entry;
+    }
+    return null;
+  }, [lang, cacheKey]);
+
+  // FlatList data source: accumulated articles from pagination, or cache fallback
+  const dataSource =
+    allArticles.length > 0 ? allArticles : (cachedData?.items ?? []);
 
   const {
     data: categoryData,
@@ -93,6 +112,20 @@ const CategoryArticlesScreen: React.FC<
       }
     }
   }, [categoryData, page]);
+
+  // Save page 1 to MMKV cache when fresh data arrives from API
+  const prevDataRef = useRef(categoryData);
+  React.useEffect(() => {
+    // categoryData.articles is the FrontendPaginatedResponse that saveArticleList expects
+    if (
+      categoryData?.articles?.items &&
+      page === 1 &&
+      categoryData !== prevDataRef.current
+    ) {
+      saveArticleList(lang, cacheKey, categoryData.articles);
+      prevDataRef.current = categoryData;
+    }
+  }, [categoryData, lang, cacheKey, page]);
 
   const category = categoryData
     ? {
@@ -219,9 +252,9 @@ const CategoryArticlesScreen: React.FC<
     </View>
   );
 
-  // ─── Loading state ──────────────────────────────────────────────────
+  // ─── Loading state (skip if cached data available) ────────────────
 
-  if (isLoading && page === 1) {
+  if (isLoading && page === 1 && dataSource.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
         <Header
@@ -250,7 +283,7 @@ const CategoryArticlesScreen: React.FC<
         spinnerColor={colors.primary}
       >
         <FlatList
-          data={allArticles}
+          data={dataSource}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           contentContainerStyle={[

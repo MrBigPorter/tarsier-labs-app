@@ -496,20 +496,44 @@ codepush-keys: ## List all deployment keys (requires logged in)
 	$(CODEPUSH_STANDALONE_CMD) deployment ls Tarsier-android -k
 
 codepush-release-staging: ## Release OTA update to Staging (both platforms)
-	@read -p "📝 Enter OTA description: " msg; \
+	@printf "📝 Enter OTA description: "; \
+	read msg; \
 	echo "📦 Releasing to TarsierTest-ios Staging..." && \
-	$(CODEPUSH_STANDALONE_CMD) release-react TarsierTest-ios ios --deploymentName Staging --description "$$msg" --plistFile ios/FrontendBlogMobile/Info.plist --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj && \
+	$(CODEPUSH_STANDALONE_CMD) release-react TarsierTest-ios ios --deploymentName Staging --description "$$msg" --plistFile ios/FrontendBlogMobile/Info.plist --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj; \
+	IOS_EXIT=$$?; \
 	echo "📦 Releasing to TarsierTest-android Staging..." && \
-	$(CODEPUSH_STANDALONE_CMD) release-react TarsierTest-android android --deploymentName Staging --description "$$msg" && \
-	echo "✅ Staging OTA update sent"
+	rm -rf /var/folders/7w/zsgmqn7549dff51cd3mq9hqr0000gn/T/CodePush 2>/dev/null; \
+	$(CODEPUSH_STANDALONE_CMD) release-react TarsierTest-android android --deploymentName Staging --description "$$msg"; \
+	ANDROID_EXIT=$$?; \
+	if [ $$IOS_EXIT -eq 0 ] && [ $$ANDROID_EXIT -eq 0 ]; then \
+		echo "✅ Staging OTA update sent"; \
+	elif [ $$IOS_EXIT -ne 0 ]; then \
+		echo "⚠️  iOS release failed (exit $$IOS_EXIT)"; \
+	fi; \
+	if [ $$ANDROID_EXIT -ne 0 ]; then \
+		echo "⚠️  Android release failed (exit $$ANDROID_EXIT)"; \
+		exit $$ANDROID_EXIT; \
+	fi
 
 codepush-release-production: ## Release OTA update to Production (both platforms)
-	@read -p "📝 Enter OTA description: " msg; \
+	@printf "📝 Enter OTA description: "; \
+	read msg; \
 	echo "📦 Releasing to Tarsier-ios Production..." && \
-	$(CODEPUSH_STANDALONE_CMD) release-react Tarsier-ios ios --deploymentName Production --description "$$msg" --plistFile ios/FrontendBlogMobile/Info.plist --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj && \
+	$(CODEPUSH_STANDALONE_CMD) release-react Tarsier-ios ios --deploymentName Production --description "$$msg" --plistFile ios/FrontendBlogMobile/Info.plist --xcodeProjectFile ios/FrontendBlogMobile.xcodeproj; \
+	IOS_EXIT=$$?; \
 	echo "📦 Releasing to Tarsier-android Production..." && \
-	$(CODEPUSH_STANDALONE_CMD) release-react Tarsier-android android --deploymentName Production --description "$$msg" && \
-	echo "✅ Production OTA update sent"
+	rm -rf /var/folders/7w/zsgmqn7549dff51cd3mq9hqr0000gn/T/CodePush 2>/dev/null; \
+	$(CODEPUSH_STANDALONE_CMD) release-react Tarsier-android android --deploymentName Production --description "$$msg"; \
+	ANDROID_EXIT=$$?; \
+	if [ $$IOS_EXIT -eq 0 ] && [ $$ANDROID_EXIT -eq 0 ]; then \
+		echo "✅ Production OTA update sent"; \
+	elif [ $$IOS_EXIT -ne 0 ]; then \
+		echo "⚠️  iOS release failed (exit $$IOS_EXIT)"; \
+	fi; \
+	if [ $$ANDROID_EXIT -ne 0 ]; then \
+		echo "⚠️  Android release failed (exit $$ANDROID_EXIT)"; \
+		exit $$ANDROID_EXIT; \
+	fi
 
 codepush-promote: ## Promote Staging → Production for all 4 apps
 	$(CODEPUSH_STANDALONE_CMD) promote TarsierTest-ios Staging Production

@@ -32,9 +32,15 @@ export interface UsePaginatedQueryConfig<TData, TItem> {
   selectTotalPages: (data: TData) => number;
   /** Optional: extract total item count from the query response */
   selectTotal?: (data: TData) => number;
+  /**
+   * Optional initial/cache data to display while the real API call is in flight.
+   * Used for cold-start display: show MMKV cached data immediately, then
+   * silently replace with fresh API data when it arrives.
+   */
+  initialCacheData?: TData;
 }
 
-export interface UsePaginatedQueryResult<TItem> {
+export interface UsePaginatedQueryResult<TItem, TData = unknown> {
   /** Accumulated items across all loaded pages */
   items: TItem[];
   /** Total item count from server (if selectTotal provided) */
@@ -55,6 +61,8 @@ export interface UsePaginatedQueryResult<TItem> {
   loadMore: () => void;
   /** Refresh from page 1 — resets accumulation */
   refresh: () => void;
+  /** Raw API response data (undefined when showing initialCacheData seed) */
+  rawData?: TData;
 }
 
 /**
@@ -82,7 +90,13 @@ export function usePaginatedQuery<TData, TItem>(
   params: Record<string, unknown>,
   config: UsePaginatedQueryConfig<TData, TItem>,
 ): UsePaginatedQueryResult<TItem> {
-  const { selectItems, selectTotalPages, selectTotal, pageSize = 10 } = config;
+  const {
+    selectItems,
+    selectTotalPages,
+    selectTotal,
+    pageSize = 10,
+    initialCacheData,
+  } = config;
 
   // ─── State ───────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
@@ -191,7 +205,9 @@ export function usePaginatedQuery<TData, TItem>(
     effectivePage === 1
       ? data
         ? selectItems(data)
-        : []
+        : initialCacheData
+          ? selectItems(initialCacheData)
+          : []
       : paramsChanged
         ? []
         : allItems;
@@ -207,5 +223,6 @@ export function usePaginatedQuery<TData, TItem>(
     hasMore,
     loadMore,
     refresh,
+    rawData: data,
   };
 }
