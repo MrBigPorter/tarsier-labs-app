@@ -7,8 +7,12 @@
  * Data: useGetCategoriesQuery (RTK Query)
  *
  * States: Loading → skeleton grid | Error → retry
+ *
+ * Cache: MMKV-backed SWR pattern — cached categories display instantly on
+ * cold start and tab switch, while a silent background refresh fetches the
+ * latest data. Cached data is shown during the 1-frame loading gap.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import PullToRefreshWrapper from '@/components/core/PullToRefreshWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +25,10 @@ import Header from '@/components/layout/Header';
 import { CategoryCardSkeleton } from '@/components/core/Skeleton';
 import { EmptyContent } from '@/components/core/EmptyContent';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import {
+  loadCategoryCache,
+  saveCategoryCache,
+} from '@/lib/cache/categoryCache';
 import type { CategoriesTabScreenProps } from '@/navigation/types';
 import type { FrontendCategory } from '@/types/frontend-blog';
 
@@ -41,6 +49,23 @@ const CategoryListScreen: React.FC<
     isError,
     refetch,
   } = useGetCategoriesQuery(lang);
+
+  // ─── MMKV Cache for cold start & tab switch ──────────────────────────
+  // Synchronous MMKV read (~0.01ms) via useMemo — no 1-frame skeleton flash.
+  const cachedCategoriesEntry = useMemo(() => loadCategoryCache(lang), [lang]);
+  const cachedCategories = cachedCategoriesEntry?.categories ?? null;
+
+  // Use cached data as fallback while API is loading (SWR pattern)
+  const displayCategories = categories ?? cachedCategories;
+
+  // Save API response to MMKV cache when fresh data arrives
+  const prevCategoriesRef = React.useRef(categories);
+  useEffect(() => {
+    if (categories && categories !== prevCategoriesRef.current) {
+      saveCategoryCache(lang, categories);
+    }
+    prevCategoriesRef.current = categories;
+  }, [categories, lang]);
 
   // Re-fetch when language changes
   React.useEffect(() => {
@@ -87,7 +112,7 @@ const CategoryListScreen: React.FC<
     [handleCategoryPress],
   );
 
-  if (isLoading && !categories) {
+  if (isLoading && !displayCategories) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
         <Header title="Categories" hideSearch hideSettings showBack={false} />
@@ -111,7 +136,7 @@ const CategoryListScreen: React.FC<
         spinnerColor={colors.primary}
       >
         <FlatList
-          data={categories || []}
+          data={displayCategories || []}
           renderItem={renderItem}
           keyExtractor={item => item.id}
           contentContainerStyle={[
@@ -119,14 +144,14 @@ const CategoryListScreen: React.FC<
             { paddingBottom: insets.bottom + spacing.xl },
           ]}
           ListEmptyComponent={
-            isError && !categories ? (
+            isError && !displayCategories ? (
               <EmptyContent
                 icon="⚠️"
                 title={t('categories.error.loadFailed')}
                 actionLabel={t('common.retry')}
                 onAction={refetch}
               />
-            ) : !categories || categories.length === 0 ? (
+            ) : !displayCategories || displayCategories.length === 0 ? (
               <EmptyLogoContent
                 title={t('categories.empty')}
                 description={t('categories.emptyState.description')}

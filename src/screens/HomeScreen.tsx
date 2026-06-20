@@ -72,8 +72,13 @@ import {
   useAddBookmarkMutation,
   useRemoveBookmarkMutation,
 } from '@/api/endpoints/bookmarks';
-import { useNetworkQuality } from '@/lib/hooks/useNetworkQuality';
+import { useNetworkQualityContext } from '@/lib/hooks/NetworkQualityContext';
 import { useImagePrefetch } from '@/lib/hooks/useImagePrefetch';
+import {
+  recordOffline,
+  recordOnline,
+  useScreenRenderSpan,
+} from '@/lib/monitoring';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
 import {
   getArticleImageUrl,
@@ -108,6 +113,21 @@ const TAB_BAR_HEIGHT = 80;
 const PRIORITY_COUNT = 2;
 
 /**
+ * Number of initial items that get staggered image loading (OOM mitigation).
+ *
+ * Items with index < STAGGER_BATCH_SIZE are loaded sequentially with a
+ * 120ms interval between each (`index * 120ms` delay). This spreads the
+ * ~2MB-per-image PNG decode memory across time instead of all at once.
+ *
+ * Items with index >= STAGGER_BATCH_SIZE load immediately (no stagger).
+ * These are scroll-loaded items that render one-at-a-time via FlatList
+ * virtualization, which already limits concurrency naturally.
+ *
+ * See: plans/oom-image-png-memory-cascade.md
+ */
+const STAGGER_BATCH_SIZE = 10;
+
+/**
  * Bundled context hook to prevent hooks order shift.
  * useSafeAreaInsets can have varying internal hook counts under Fabric/New Architecture,
  * which would shift component-level hook positions. Bundling isolates the instability.
@@ -134,7 +154,9 @@ function getPrefetchUrl(article: FrontendArticle): string | null {
     coverImage: article.coverImage,
     size: 'medium',
   });
-  if (!raw) {return null;}
+  if (!raw) {
+    return null;
+  }
 
   // Apply the same Cloudflare optimization that AppImage uses.
   // Without this, the prefetched URL (raw medium.webp) differs from the
@@ -144,6 +166,9 @@ function getPrefetchUrl(article: FrontendArticle): string | null {
 
 const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   const { t } = useTranslation();
+  // Screen TTID — creates a Sentry Tracing child span measuring time from
+  // navigation start to first rendered frame (P1).
+  useScreenRenderSpan('HomeScreen');
   const { insets, colors, tabBarTranslateY, lastScrollY } =
     useHomeScreenContext();
 
@@ -156,7 +181,7 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
   const [removeBookmark] = useRemoveBookmarkMutation();
 
   // ─── Network quality (screen-level, passes down to ArticleCard) ────
-  const networkQuality = useNetworkQuality();
+  const networkQuality = useNetworkQualityContext();
   // Ref to prevent networkQuality changes from recreating renderArticleItem,
   // which would cascade all visible ArticleCards to re-render.
   // The ref always has the latest value, consumed during render via React.memo.
@@ -270,12 +295,15 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
     };
   }, [refresh]);
 
-  // ─── NetInfo listener: refresh on connectivity restore ────────────
+  // ─── NetInfo listener: refresh + network monitoring ───────────────
   // When the device regains network access, refresh to update stale cache.
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
       if (state.isConnected && state.isInternetReachable !== false) {
+        recordOnline();
         refresh();
+      } else {
+        recordOffline();
       }
     });
     return () => {
@@ -498,6 +526,13 @@ const HomeScreen: React.FC<HomeTabScreenProps<'Home'>> = ({ navigation }) => {
           // latest quality without causing dependency changes.
           networkQuality={networkQualityRef.current}
           priority={index < PRIORITY_COUNT}
+          // Stagger load initial items (index < STAGGER_BATCH_SIZE) to
+          // spread concurrent PNG decode memory across time instead of
+          // all at once. Items 0-9 each wait index * 120ms before starting
+          // the HTTP request. Items 10+ (scroll-loaded via pagination)
+          // load immediately since FlatList already limits concurrency.
+          // See: plans/oom-image-png-memory-cascade.md
+          staggerLoadIndex={index < STAGGER_BATCH_SIZE ? index : 0}
         />
       </View>
     ),

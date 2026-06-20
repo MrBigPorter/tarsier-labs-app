@@ -37,12 +37,16 @@ import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
 import SvgIcon from '@/components/core/SvgIcon';
 import { useArticlePrefetch } from '@/lib/hooks/useArticlePrefetch';
+import { useScreenRenderSpan } from '@/lib/monitoring';
 import type { RootStackScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
 
 const SearchScreen: React.FC<RootStackScreenProps<'Search'>> = ({
   navigation,
 }) => {
+  // Start a Sentry Tracing span for screen initial render (P1 — Screen TTID).
+  useScreenRenderSpan('SearchScreen');
+
   const insets = useSafeAreaInsets();
   const colors = useModeColors();
   const { t } = useTranslation();

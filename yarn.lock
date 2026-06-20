@@ -4118,6 +4118,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"babel-plugin-transform-inline-environment-variables@npm:^0.4.4":
+  version: 0.4.4
+  resolution: "babel-plugin-transform-inline-environment-variables@npm:0.4.4"
+  checksum: 10c0/f1bb9d57e83184a8413939032c570a286447186e6b78fdc0d3cade4dcab51955d3b549d2a0af4f866b172221d287d67a9f4e6d742de7df4c411fe085e20aadeb
+  languageName: node
+  linkType: hard
+
 "babel-preset-current-node-syntax@npm:^1.0.0":
   version: 1.2.0
   resolution: "babel-preset-current-node-syntax@npm:1.2.0"
@@ -6826,6 +6833,7 @@ __metadata:
     "@types/utf8": "npm:^3"
     "@welldone-software/why-did-you-render": "npm:^10.0.1"
     babel-plugin-module-resolver: "npm:^5.0.3"
+    babel-plugin-transform-inline-environment-variables: "npm:^0.4.4"
     base-64: "npm:^1.0.0"
     detox: "npm:^20"
     eslint: "npm:8.57.1"

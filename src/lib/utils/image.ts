@@ -12,6 +12,8 @@
  * - `isVideoUrl()` — Detects video URLs by file extension
  */
 
+import { Platform } from 'react-native';
+
 // ─── Constants ────────────────────────────────────────────────────────────
 
 /** Default quality for Cloudflare image optimization */
@@ -117,9 +119,12 @@ export function getOptimizedImageUrl({
     // Assemble Cloudflare Image Resizing parameters
     // - width: requested width in pixels
     // - quality: 75 (default, accepted by CDN)
-    // - f=auto: automatic format selection (AVIF > WebP > JPEG)
+    // - format: WebP on Android (native support), PNG on iOS (SDWebImageWebPCoder
+    //   is installed as a Pod but not registered with SDImageCodersManager,
+    //   causing WebP decode failures on cold start)
     // - fit=scale-down: scale down only (preserve aspect ratio, no cropping)
-    const cfParams = `width=${width},quality=${quality},f=auto,fit=scale-down`;
+    const format = Platform.OS === 'ios' ? 'png' : 'webp';
+    const cfParams = `width=${width},quality=${quality},format=${format},fit=scale-down`;
 
     return `${url.protocol}//${url.host}/cdn-cgi/image/${cfParams}${url.pathname}`;
   } catch {

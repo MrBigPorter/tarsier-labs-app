@@ -19,6 +19,13 @@ import { env } from '@/lib/env';
 import { commentStatusManager } from '@/lib/utils/commentStatus';
 import { commentApi } from '@/api/endpoints/comments';
 import { store } from '@/store';
+import {
+  recordSSEConnect,
+  recordSSEDisconnect,
+  recordSSEError,
+  recordSSEReplyReceived,
+  recordSSEModerated,
+} from '@/lib/monitoring';
 import type { Comment } from '@/types/blog';
 
 // ---------------------------------------------------------------------------
@@ -79,12 +86,14 @@ export function useCommentSSE(articleId: string | undefined): void {
     const handler = (data: SSEEvent) => {
       // Moderation event: notify CommentStatusManager
       if (data.type === 'moderated') {
+        recordSSEModerated(articleId);
         commentStatusManager.updateByRealId(data.commentId, data.status);
         return;
       }
 
       // AI auto-reply event: insert into cache
       const replyData = data as CommentReplyEvent;
+      recordSSEReplyReceived(articleId);
       insertReplyIntoCache(articleId, replyData);
     };
     handlerRef.current = handler;
@@ -101,6 +110,7 @@ export function useCommentSSE(articleId: string | undefined): void {
       const sseUrl = `${baseUrl}/api/v1/frontend/blog/comments/stream?articleId=${articleId}`;
 
       const es = new EventSource(sseUrl, { lineEndingCharacter: '\n' });
+      recordSSEConnect(articleId);
       const handlers = new Set<(data: SSEEvent) => void>();
       handlers.add(handler);
 
@@ -132,6 +142,7 @@ export function useCommentSSE(articleId: string | undefined): void {
 
       // Handle errors — EventSource auto-reconnects via react-native-sse
       es.addEventListener('error', () => {
+        recordSSEError(articleId);
         // Auto-reconnect is handled by the library
       });
     }
@@ -154,6 +165,7 @@ export function useCommentSSE(articleId: string | undefined): void {
       if (reg.refCount <= 0) {
         reg.es.close();
         sseRegistry.delete(articleId);
+        recordSSEDisconnect(articleId);
       }
     };
   }, [articleId]);

@@ -27,6 +27,17 @@ import { getCurrentLanguage } from '@/lib/i18n';
 import { logout } from '@/store/slices/authSlice';
 import { navigateToAuth } from '@/lib/navigationRef';
 import { recordApiCall } from '@/lib/perf/apiTiming';
+import {
+  recordApiLatency,
+  recordApiError,
+  recordApiRetry,
+  recordApiRetrySuccess,
+  recordApiRetryExhausted,
+  recordTokenRefresh,
+  recordTokenRefreshSuccess,
+  recordTokenRefreshFailure,
+  startApiSpan,
+} from '@/lib/monitoring';
 
 /**
  * Performance.now() is available at runtime in React Native (Hermes provides
@@ -93,6 +104,11 @@ const baseQuery: BaseQueryFn<
   const endpoint = typeof args === 'string' ? args : (args.url as string);
   const method = typeof args === 'string' ? 'GET' : (args.method ?? 'GET');
 
+  // Start a Sentry Tracing span for this API call if a navigation transaction
+  // is active (P0 — API child spans). The span is automatically linked to the
+  // active transaction by the SDK. No-op if no active transaction.
+  const apiSpan = startApiSpan(endpoint, method);
+
   // Note: lang parameter is NOT injected here — each endpoint already passes
   // `lang` from getCurrentLanguage() at the component level (e.g. HomeScreen).
   // Injecting it here would cause duplicate ?lang=en&lang=en in the URL.
@@ -131,6 +147,7 @@ const baseQuery: BaseQueryFn<
     console.warn(
       `[API] ⏱️ Retry ${attempt}/${RETRY_MAX}: first attempt took ${Math.round(tWallAfterFirst - tWallStart)}ms, waiting ${backoffMs}ms for ${method} ${endpoint}`,
     );
+    recordApiRetry(endpoint, method);
     await delay(backoffMs);
     const tRetryStart = performance.now();
     result = await rawBaseQuery(args, api, extraOptions);
@@ -138,10 +155,20 @@ const baseQuery: BaseQueryFn<
     console.warn(
       `[API] ⏱️ Retry ${attempt} completed in ${Math.round(tRetryEnd - tRetryStart)}ms, status: ${result.error?.status ?? 200}`,
     );
+    if (!result.error) {
+      recordApiRetrySuccess(endpoint, method);
+    }
     attempt++;
   }
 
-  // Record API call timing for the perf monitor
+  // ── Retry exhaustion detection ───────────────────────────────────
+  // If the loop exited because we exhausted all retries (attempt > RETRY_MAX)
+  // and the error is still present, fire the exhaustion alert.
+  if (result.error && attempt > RETRY_MAX) {
+    recordApiRetryExhausted(endpoint, method);
+  }
+
+  // Record API call timing for the perf monitor + Sentry monitoring
   {
     const timestamp = Date.now(); // wall-clock timestamp for record-keeping
     const wallClockMs = performance.now() - tWallStart;
@@ -158,6 +185,16 @@ const baseQuery: BaseQueryFn<
       timestamp,
     });
 
+    // Sentry Monitoring — latency distribution + status breakdown
+    // Uses the same wall-clock measurement (user-perceived wait time).
+    // 100% sampling — negligible overhead for a counter + distribution.
+    recordApiLatency({
+      endpoint,
+      method,
+      statusCode: status,
+      durationMs: Math.round(wallClockMs),
+    });
+
     // ── Slow API warning (threshold: 1000ms wall-clock) ──────────
     // This measures user-perceived wait time (includes JS thread queueing).
     // High values may indicate rendering bottlenecks, not network issues.
@@ -171,20 +208,32 @@ const baseQuery: BaseQueryFn<
     }
   }
 
-  // ── Error logging ────────────────────────────────────────────────
+  // ── Error logging + Sentry monitoring ────────────────────────────
   if (result.error) {
     const status = result.error.status ?? 'unknown';
+    const statusCode = typeof status === 'number' ? status : 0;
     const errorMsg =
       typeof result.error.data === 'object' && result.error.data !== null
         ? JSON.stringify(result.error.data)
         : String(result.error.data ?? 'No error details');
     console.warn(`[API] ❌ ${method} ${endpoint} — ${status}: ${errorMsg}`);
+
+    // Sentry Monitoring — track all API errors (4xx + 5xx)
+    // 100% sampling — critical signal for alerting.
+    recordApiError({
+      endpoint,
+      method,
+      statusCode,
+      durationMs: Math.round(performance.now() - tWallStart),
+    });
   }
 
   // Handle 401 Unauthorized — attempt token refresh
   if (result.error && result.error.status === 401) {
     const refreshToken = storage.getString(REFRESH_TOKEN_KEY);
     if (refreshToken) {
+      // Sentry Monitoring — token refresh was triggered
+      recordTokenRefresh();
       try {
         // Attempt to refresh the token
         const refreshResult = await rawBaseQuery(
@@ -198,6 +247,9 @@ const baseQuery: BaseQueryFn<
         );
 
         if (refreshResult.data) {
+          // Sentry Monitoring — token refresh succeeded
+          recordTokenRefreshSuccess();
+
           // Extract new tokens from refresh response
           // Server returns: { data: { tokens: { accessToken, refreshToken } } }
           const response = refreshResult.data as any;
@@ -230,6 +282,7 @@ const baseQuery: BaseQueryFn<
             console.warn(
               '[API] Token refresh response missing tokens — clearing stored tokens',
             );
+            recordTokenRefreshFailure();
             storage.delete(AUTH_TOKEN_KEY);
             storage.delete(REFRESH_TOKEN_KEY);
             // Sync Redux auth state and redirect to login
@@ -240,6 +293,7 @@ const baseQuery: BaseQueryFn<
           // Refresh returned non-2xx (e.g. 400 INVALID_JWT_TOKEN)
           // Token is corrupted or expired — clear stored tokens to break the cycle
           console.warn('[API] Token refresh failed — clearing stored tokens');
+          recordTokenRefreshFailure();
           storage.delete(AUTH_TOKEN_KEY);
           storage.delete(REFRESH_TOKEN_KEY);
           // Sync Redux auth state and redirect to login
@@ -252,6 +306,7 @@ const baseQuery: BaseQueryFn<
           '[API] Token refresh network error — clearing stored tokens',
           error,
         );
+        recordTokenRefreshFailure();
         storage.delete(AUTH_TOKEN_KEY);
         storage.delete(REFRESH_TOKEN_KEY);
         // Sync Redux auth state and redirect to login
@@ -261,12 +316,17 @@ const baseQuery: BaseQueryFn<
     } else {
       // No refresh token available — user needs to re-authenticate
       console.warn('[API] 401 but no refresh token — clearing access token');
+      recordTokenRefreshFailure();
       storage.delete(AUTH_TOKEN_KEY);
       // Sync Redux auth state and redirect to login
       api.dispatch(logout());
       navigateToAuth();
     }
   }
+
+  // End the Sentry Tracing span for this API call.
+  // If there was no active transaction, apiSpan is undefined and this is a no-op.
+  apiSpan?.end();
 
   return result;
 };

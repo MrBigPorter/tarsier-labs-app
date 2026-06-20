@@ -280,6 +280,23 @@ export function useVideoPlayback(
     (e: any) => {
       // Extract structured error details for better diagnostics
       const errorDetails = extractVideoError(e);
+
+      // ── Filter: CoreMediaErrorDomain -12642 (kCMBaseObjectError_Invalidated) ──
+      // This error fires when the <Video> component unmounts while CoreMedia is
+      // still loading (e.g. FlatList card recycled during network-not-ready window).
+      // It's a lifecycle artifact, not a real playback failure — the user sees no
+      // visible issue because the card is gone. Log at debug level and bail out
+      // to avoid noise in Sentry Logs.
+      if (
+        errorDetails.ios_domain === 'CoreMediaErrorDomain' &&
+        errorDetails.ios_code === -12642
+      ) {
+        logger.debug(
+          `[useVideoPlayback] video invalidated on unmount (CoreMedia -12642) id=${articleId?.slice(0, 8)}`,
+        );
+        return;
+      }
+
       logger.error(
         `[useVideoPlayback] video error id=${articleId?.slice(0, 8)} uri="${videoUri}"`,
         errorDetails,

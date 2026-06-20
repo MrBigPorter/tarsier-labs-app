@@ -73,6 +73,7 @@
     "@types/utf8": "^3",
     "@welldone-software/why-did-you-render": "^10.0.1",
     "babel-plugin-module-resolver": "^5.0.3",
+    "babel-plugin-transform-inline-environment-variables": "^0.4.4",
     "detox": "^20",
     "eslint": "8.57.1",
     "eslint-config-prettier": "^9",

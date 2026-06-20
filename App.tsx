@@ -34,7 +34,7 @@ if (__DEV__) {
   });
 }
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { StatusBar, StyleSheet, LogBox } from 'react-native';
+import { StatusBar, StyleSheet, LogBox, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -47,10 +47,39 @@ import { restoreSession } from '@/store/slices/authSlice';
 import '@/lib/i18n/index';
 import RootNavigator, { linking } from '@/navigation/RootNavigator';
 import { logger } from '@/lib/logger';
-import { initSentry, captureException, addBreadcrumb } from '@/lib/sentry';
+import {
+  initSentry,
+  captureException,
+  addBreadcrumb,
+  reactNavigationIntegration,
+} from '@/lib/sentry';
+import { NetworkQualityProvider } from '@/lib/hooks/NetworkQualityContext';
+import {
+  startColdStartSpan,
+  endColdStartSpan,
+  recordAppBackground,
+  recordAppForeground,
+} from '@/lib/monitoring';
 import { PerfProvider, PerfMonitor, usePerfMonitor } from '@/lib/perf';
 import BootSplash from 'react-native-bootsplash';
 import codePush from 'react-native-code-push';
+
+// process.env.APP_ENV is inlined at build time by
+// babel-plugin-transform-inline-environment-variables.
+// This declaration satisfies TypeScript without installing @types/node
+// (which would conflict with React Native's global types).
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      APP_ENV?: 'staging' | 'production' | 'development';
+    }
+  }
+  interface Process {
+    env: NodeJS.ProcessEnv;
+  }
+
+  var process: Process;
+}
 
 // Suppress known non-critical warnings in development
 if (__DEV__) {
@@ -134,10 +163,15 @@ function AppContentWithPerf(): React.JSX.Element {
  * Main App component with all providers
  */
 function AppComponent(): React.JSX.Element {
+  const coldStartSpanRef = useRef<ReturnType<typeof startColdStartSpan>>(null);
+
   useEffect(() => {
     // Initialize app-level services
     const init = async () => {
       try {
+        // Start cold start trace span (20% sampled)
+        coldStartSpanRef.current = startColdStartSpan();
+
         // Restore auth session from MMKV (survives hot reloads)
         store.dispatch(restoreSession());
 
@@ -148,11 +182,20 @@ function AppComponent(): React.JSX.Element {
         // time during the critical startup path (LCP / first paint).
         // Note: setTimeout(0) is used instead of the deprecated InteractionManager.
         setTimeout(() => {
+          // Register navigation container BEFORE initSentry so Sentry's
+          // afterAllSetup callback can create the initial navigation span.
+          // IMPORTANT: This must be called after NavigationContainer mounts,
+          // otherwise navigationRef.current is null and Sentry silently drops
+          // all navigation listeners → zero Tracing data.
+          reactNavigationIntegration.registerNavigationContainer(navigationRef);
           initSentry();
         }, 0);
 
         logger.info('[App] App initialization complete');
         addBreadcrumb('App initialized', 'app');
+
+        // End cold start span — captures total init duration
+        endColdStartSpan(coldStartSpanRef.current);
       } catch (error) {
         logger.error('[App] Initialization failed', error);
         if (error instanceof Error) {
@@ -166,13 +209,32 @@ function AppComponent(): React.JSX.Element {
     init();
   }, []);
 
+  // Track app lifecycle state transitions (background/foreground)
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextState: string) => {
+        if (nextState === 'background') {
+          recordAppBackground();
+        } else if (nextState === 'active') {
+          recordAppForeground();
+        }
+      },
+    );
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <ReduxProvider store={store}>
           <ThemeProvider>
             <KeyboardProvider>
-              <AppContentWithPerf />
+              <NetworkQualityProvider>
+                <AppContentWithPerf />
+              </NetworkQualityProvider>
             </KeyboardProvider>
           </ThemeProvider>
         </ReduxProvider>
@@ -202,28 +264,46 @@ function AppComponent(): React.JSX.Element {
  */
 function CodePushSafeWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    if (__DEV__) {return;}
+    // Skip CodePush sync in two scenarios:
+    //  1. __DEV__ (local dev via Metro)
+    //  2. APP_ENV=staging (staging/local builds via make deploy-test-ios)
+    //     This prevents the app from downloading an older CodePush Staging
+    //     release and overriding the local build on the next resume.
+    if (__DEV__ || process.env.APP_ENV === 'staging') {
+      return;
+    }
 
     let cancelled = false;
 
-    // Notify CodePush that the current bundle is running successfully.
-    // This is REQUIRED — without it CodePush thinks the update failed and
-    // may roll back a previously installed update on the next check.
-    codePush
-      .notifyAppReady()
-      .then(() => {
-        logger.info('[CodePush] App ready notified');
-      })
-      .catch((err: unknown) => {
-        logger.warn('[CodePush] notifyAppReady failed (non-fatal):', err);
-      });
+    // Defer notifyAppReady past first paint using requestAnimationFrame.
+    // The previous code called notifyAppReady() synchronously on mount,
+    // which could POST to cp.hyperpush.org (observed ~1.24s in Sentry traces)
+    // and block the JS thread during the critical first-paint window.
+    // By deferring to after the next animation frame, the home screen can
+    // render before CodePush startup work begins.
+    requestAnimationFrame(() => {
+      if (cancelled) {
+        return;
+      }
+
+      codePush
+        .notifyAppReady()
+        .then(() => {
+          logger.info('[CodePush] App ready notified');
+        })
+        .catch((err: unknown) => {
+          logger.warn('[CodePush] notifyAppReady failed (non-fatal):', err);
+        });
+    });
 
     // Defer sync to avoid blocking critical startup path (Sentry, auth restore).
     // CodePush sync makes HTTP requests to the self-hosted server which may
     // be slow or blocked by Cloudflare JS challenges — don't let that delay
     // the first paint.
     const syncTimer = setTimeout(() => {
-      if (cancelled) {return;}
+      if (cancelled) {
+        return;
+      }
 
       codePush
         .sync({

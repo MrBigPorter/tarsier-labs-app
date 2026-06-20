@@ -123,6 +123,7 @@ deploy-prod-ios: env-prod ## Build & run on iOS Device (Release/production mode)
 	@echo "     In the Metro terminal, press ${BOLD}j${NC} → Fusebox DevTools"
 	@echo ""
 
+deploy-test-ios: export APP_ENV=staging
 deploy-test-ios: env-staging ## Build & run on iOS Device (Test/Staging mode, CodePush Staging key)
 	@echo "🏗️  Deploying \033[36mtest\033[0m build to connected iOS device..."
 	@echo ""
@@ -151,7 +152,7 @@ deploy-test-ios: env-staging ## Build & run on iOS Device (Test/Staging mode, Co
 	@echo "  📱 Building Release-Test and installing to first connected device..."
 	@echo "     (Scheme: FrontendBlogMobile-Test, uses Test.xcconfig → CodePush Staging)"
 	@echo ""
-	cd ios && npx react-native run-ios --device --mode Release-Test 2>&1; \
+	cd ios && APP_ENV=staging npx react-native run-ios --device --mode Release-Test 2>&1; \
 	RC=$$?; \
 	if [ $$RC -ne 0 ]; then \
 		echo ""; \
@@ -326,9 +327,10 @@ staging: env-staging ## Build both platforms in staging mode
 	$(MAKE) staging-ios
 	$(MAKE) staging-android
 
+staging-ios: export APP_ENV=staging
 staging-ios: env-staging ## Build iOS staging archive
 	@echo "🏗️  Building iOS \033[33mstaging\033[0m archive..."
-	cd ios && xcodebuild -workspace FrontendBlogMobile.xcworkspace \
+	cd ios && APP_ENV=staging xcodebuild -workspace FrontendBlogMobile.xcworkspace \
 		-scheme FrontendBlogMobile \
 		-configuration Release \
 		-archivePath ./build/Staging.xcarchive \

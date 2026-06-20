@@ -74,6 +74,19 @@ import { NetworkStatusBar } from '@/components/core/NetworkStatusBar';
 import { ArticleDetailSkeleton } from '@/components/core/Skeleton';
 import { EmptyState } from '@/components/core/EmptyState';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import {
+  recordCommentSubmit,
+  recordCommentSubmitSuccess,
+  recordCommentSubmitFailure,
+  recordCommentFlag,
+  recordCommentBlock,
+  recordBookmarkAdd,
+  recordBookmarkRemove,
+  recordBookmarkRollback,
+  recordLike,
+  recordShare,
+  useScreenRenderSpan,
+} from '@/lib/monitoring';
 import SvgIcon from '@/components/core/SvgIcon';
 import type { RootStackScreenProps } from '@/navigation/types';
 import type { FrontendArticle } from '@/types/frontend-blog';
@@ -83,6 +96,10 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
   navigation,
   route,
 }) => {
+  // Start a Sentry Tracing span for screen initial render (P1 — Screen TTID).
+  // Automatically becomes a child of the current navigation transaction.
+  useScreenRenderSpan('ArticleDetail');
+
   const { slug } = route.params;
   const insets = useSafeAreaInsets();
   const colors = useModeColors();
@@ -195,17 +212,29 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     setIsBookmarked(newIsBookmarked);
     // Persist to server
     if (newIsBookmarked) {
-      addBookmark({ articleId: article.id }).catch(() => {
-        // Rollback on failure — revert optimistic update
-        dispatch(toggleBookmarkOptimistic(article.id));
-        setIsBookmarked(false);
-      });
+      addBookmark({ articleId: article.id })
+        .then(() => {
+          recordBookmarkAdd(true);
+        })
+        .catch(() => {
+          recordBookmarkAdd(false);
+          recordBookmarkRollback();
+          // Rollback on failure — revert optimistic update
+          dispatch(toggleBookmarkOptimistic(article.id));
+          setIsBookmarked(false);
+        });
     } else {
-      removeBookmark({ articleId: article.id }).catch(() => {
-        // Rollback on failure
-        dispatch(toggleBookmarkOptimistic(article.id));
-        setIsBookmarked(true);
-      });
+      removeBookmark({ articleId: article.id })
+        .then(() => {
+          recordBookmarkRemove(true);
+        })
+        .catch(() => {
+          recordBookmarkRemove(false);
+          recordBookmarkRollback();
+          // Rollback on failure
+          dispatch(toggleBookmarkOptimistic(article.id));
+          setIsBookmarked(true);
+        });
     }
   }, [article, dispatch, isBookmarked, addBookmark, removeBookmark]);
 
@@ -233,17 +262,27 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     // Persist to server
     // Note: backend uses slug (URL-friendly string), not database UUID
     if (newIsLiked) {
-      likeArticle({ slug: article.slug }).catch(() => {
-        // Rollback on failure
-        dispatch(toggleLikeOptimistic(article.id));
-        setIsLiked(false);
-      });
+      likeArticle({ slug: article.slug })
+        .then(() => {
+          recordLike('like', true);
+        })
+        .catch(() => {
+          recordLike('like', false);
+          // Rollback on failure
+          dispatch(toggleLikeOptimistic(article.id));
+          setIsLiked(false);
+        });
     } else {
-      unlikeArticle({ slug: article.slug }).catch(() => {
-        // Rollback on failure
-        dispatch(toggleLikeOptimistic(article.id));
-        setIsLiked(true);
-      });
+      unlikeArticle({ slug: article.slug })
+        .then(() => {
+          recordLike('unlike', true);
+        })
+        .catch(() => {
+          recordLike('unlike', false);
+          // Rollback on failure
+          dispatch(toggleLikeOptimistic(article.id));
+          setIsLiked(true);
+        });
     }
   }, [article, dispatch, isLiked, likeScale, likeArticle, unlikeArticle]);
 
@@ -251,7 +290,12 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     if (!article) {
       return;
     }
-    await shareArticle(article, lang);
+    try {
+      await shareArticle(article, lang);
+      recordShare(true);
+    } catch {
+      recordShare(false);
+    }
   }, [article, lang]);
 
   const handleReply = useCallback(
@@ -281,11 +325,14 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     }
 
     try {
+      recordCommentSubmit();
       const result = await createComment({
         articleId: slug,
         content: commentText.trim(),
         parentId: replyTo?.commentId || undefined,
       }).unwrap();
+
+      recordCommentSubmitSuccess();
 
       // Insert into the correct position based on whether it's a reply or top-level
       if (replyTo?.commentId) {
@@ -300,6 +347,7 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
       setReplyTo(null);
       scrollRef.current?.scrollToEnd({ animated: false });
     } catch (submissionError) {
+      recordCommentSubmitFailure();
       console.warn('[Comment] Failed to submit comment:', submissionError);
     }
   }, [
@@ -319,6 +367,7 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     async (comment: Comment) => {
       try {
         await flagComment({ commentId: comment.id }).unwrap();
+        recordCommentFlag();
         Alert.alert(t('common.success'), t('comment.flagSuccess'));
       } catch {
         Alert.alert(t('common.error'), t('comment.flagFailed'));
@@ -331,6 +380,7 @@ const ArticleDetailScreen: React.FC<RootStackScreenProps<'ArticleDetail'>> = ({
     async (comment: Comment) => {
       try {
         await blockUser({ commentId: comment.id }).unwrap();
+        recordCommentBlock();
         // Instantly remove all comments by this author from UI
         commentsQuery.removeCommentsByAuthor(comment.author);
         Alert.alert(t('common.success'), t('comment.blockSuccess'));

@@ -14,6 +14,7 @@
  */
 
 import { useCallback } from 'react';
+import { recordOAuth, recordOAuthTimeout } from '@/lib/monitoring';
 import { Platform, NativeModules, Linking } from 'react-native';
 import { useAppDispatch } from '@/store';
 import { setCredentials } from '@/store/slices/authSlice';
@@ -129,37 +130,50 @@ export function useOAuth() {
    */
   const loginWithProvider = useCallback(
     async (provider: OAuthProvider) => {
-      const config = oauthProviders[provider];
-      const authUrl = config.getAuthorizationUrl();
+      try {
+        const config = oauthProviders[provider];
+        const authUrl = config.getAuthorizationUrl();
 
-      let callbackUrl: string;
+        let callbackUrl: string;
 
-      if (Platform.OS === 'ios') {
-        // iOS: Use native ASWebAuthenticationSession via the custom Swift module
-        callbackUrl = await NativeModules.ASAuthSession.startAuth(
-          authUrl,
-          'tarsier',
-          true, // prefersEphemeralSession — doesn't share cookies with Safari
-        );
-      } else {
-        // Android: Use Chrome Custom Tabs via Linking API
-        callbackUrl = await openAuthSessionAndroid(authUrl);
+        if (Platform.OS === 'ios') {
+          // iOS: Use native ASWebAuthenticationSession via the custom Swift module
+          callbackUrl = await NativeModules.ASAuthSession.startAuth(
+            authUrl,
+            'tarsier',
+            true, // prefersEphemeralSession — doesn't share cookies with Safari
+          );
+        } else {
+          // Android: Use Chrome Custom Tabs via Linking API
+          callbackUrl = await openAuthSessionAndroid(authUrl);
+        }
+
+        // Parse tokens from the callback URL
+        const params = parseQueryParams(callbackUrl);
+        const accessToken = params.token;
+        const refreshToken = params.refreshToken;
+
+        if (!accessToken || !refreshToken) {
+          throw new Error('Invalid OAuth response — missing tokens');
+        }
+
+        // Fetch user profile using the access token
+        const user = await fetchProfile(accessToken);
+
+        // Persist to Redux + MMKV
+        dispatch(setCredentials({ user, accessToken, refreshToken }));
+
+        // Sentry Monitoring — OAuth login succeeded
+        recordOAuth(provider, true);
+      } catch (err: unknown) {
+        // Sentry Monitoring — OAuth login failed
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (errorMessage === 'OAuth timed out') {
+          recordOAuthTimeout(provider);
+        }
+        recordOAuth(provider, false);
+        throw err; // re-throw so the caller (AuthScreen) can handle UI feedback
       }
-
-      // Parse tokens from the callback URL
-      const params = parseQueryParams(callbackUrl);
-      const accessToken = params.token;
-      const refreshToken = params.refreshToken;
-
-      if (!accessToken || !refreshToken) {
-        throw new Error('Invalid OAuth response — missing tokens');
-      }
-
-      // Fetch user profile using the access token
-      const user = await fetchProfile(accessToken);
-
-      // Persist to Redux + MMKV
-      dispatch(setCredentials({ user, accessToken, refreshToken }));
     },
     [dispatch],
   );

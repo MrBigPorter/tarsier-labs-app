@@ -7,8 +7,12 @@
  * Data: useGetTagsQuery + useGetPopularTagsQuery (RTK Query)
  *
  * States: Loading → skeleton pills | Error → retry | Empty → message
+ *
+ * Cache: MMKV-backed SWR pattern — cached tags display instantly on cold
+ * start and tab switch, while a silent background refresh fetches the latest
+ * data. Cached data is shown during the 1-frame loading gap.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -26,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 import Header from '@/components/layout/Header';
 import { EmptyContent } from '@/components/core/EmptyContent';
 import { EmptyLogoContent } from '@/components/core/EmptyLogoContent';
+import { loadTagsCache, saveTagsCache } from '@/lib/cache/tagCache';
 import type { TagsTabScreenProps } from '@/navigation/types';
 import type { FrontendTag } from '@/types/frontend-blog';
 
@@ -52,6 +57,23 @@ const TagListScreen: React.FC<TagsTabScreenProps<'TagList'>> = ({
   const prevLangRef = React.useRef(lang);
 
   const { data: tags, isLoading, isError, refetch } = useGetTagsQuery(lang);
+
+  // ─── MMKV Cache for cold start & tab switch ──────────────────────────
+  // Synchronous MMKV read (~0.01ms) via useMemo — no 1-frame skeleton flash.
+  const cachedTagsEntry = useMemo(() => loadTagsCache(lang), [lang]);
+  const cachedTags = cachedTagsEntry?.tags ?? null;
+
+  // Use cached data as fallback while API is loading (SWR pattern)
+  const displayTags = tags ?? cachedTags;
+
+  // Save API response to MMKV cache when fresh data arrives
+  const prevTagsRef = React.useRef(tags);
+  useEffect(() => {
+    if (tags && tags !== prevTagsRef.current) {
+      saveTagsCache(lang, tags);
+    }
+    prevTagsRef.current = tags;
+  }, [tags, lang]);
 
   // Re-fetch when language changes
   React.useEffect(() => {
@@ -117,7 +139,7 @@ const TagListScreen: React.FC<TagsTabScreenProps<'TagList'>> = ({
   const pillsPerRow = 4;
   const LOADING_PILL_COUNT = rowsNeeded * pillsPerRow;
 
-  if (isLoading && !tags) {
+  if (isLoading && !displayTags) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgSecondary }]}>
         <Header title="Tags" hideSearch hideSettings showBack={false} />
@@ -166,9 +188,9 @@ const TagListScreen: React.FC<TagsTabScreenProps<'TagList'>> = ({
             All Tags
           </Text>
 
-          {tags && tags.length > 0 ? (
+          {displayTags && displayTags.length > 0 ? (
             <View style={styles.tagFlow}>
-              {tags.map((tag, index) => {
+              {displayTags.map((tag, index) => {
                 const tagColor = getTagColor(index);
                 return (
                   <TouchableOpacity
@@ -204,14 +226,14 @@ const TagListScreen: React.FC<TagsTabScreenProps<'TagList'>> = ({
                 );
               })}
             </View>
-          ) : isError && !tags ? (
+          ) : isError && !displayTags ? (
             <EmptyContent
               icon="⚠️"
               title={t('tags.error.loadFailed')}
               actionLabel={t('common.retry')}
               onAction={refetch}
             />
-          ) : !tags || tags.length === 0 ? (
+          ) : !displayTags || displayTags.length === 0 ? (
             <EmptyLogoContent
               title={t('tags.empty')}
               description={t('tags.emptyState.description')}

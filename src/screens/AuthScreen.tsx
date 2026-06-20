@@ -45,6 +45,11 @@ import {
   useSendEmailCodeMutation,
   useLoginWithEmailCodeMutation,
 } from '@/api/endpoints/auth';
+import {
+  recordLogin,
+  recordSendEmailCode,
+  useScreenRenderSpan,
+} from '@/lib/monitoring';
 import Header from '@/components/layout/Header';
 import SvgIcon from '@/components/core/SvgIcon';
 import { useOAuth } from '@/lib/hooks/useOAuth';
@@ -55,6 +60,9 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COUNTDOWN_SECONDS = 60;
 
 const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
+  // Start a Sentry Tracing span for screen initial render (P1 — Screen TTID).
+  useScreenRenderSpan('AuthScreen');
+
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
@@ -153,8 +161,10 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
       await sendEmailCodeMutation({
         email: email.trim(),
       }).unwrap();
+      recordSendEmailCode(true);
       setCountdown(COUNTDOWN_SECONDS);
     } catch (err: any) {
+      recordSendEmailCode(false);
       const status = err?.status ?? err?.originalStatus ?? '';
       const serverMsg = err?.data?.message || err?.error || '';
       const statusPrefix = status ? `[${status}] ` : '';
@@ -200,6 +210,8 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
         code: trimmedCode,
       }).unwrap();
 
+      recordLogin(true, 'email_code');
+
       console.log(
         '[Auth] ✅ Email code login success, dispatching setCredentials',
         {
@@ -228,6 +240,7 @@ const AuthScreen: React.FC<RootStackScreenProps<'Auth'>> = ({ navigation }) => {
         navigation.goBack();
       }
     } catch (err: any) {
+      recordLogin(false, 'email_code');
       const status = err?.status ?? err?.originalStatus ?? '';
       const serverMsg = err?.data?.message || err?.error || '';
       const statusPrefix = status ? `[${status}] ` : '';

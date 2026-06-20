@@ -48,7 +48,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
+  Text,
   Animated,
+  AppState,
+  Platform,
   StyleSheet,
   type ImageProps,
   type ImageStyle,
@@ -64,6 +67,12 @@ import {
 import { Blurhash } from 'react-native-blurhash';
 import SvgIcon from '@/components/core/SvgIcon';
 import { getOptimizedImageUrl, getArticleImageUrl } from '@/lib/utils/image';
+import {
+  recordImageFallback,
+  recordImageTotalFailure,
+  getTimeSinceAppStartMs,
+  type ImageFailureContext,
+} from '@/lib/monitoring';
 import type { ArticleMeta } from '@/types/frontend-blog';
 import type { NetworkQuality } from '@/lib/hooks/useNetworkQuality';
 
@@ -78,8 +87,41 @@ const AnimatedFastImage = createAnimatedComponent(FastImage);
 /** Duration for cross-fade animation (matches Flutter's FadeInImage default) */
 const CROSS_FADE_DURATION_MS = 300;
 
+/**
+ * Stagger interval for sequential image loading (OOM mitigation).
+ *
+ * Each image waits `staggerLoadIndex * STAGGER_INTERVAL_MS` before starting
+ * its HTTP request and decode. This spreads the memory spike of concurrent
+ * PNG/WebP decoding across ~1.5s instead of all at once.
+ *
+ * Root cause (from OOM analysis):
+ * On iOS with `format=PNG`, each 960px image decodes to ~2MB in RGBA memory.
+ * 10 visible articles loading simultaneously = ~20MB+ peak decode spike.
+ * Staggering reduces this to ~2MB sequential.
+ *
+ * See: plans/oom-image-png-memory-cascade.md
+ */
+const STAGGER_INTERVAL_MS = 120;
+
 /** Icon size for placeholder/error states */
 const FALLBACK_ICON_SIZE = 32;
+
+/**
+ * Retry delay when both image URLs fail due to transient network issues.
+ *
+ * Root cause (from Sentry Logs analysis):
+ * When the app returns to foreground, NetInfo reports "online" before the
+ * underlying NSURLSession connection pool is fully established. All HTTP
+ * requests in this window return response_body_size: 0. After ~2-3 seconds
+ * the network stabilises and images load normally.
+ *
+ * This retry mechanism waits RETRY_DELAY_MS before trying both URLs again,
+ * giving the network stack time to stabilise.
+ */
+const RETRY_DELAY_MS = 3000;
+
+/** Maximum number of full retry cycles (optimized + fallback) before giving up */
+const MAX_RETRIES = 2;
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -102,12 +144,53 @@ export interface AppImageProps extends Omit<ImageProps, 'source'> {
   optimize?: boolean;
   /** Whether this is a priority image (LCP optimization) */
   priority?: boolean;
+  /**
+   * Stagger load index for sequential image loading (OOM mitigation).
+   *
+   * When set, the image HTTP request is delayed by
+   * `staggerLoadIndex * STAGGER_INTERVAL_MS` milliseconds. This spreads
+   * concurrent image decode memory across time instead of all at once.
+   *
+   * - 0: Load immediately (no delay)
+   * - 1: Delay 120ms
+   * - 2: Delay 240ms
+   * - ...
+   *
+   * Priority images (first 2 items) should use index 0 for LCP.
+   * Off-screen images get higher indices for progressive loading.
+   *
+   * See: plans/oom-image-png-memory-cascade.md
+   */
+  staggerLoadIndex?: number;
   /** Called when image loads successfully */
   onLoad?: () => void;
   /** Called when image fails to load */
   onError?: () => void;
   /** Container style */
   containerStyle?: StyleProp<ViewStyle>;
+  /** Show debug info overlay when image fails (for on-device debugging) */
+  debugMode?: boolean;
+}
+
+/**
+ * Debug info captured at the moment of image failure.
+ * Displayed on-screen when debugMode is enabled.
+ */
+interface ImageDebugInfo {
+  /** The URL that was being loaded when the error occurred */
+  failedUrl: string;
+  /** Which phase of the error-recovery flow we're in */
+  errorPhase: 'fallback' | 'retrying' | 'total_failure';
+  /** Current retry attempt (0 = first failure, MAX_RETRIES = exhausted) */
+  retryCount: number;
+  /** Network connection type at time of failure */
+  connectionType?: string | null;
+  /** Whether NetInfo reports the device as connected */
+  isConnected?: boolean;
+  /** Image size tier requested */
+  imageSizeTier?: string;
+  /** Milliseconds since app process started */
+  timeSinceAppStartMs?: number;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
@@ -122,8 +205,10 @@ export function AppImage({
   quality = 75,
   optimize = true,
   priority = false,
+  staggerLoadIndex,
   style,
   containerStyle,
+  debugMode = false,
   onLoad,
   onError,
   ...imageProps
@@ -150,7 +235,12 @@ export function AppImage({
       case 'large':
         return 640;
       case 'original':
-        return 1280;
+        // Cap at 960px (OOM mitigation). The previous 1280px produced ~3.7MB
+        // decoded RGBA buffers on iOS (format=PNG). 960px reduces this to ~2MB
+        // per image — a 45% reduction — with negligible visual impact on mobile
+        // (326-458ppi: 960px content fills a 390px viewport at 2.5x scale).
+        // See: plans/oom-image-png-memory-cascade.md
+        return 960;
       default:
         return 480;
     }
@@ -185,6 +275,14 @@ export function AppImage({
     });
   }, [resolvedUrl, optimize, adaptiveWidth, quality]);
 
+  /**
+   * Active URL — use fallback (original/raw) URL when the Cloudflare-optimized
+   * URL fails to load. This provides resilience against CDN format negotiation
+   * issues (e.g., AVIF cached on disk fails to decode on cold start).
+   *
+   * When useFallbackUrl is true and resolvedUrl differs from optimizedUrl,
+   * we load the original URL directly (no Cloudflare transformation).
+   */
   // ─── Cross-fade animation values ───────────────────────────────────
   //
   // Flutter-style FadeInImage:
@@ -200,6 +298,29 @@ export function AppImage({
   const imageOpacity = useSharedValue(blurhash ? 0 : 1);
   const placeholderOpacity = useRef(new Animated.Value(1)).current;
 
+  // ─── Retry state for transient network failures ─────────────────────
+  //
+  // When the network isn't fully ready at app start/foreground, FastImage
+  // may get empty responses (response_body_size: 0) for both optimized and
+  // original URLs. This ref tracks retry attempts and schedules a delayed
+  // retry — giving the network stack time to stabilise.
+  //
+  // See RETRY_DELAY_MS / MAX_RETRIES constants above.
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Clean up retry timeout on unmount to prevent setState on unmounted component.
+   */
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current !== null) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   /**
    * Reset animation when blurhash prop changes (e.g., FlatList recycles
    * an ArticleCard with new article data).
@@ -208,6 +329,13 @@ export function AppImage({
    * article's fade-out), making it invisible.
    */
   useEffect(() => {
+    // Clear any pending retry timeout from the previous image
+    if (retryTimeoutRef.current !== null) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    retryCountRef.current = 0;
+
     if (blurhash) {
       // New blurhash available — show placeholder, hide image
       imageOpacity.value = 0;
@@ -219,11 +347,88 @@ export function AppImage({
     }
     // Reset error state for new image
     setHasError(false);
+    // Reset fallback URL state — new image should try optimized URL first
+    setUseFallbackUrl(false);
   }, [blurhash, imageOpacity, placeholderOpacity]);
+
+  // ─── Staggered loading (OOM mitigation) ───────────────────────────
+  //
+  // When staggerLoadIndex is provided, the image HTTP request is delayed
+  // by `staggerLoadIndex * STAGGER_INTERVAL_MS` to spread concurrent
+  // decode memory across time. During the delay, blurhash/skeleton remains
+  // visible as a placeholder — no visual flash.
+  //
+  // Priority images (index 0) and non-list usages (undefined) load
+  // immediately with no delay.
+  //
+  // See: plans/oom-image-png-memory-cascade.md
+
+  const [isStaggerReady, setStaggerReady] = useState(
+    staggerLoadIndex === undefined || staggerLoadIndex === 0,
+  );
+
+  useEffect(() => {
+    if (staggerLoadIndex === undefined || staggerLoadIndex <= 0) {
+      setStaggerReady(true);
+      return;
+    }
+
+    const delay = staggerLoadIndex * STAGGER_INTERVAL_MS;
+    const timer = setTimeout(() => {
+      setStaggerReady(true);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [staggerLoadIndex]);
 
   // ─── Error state ───────────────────────────────────────────────────
 
   const [hasError, setHasError] = useState(false);
+
+  /**
+   * Fallback URL state — when FastImage fails with Cloudflare-optimized URL,
+   * we retry with the original (non-optimized) URL before showing the error icon.
+   * This provides resilience against CDN format/cache issues on cold start.
+   * See: plans/sdd-fastimage-cold-start-broken-images.md
+   */
+  const [useFallbackUrl, setUseFallbackUrl] = useState(false);
+
+  /**
+   * Debug info — diagnostic context captured at the moment of failure.
+   * Only populated when debugMode={true}. Displayed as text overlay on
+   * the error icon for on-device debugging.
+   */
+  const [debugInfo, setDebugInfo] = useState<ImageDebugInfo | null>(null);
+
+  /**
+   * Active URL — use fallback (original/raw) URL when the Cloudflare-optimized
+   * URL fails to load. This provides resilience against CDN format negotiation
+   * issues (e.g., AVIF cached on disk fails to decode on cold start).
+   *
+   * When useFallbackUrl is true and resolvedUrl differs from optimizedUrl,
+   * we load the original URL directly (no Cloudflare transformation).
+   */
+  const activeUrl = useFallbackUrl && resolvedUrl ? resolvedUrl : optimizedUrl;
+
+  /**
+   * Active cache control — use 'web' (validate with server) for Cloudflare-
+   * optimized URLs, 'immutable' (cache aggressively) for original URLs.
+   *
+   * Root cause: Cloudflare's /cdn-cgi/image/ endpoint may occasionally return
+   * a non-image response (e.g., HTML error page) during cold cache processing.
+   * With 'immutable', SDWebImage caches this non-image response and serves it
+   * on subsequent requests — causing persistent decode failures. 'web' adds
+   * SDWebImageRefreshCached which validates with the server on each access,
+   * ensuring transient Cloudflare errors don't get permanently cached.
+   *
+   * See: plans/revised-cloudflare-image-fallback-analysis-v2.md
+   */
+  const activeCacheControl =
+    useFallbackUrl && resolvedUrl && resolvedUrl !== optimizedUrl
+      ? FastImage.cacheControl.immutable
+      : FastImage.cacheControl.web;
 
   /**
    * Cross-fade handler — triggered when image finishes loading.
@@ -253,11 +458,139 @@ export function AppImage({
   }, [imageOpacity, placeholderOpacity, onLoad]);
 
   const handleError = useCallback(() => {
+    // Build diagnostic context shared by both fallback and total failure events
+    const failureCtx: ImageFailureContext = {
+      resolvedUrl: resolvedUrl ?? '',
+      optimizedUrl: optimizedUrl ?? undefined,
+      platform: Platform.OS,
+      imageSizeTier: imageSizeTier,
+      hasBlurhash: typeof blurhash === 'string' && blurhash.length > 0,
+      optimizeEnabled: optimize,
+      // Network context — helps distinguish transient network issues
+      // (NetInfo online but NSURLSession not ready) from real connectivity loss.
+      isConnected: networkQuality?.isConnected,
+      connectionType: networkQuality?.connectionType,
+      appState: AppState.currentState,
+      timeSinceAppStartMs: getTimeSinceAppStartMs(),
+    };
+
+    // Shared debug info builder — captures snapshot of current state for
+    // on-device display when debugMode is enabled.
+    const buildDebugInfo = (
+      phase: ImageDebugInfo['errorPhase'],
+    ): ImageDebugInfo => ({
+      failedUrl: activeUrl ?? resolvedUrl ?? optimizedUrl ?? '(no url)',
+      errorPhase: phase,
+      retryCount: retryCountRef.current,
+      connectionType: networkQuality?.connectionType,
+      isConnected: networkQuality?.isConnected,
+      imageSizeTier: imageSizeTier,
+      timeSinceAppStartMs: getTimeSinceAppStartMs(),
+    });
+
+    // If Cloudflare-optimized URL failed and we have a non-optimized fallback
+    // available, try the original URL before showing the error icon.
+    // This provides resilience against CDN format/cache issues (e.g., AVIF
+    // decode failures on cold start — see sdd-fastimage-cold-start-broken-images.md).
+    if (!useFallbackUrl && resolvedUrl && resolvedUrl !== optimizedUrl) {
+      // Record fallback via monitoring service layer — logs warning + Sentry breadcrumb
+      recordImageFallback(failureCtx);
+      if (debugMode) {
+        setDebugInfo(buildDebugInfo('fallback'));
+      }
+      setUseFallbackUrl(true);
+      // Reset image opacity for the fallback attempt
+      imageOpacity.value = 0;
+      return;
+    }
+
+    // ── Both optimized and original URLs failed ─────────────────────────
+    //
+    // Root cause (from Sentry Logs breadcrumb analysis):
+    // When the app returns to foreground, NetInfo reports "online" before
+    // the underlying network stack is ready. FastImage gets HTTP responses
+    // with response_body_size: 0 for ALL images in this window. After
+    // ~2-3 seconds the connection pool stabilises and images load normally.
+    //
+    // Retry strategy: Instead of immediately showing the error state, we
+    // schedule a delayed retry (up to MAX_RETRIES times). This gives the
+    // network stack time to stabilise without user-visible errors.
+
+    if (retryCountRef.current < MAX_RETRIES) {
+      retryCountRef.current += 1;
+
+      console.warn(
+        '[AppImage] Both URLs failed, scheduling retry',
+        `attempt ${retryCountRef.current}/${MAX_RETRIES}`,
+        resolvedUrl,
+      );
+
+      if (debugMode) {
+        setDebugInfo(buildDebugInfo('retrying'));
+      }
+
+      // Keep showing placeholder during the retry wait
+      // Don't set hasError yet — placeholder stays visible
+      // Don't clear fallback state yet — resolvedUrl remains as active
+
+      // Schedule retry after delay
+      retryTimeoutRef.current = setTimeout(() => {
+        // Reset to initial state so FastImage re-mounts with optimized URL
+        setHasError(false);
+        setUseFallbackUrl(false);
+        // Reset opacity for cross-fade on new attempt
+        imageOpacity.value = blurhash ? 0 : 1;
+        placeholderOpacity.setValue(blurhash ? 1 : 0);
+
+        retryTimeoutRef.current = null;
+      }, RETRY_DELAY_MS);
+
+      return;
+    }
+
+    // ── Exhausted all retries — permanent error ──────────────────────────
+    // Record total failure via monitoring service layer — logs error + captureException
+    recordImageTotalFailure(failureCtx);
+    if (debugMode) {
+      setDebugInfo(buildDebugInfo('total_failure'));
+    }
+
+    // If blurhash is available, keep it visible instead of showing ❌.
+    // The blurhash provides a meaningful visual placeholder — far better than
+    // an error icon. The image may load on a subsequent mount cycle (e.g.,
+    // FlatList recycle, pull-to-refresh) when the network is more stable.
+    //
+    // Only show ❌ when there's NO blurhash (no graceful fallback available).
+    // NOTE: Inline blurhash check instead of referencing `showBlurhash` (which is
+    // defined later in the component body after this useCallback). Since `blurhash`
+    // is already in the dependency array, the closure always captures the correct
+    // value without needing `showBlurhash` as a separate dependency.
+    if (typeof blurhash === 'string' && blurhash.length > 0) {
+      // Record the failure but don't display ❌ — keep blurhash visible.
+      // The image may load on a subsequent mount cycle (e.g., FlatList recycle,
+      // pull-to-refresh) when the network is more stable.
+      onError?.();
+      return;
+    }
+
     setHasError(true);
     // Hide placeholder on error, show error icon instead
     placeholderOpacity.setValue(0);
     onError?.();
-  }, [placeholderOpacity, onError]);
+  }, [
+    resolvedUrl,
+    optimizedUrl,
+    useFallbackUrl,
+    imageSizeTier,
+    blurhash,
+    optimize,
+    imageOpacity,
+    placeholderOpacity,
+    onError,
+    networkQuality,
+    activeUrl,
+    debugMode,
+  ]);
 
   // ─── No image available — show gradient placeholder ─────────────────
 
@@ -288,14 +621,37 @@ export function AppImage({
 
   // ─── Render ──────────────────────────────────────────────────────────
 
+  // ─── Stagger guard ──────────────────────────────────────────────────
+  //
+  // When staggerLoadIndex > 0, the FastImage is NOT rendered until the
+  // stagger delay elapses. The blurhash or skeleton placeholder remains
+  // visible during the delay — no visual flash or layout shift.
+  //
+  // This works correctly with the existing retry logic: retryTimeoutRef
+  // and retryCountRef are unaffected since they only activate AFTER the
+  // image mount (onError callback), which can't fire before isStaggerReady.
+  //
+  // Non-staggered images (staggerLoadIndex === undefined or 0) always
+  // render the FastImage immediately — no behavior change.
+
+  const shouldRenderImage = !hasError && isStaggerReady;
+
   return (
     <View style={[styles.container, containerStyle as ViewStyle]}>
       {/* ── Layer 1: Image ──────────────────────────────────────────────
-           Always rendered. Opacity animated 0→1 during cross-fade.
-           Hidden behind blurhash/skeleton until animation completes. */}
-      {!hasError && (
+           Always rendered (when staggerReady). Opacity animated 0→1
+           during cross-fade. Hidden behind blurhash/skeleton until
+           animation completes. */}
+      {shouldRenderImage && (
         <AnimatedFastImage
-          source={{ uri: optimizedUrl }}
+          // Use activeUrl (supports fallback: optimized → original if CDN fails).
+          // Use activeCacheControl: 'web' for Cloudflare URLs (validate with server
+          // to avoid caching transient error responses), 'immutable' for original
+          // URLs (maximize disk cache hit rate for stable content).
+          source={{
+            uri: activeUrl,
+            cache: activeCacheControl,
+          }}
           // FastImage native priority support (replaces RN accessibilityHint hack)
           priority={
             priority ? FastImage.priority.high : FastImage.priority.normal
@@ -357,7 +713,9 @@ export function AppImage({
       )}
 
       {/* ── Layer 3: Error overlay ──────────────────────────────────────
-           Replaces all other layers when image fails to load. */}
+           Replaces all other layers when image fails to load.
+           When debugMode is enabled, shows diagnostic text below the
+           error icon for on-device debugging. */}
       {hasError && (
         <View style={[styles.errorContainer, style as ImageStyle]}>
           <SvgIcon
@@ -365,6 +723,30 @@ export function AppImage({
             size={FALLBACK_ICON_SIZE}
             color="#9CA3AF"
           />
+          {debugMode && debugInfo && (
+            <View style={styles.debugOverlay}>
+              <Text
+                style={styles.debugText}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
+                {debugInfo.failedUrl}
+              </Text>
+              <Text style={styles.debugText}>
+                Phase: {debugInfo.errorPhase} | Retry: {debugInfo.retryCount}/
+                {MAX_RETRIES}
+              </Text>
+              <Text style={styles.debugText}>
+                Net: {debugInfo.connectionType ?? '?'} | Online:{' '}
+                {debugInfo.isConnected === true
+                  ? 'Y'
+                  : debugInfo.isConnected === false
+                    ? 'N'
+                    : '?'}
+                {' | '}Size: {debugInfo.imageSizeTier ?? '?'}
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -391,5 +773,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f3f4f6',
+  },
+  debugOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  debugText: {
+    color: '#ff6b6b',
+    fontSize: 8,
+    fontFamily: 'monospace',
+    lineHeight: 10,
   },
 });

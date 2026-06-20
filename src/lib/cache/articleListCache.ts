@@ -12,6 +12,7 @@
  *          for SSE-driven cache invalidation
  */
 import { storage } from '@/lib/storage';
+import { recordCacheHit, recordCacheMiss } from '@/lib/monitoring';
 import type {
   FrontendArticle,
   FrontendPaginatedResponse,
@@ -95,6 +96,7 @@ export function loadArticleList(
     const key = buildCacheKey(lang, categoryId);
     const raw = storage.getString(key);
     if (!raw) {
+      recordCacheMiss('HomeScreen');
       return null;
     }
 
@@ -102,16 +104,20 @@ export function loadArticleList(
 
     // Validate structure
     if (!Array.isArray(entry.items) || typeof entry.cachedAt !== 'number') {
+      recordCacheMiss('HomeScreen');
       return null;
     }
 
     // Expired — caller should refresh but can still use the data
     if (isExpired(entry.cachedAt)) {
+      recordCacheHit('HomeScreen');
       return entry; // Return stale data; caller decides (SWR pattern)
     }
 
+    recordCacheHit('HomeScreen');
     return entry;
   } catch {
+    recordCacheMiss('HomeScreen');
     return null;
   }
 }

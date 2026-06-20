@@ -17,6 +17,28 @@ import { logger } from '@/lib/logger';
 let initialized = false;
 
 /**
+ * React Navigation integration for automatic route tracing.
+ * Created at module level so it can be exported and wired to NavigationContainer
+ * via registerNavigationContainer() BEFORE Sentry.init() is called.
+ *
+ * In @sentry/react-native v8, the integration MUST observe navigation events
+ * through the NavigationContainer ref to create transactions. Without this,
+ * Performance/Tracing produces zero data.
+ *
+ * IMPORTANT: registerNavigationContainer() is called in App.tsx's useEffect,
+ * NOT in navigationRef.ts at module level. This is because the Sentry
+ * integration extracts navigationRef.current at call time — at module load
+ * the ref's current is null (NavigationContainer hasn't mounted), so Sentry
+ * silently drops all navigation listeners, producing zero Tracing data.
+ * See App.tsx lines 162-167 for the registration call.
+ *
+ * @see {@link registerNavigationContainer} in App.tsx
+ */
+export const reactNavigationIntegration = Sentry.reactNavigationIntegration({
+  routeChangeTimeoutMs: 500,
+});
+
+/**
  * Initialize Sentry SDK.
  * Safe to call multiple times — only runs once.
  */
@@ -38,12 +60,6 @@ export function initSentry(): void {
     return;
   }
 
-  // React Navigation instrumentation for automatic route tracing
-  const reactNavigationIntegration = Sentry.reactNavigationIntegration({
-    // Route names to ignore (e.g., modal screens or auth)
-    routeChangeTimeoutMs: 500,
-  });
-
   Sentry.init({
     dsn: env.SENTRY_DSN,
     enabled: env.SENTRY_ENABLED,
@@ -51,10 +67,20 @@ export function initSentry(): void {
     release: `frontend-blog-mobile@${__DEV__ ? 'dev' : env.BUILD_VARIANT}`,
 
     // ── Performance Tracing ──────────────────────────────────────────
-    // 100% in dev, 20% in production to reduce overhead
+    // 100% in dev/test to catch issues early; 20% in production to reduce overhead.
+    // WARNING: tracesSampleRate=1.0 in production caused a Sentry SDK infinite loop
+    // (withScope → withSetScope → create_tSpan → emit) on HomeScreen due to
+    // concurrent startInactiveSpan calls triggering recursive scope propagation.
+    // Keep at 0.2 for production — still statistically significant for trend analysis.
     tracesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0,
-    // Profiling for transactions (requires Hermes)
+    // Profile 20% of sampled transactions (reduced from 1.0 to match traces rate)
     profilesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0,
+
+    // ── Sentry Logs ──────────────────────────────────────────────────
+    // Enables logEnricherIntegration + consoleLoggingIntegration which
+    // capture console.log/warn/error and send them to Sentry Logs.
+    // Note: Requires a Sentry plan that includes the Logs product.
+    enableLogs: true,
 
     // ── Session Replay ───────────────────────────────────────────────
     // Only enable for production with lower rate to save bandwidth
@@ -83,7 +109,7 @@ export function initSentry(): void {
   initialized = true;
   logger.info('[Sentry] Initialized', {
     environment: env.BUILD_VARIANT,
-    tracesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0,
+    tracesSampleRate: env.SENTRY_ENABLED ? (__DEV__ ? 1.0 : 0.2) : 0, // Keep sync with actual value above
   });
 }
 

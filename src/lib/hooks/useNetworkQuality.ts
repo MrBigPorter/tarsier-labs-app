@@ -11,11 +11,21 @@
  * - Sync PixelRatio: reads PixelRatio.get() synchronously for initial state
  * - Change detection: uses ref to skip setQuality when values haven't changed
  * - All consumers share the same state object reference
+ * - Debounce: 5s minimum interval between NetInfo events to reduce network
+ * - startTransition: state updates are deferred to avoid competing with animations
+ *
+ * For consumers inside Reanimated animated trees, use the context hook from
+ * NetworkQualityContext.tsx instead.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
 import { PixelRatio } from 'react-native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/** Minimum interval (ms) between NetInfo events to throttle network checks */
+const MIN_NETINFO_INTERVAL_MS = 5000;
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -46,6 +56,7 @@ let sharedState: NetworkQuality | null = null;
 let listeners: Set<(quality: NetworkQuality) => void> = new Set();
 let unsubscribeNetInfo: (() => void) | null = null;
 let subscriptionInitialized = false;
+let lastNetInfoEventTime = 0;
 
 // ─── Quality calculation ─────────────────────────────────────────────────
 
@@ -152,6 +163,10 @@ function getDefaultQuality(): NetworkQuality {
 /**
  * Singleton initializer — runs once to set up the NetInfo subscription.
  * Subsequent calls are no-ops.
+ *
+ * Includes a debounce guard (MIN_NETINFO_INTERVAL_MS) to prevent the
+ * uncacheable HEAD requests (?_=timestamp) from flooding the network
+ * during rapid connectivity state changes.
  */
 function ensureSubscriptionInitialized(): void {
   if (subscriptionInitialized) {
@@ -164,6 +179,17 @@ function ensureSubscriptionInitialized(): void {
 
   // Subscribe to NetInfo — fires immediately with current state
   unsubscribeNetInfo = NetInfo.addEventListener(state => {
+    // ── Debounce guard ──────────────────────────────────────────────────
+    // NetInfo fires a HEAD request to clients3.google.com/generate_204 with
+    // a cache-busting timestamp (?_=timestamp) on EVERY event. In regions
+    // with high latency (e.g., Philippines, ~45ms average), these add up.
+    // Throttle to MIN_NETINFO_INTERVAL_MS to reduce network pressure.
+    const now = Date.now();
+    if (now - lastNetInfoEventTime < MIN_NETINFO_INTERVAL_MS) {
+      return; // Skip — too frequent
+    }
+    lastNetInfoEventTime = now;
+
     const netQuality = getQualityFromNetInfo(state);
     const newQuality: NetworkQuality = {
       ...netQuality,
@@ -192,6 +218,12 @@ function ensureSubscriptionInitialized(): void {
  * Uses a module-level singleton: only ONE NetInfo subscription exists
  * regardless of how many components call this hook. All consumers share
  * the same state and update simultaneously.
+ *
+ * NOTE: For components inside a Reanimated animated tree, prefer
+ * useNetworkQualityContext() from NetworkQualityContext.tsx instead —
+ * it reads from a React Context whose provider lives outside the
+ * animated tree, preventing state updates from competing with
+ * animation frames.
  */
 export function useNetworkQuality(): NetworkQuality {
   // Initialize with shared state if available, otherwise defaults
@@ -216,7 +248,13 @@ export function useNetworkQuality(): NetworkQuality {
         return;
       }
       currentRef.current = newQuality;
-      setQuality(newQuality);
+      // Use startTransition to defer the state update — this prevents
+      // the React re-render from competing with Reanimated's animation
+      // frame processing (the root cause of the JS thread contention
+      // observed in Sentry profiles).
+      startTransition(() => {
+        setQuality(newQuality);
+      });
     };
 
     listeners.add(listener);
@@ -225,7 +263,9 @@ export function useNetworkQuality(): NetworkQuality {
     // ran (race condition on first mount), sync now
     if (sharedState && !qualityEquals(currentRef.current, sharedState)) {
       currentRef.current = sharedState;
-      setQuality(sharedState);
+      startTransition(() => {
+        setQuality(sharedState!);
+      });
     }
 
     return () => {

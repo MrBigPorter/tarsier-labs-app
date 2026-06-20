@@ -6,6 +6,12 @@
  * allowing navigation calls from Redux middleware, base API queries, and other
  * non-component code.
  *
+ * Sentry's React Navigation integration is registered separately in App.tsx
+ * (inside useEffect, AFTER the NavigationContainer mounts) so that the ref's
+ * `current` property points to the actual navigation container. Registering
+ * at module level would see `current === null` and silently drop all listeners,
+ * causing Tracing to produce zero data.
+ *
  * Usage:
  * ```ts
  * import { navigateToAuth } from '@/lib/navigationRef';

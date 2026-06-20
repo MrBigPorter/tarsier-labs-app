@@ -45,6 +45,17 @@ interface ArticleCardProps {
   /** Priority image (first 2 items for LCP) */
   priority?: boolean;
   /**
+   * Stagger load index for sequential image decoding (OOM mitigation).
+   *
+   * Passed through to AppImage. Each card's image HTTP request is delayed
+   * by `staggerLoadIndex * 120ms`, spreading the peak memory spike of
+   * concurrent PNG decode across ~1.5s instead of all at once.
+   *
+   * Priority items (first 2) should use index 0 for LCP.
+   * See: plans/oom-image-png-memory-cascade.md
+   */
+  staggerLoadIndex?: number;
+  /**
    * Called on finger-down (`onPressIn`) — use to prefetch article data
    * before the tap gesture completes and navigation begins.
    */
@@ -69,6 +80,7 @@ function ArticleCardComponent({
   featured = false,
   networkQuality,
   priority = false,
+  staggerLoadIndex,
   onPrefetch,
 }: ArticleCardProps) {
   const colors = useModeColors();
@@ -136,6 +148,7 @@ function ArticleCardComponent({
                 featured && styles.featuredImage,
               ]}
               priority={priority}
+              staggerLoadIndex={staggerLoadIndex}
             />
           )}
 
